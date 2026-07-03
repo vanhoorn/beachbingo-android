@@ -80,7 +80,7 @@ private val GAMES = listOf(
     ),
     GameEntry(
         id = "vier",
-        emoji = "🐻",
+        emoji = "🍺",
         title = "Vier4Bier",
         description = "Vier in einer Reihe mit Beach-Twist.",
         accentColor = SandGold,
