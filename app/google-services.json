@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "711820565541",
+    "project_id": "beachbingo",
+    "storage_bucket": "beachbingo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:711820565541:android:142a81bdcc7098a1f7b3cc",
+        "android_client_info": {
+          "package_name": "com.bestfriends.beachbingo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_uvwF5hUcbHS2C-XAM5oB0QcdO-La3NE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
