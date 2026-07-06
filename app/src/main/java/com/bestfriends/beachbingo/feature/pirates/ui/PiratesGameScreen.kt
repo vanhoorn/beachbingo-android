@@ -32,10 +32,10 @@ import kotlin.random.Random
 private const val CW = 400f
 private const val CH = 580f
 
-private const val INVADER_COLS = 5
-private const val INVADER_ROWS = 3
-private const val INVADER_W = 52f
-private const val INVADER_H = 44f
+private const val INVADER_COLS = 7
+private const val INVADER_ROWS = 4
+private const val INVADER_W = 40f
+private const val INVADER_H = 36f
 private const val INVADER_TOP = 44f
 
 private const val PLAYER_Y = 530f
@@ -54,7 +54,7 @@ private const val SHIELD_ROWS = 8
 private const val BLOCK = 4f
 private const val ERASE_R = 2
 
-private val EMOJIS = arrayOf("🪼", "🐚", "🐟")
+private val EMOJIS = arrayOf("🪼", "🐚", "🐟", "🦀")
 private val BASE_SPEED  = mapOf("ROOKIE" to 3, "SNIPER" to 6, "BOSS_LEVEL" to 10)
 private val BASE_FIRING = mapOf("ROOKIE" to 3, "SNIPER" to 6, "BOSS_LEVEL" to 10)
 
@@ -120,7 +120,7 @@ private class GameState(diffStr: String, val fireRateArg: Int) {
     fun aliveCount()   = invaders.count { it.alive }
 
     fun initWave() {
-        val startX = 40f
+        val startX = 50f
         invaders.clear()
         for (row in 0 until INVADER_ROWS)
             for (col in 0 until INVADER_COLS)
@@ -359,7 +359,7 @@ private fun updateGame(gs: GameState, deltaMs: Float) {
             if (rectsOverlap(b.x - BULLET_W/2, b.y, BULLET_W, BULLET_H,
                     inv.x - INVADER_W/2, inv.y - INVADER_H/2, INVADER_W, INVADER_H)) {
                 inv.alive = false
-                gs.score += when (inv.row) { 0 -> 30; 1 -> 20; else -> 10 }
+                gs.score += when (inv.row) { 0 -> 40; 1 -> 30; 2 -> 20; else -> 10 }
                 pbIter.remove(); continue@outer
             }
         }
@@ -492,8 +492,8 @@ private fun drawGame(scope: DrawScope, gs: GameState, tick: Long, paused: Boolea
             }
             for (inv in gs.invaders) {
                 if (!inv.alive) continue
-                paint.textSize = 30f
-                c.nativeCanvas.drawText(EMOJIS[inv.row], inv.x, inv.y + 11f, paint)
+                paint.textSize = 22f
+                c.nativeCanvas.drawText(EMOJIS[inv.row], inv.x, inv.y + 9f, paint)
             }
             val showPlayer = gs.phase != Phase.HIT || (tick / 6) % 2 == 0L
             if (showPlayer) {
