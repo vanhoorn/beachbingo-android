@@ -87,6 +87,25 @@ fun PongSettingsScreen(
         scoreLimit = user.preferredPongScoreLimit ?: 7
     }
 
+    fun doSave() {
+        val uid = currentUser?.uid ?: return
+        saved = false
+        isSaving = true
+        scope.launch {
+            try {
+                Firebase.firestore.collection("users").document(uid).update(mapOf(
+                    "preferredPongPaddles" to paddles,
+                    "preferredPongDifficulty" to difficulty.name,
+                    "preferredPongScoreLimit" to scoreLimit,
+                )).await()
+                saved = true
+            } catch (_: Exception) {
+            } finally {
+                isSaving = false
+            }
+        }
+    }
+
     Scaffold(
         containerColor = BgDark,
         topBar = {
@@ -95,6 +114,18 @@ fun PongSettingsScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück", tint = OceanBlue)
+                    }
+                },
+                actions = {
+                    androidx.compose.material3.TextButton(
+                        onClick = { doSave() },
+                        enabled = !isSaving,
+                    ) {
+                        if (isSaving) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), color = OceanBlue, strokeWidth = 2.dp)
+                        } else {
+                            Text(if (saved) "✓" else "Speichern", color = OceanBlue, fontWeight = FontWeight.Bold)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark)
@@ -184,38 +215,6 @@ fun PongSettingsScreen(
                         color = TextPrimary
                     )
                     SettingsStepButton("+") { scoreLimit = (scoreLimit + 1).coerceAtMost(21) }
-                }
-            }
-
-            // Save button
-            Button(
-                onClick = {
-                    val uid = currentUser?.uid ?: return@Button
-                    saved = false
-                    isSaving = true
-                    scope.launch {
-                        try {
-                            Firebase.firestore.collection("users").document(uid).update(mapOf(
-                                "preferredPongPaddles" to paddles,
-                                "preferredPongDifficulty" to difficulty.name,
-                                "preferredPongScoreLimit" to scoreLimit,
-                            )).await()
-                            saved = true
-                        } catch (_: Exception) {
-                        } finally {
-                            isSaving = false
-                        }
-                    }
-                },
-                enabled = !isSaving,
-                modifier = Modifier.fillMaxWidth().height(54.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = OceanBlue)
-            ) {
-                if (isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
-                } else {
-                    Text(if (saved) "✓ Gespeichert" else "Speichern", fontWeight = FontWeight.ExtraBold, color = Color.White, fontSize = 16.sp)
                 }
             }
 

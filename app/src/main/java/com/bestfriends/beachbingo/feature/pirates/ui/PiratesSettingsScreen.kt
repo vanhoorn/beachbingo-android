@@ -61,6 +61,22 @@ fun PiratesSettingsScreen(onNavigateBack: () -> Unit) {
         controlMode = snap.getString("preferredPiratesControlMode") ?: "BUTTONS"
     }
 
+    fun doSave() {
+        if (uid == null) return
+        scope.launch {
+            saving = true
+            firestore.collection("users").document(uid).update(mapOf(
+                "preferredPiratesDifficulty" to selectedDifficulty,
+                "preferredPiratesFireRate" to fireRate,
+                "preferredPiratesControlMode" to controlMode,
+            )).await()
+            saving = false
+            saved = true
+            kotlinx.coroutines.delay(2500)
+            saved = false
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -68,6 +84,18 @@ fun PiratesSettingsScreen(onNavigateBack: () -> Unit) {
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Zurück", tint = TextPrimary)
+                    }
+                },
+                actions = {
+                    TextButton(
+                        onClick = { doSave() },
+                        enabled = !saving,
+                    ) {
+                        if (saving) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Purple, strokeWidth = 2.dp)
+                        } else {
+                            Text(if (saved) "✓" else "Speichern", color = Purple)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark),
@@ -169,30 +197,6 @@ fun PiratesSettingsScreen(onNavigateBack: () -> Unit) {
                     Text("✓ Einstellungen gespeichert", color = Success,
                         style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(10.dp))
                 }
-            }
-
-            Button(
-                onClick = {
-                    if (uid == null) return@Button
-                    scope.launch {
-                        saving = true
-                        firestore.collection("users").document(uid).update(mapOf(
-                            "preferredPiratesDifficulty" to selectedDifficulty,
-                            "preferredPiratesFireRate" to fireRate,
-                            "preferredPiratesControlMode" to controlMode,
-                        )).await()
-                        saving = false
-                        saved = true
-                        kotlinx.coroutines.delay(2500)
-                        saved = false
-                    }
-                },
-                enabled = !saving,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Purple),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Text(if (saving) "Speichern…" else "Einstellungen speichern", fontSize = 16.sp)
             }
 
             Spacer(Modifier.height(8.dp))

@@ -19,7 +19,9 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -82,6 +84,22 @@ fun VierSettingsScreen(
         selectedDifficulty = snap.getString("preferredVierDifficulty") ?: "SNIPER"
     }
 
+    fun doSave() {
+        if (uid == null) return
+        scope.launch {
+            saving = true
+            firestore.collection("users").document(uid)
+                .update(mapOf(
+                    "preferredVierDrinkId" to selectedDrinkId,
+                    "preferredVierDifficulty" to selectedDifficulty,
+                )).await()
+            saving = false
+            saved = true
+            kotlinx.coroutines.delay(2500)
+            saved = false
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -89,6 +107,18 @@ fun VierSettingsScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Zurück", tint = TextPrimary)
+                    }
+                },
+                actions = {
+                    TextButton(
+                        onClick = { doSave() },
+                        enabled = !saving,
+                    ) {
+                        if (saving) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Coral, strokeWidth = 2.dp)
+                        } else {
+                            Text(if (saved) "✓" else "Speichern", color = Coral)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark),
@@ -213,34 +243,6 @@ fun VierSettingsScreen(
                         modifier = Modifier.padding(10.dp),
                     )
                 }
-            }
-
-            Button(
-                onClick = {
-                    if (uid == null) return@Button
-                    scope.launch {
-                        saving = true
-                        firestore.collection("users").document(uid)
-                            .update(
-                                mapOf(
-                                    "preferredVierDrinkId" to selectedDrinkId,
-                                    "preferredVierDifficulty" to selectedDifficulty,
-                                )
-                            ).await()
-                        saving = false
-                        saved = true
-                        kotlinx.coroutines.delay(2500)
-                        saved = false
-                    }
-                },
-                enabled = !saving,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Coral),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Text(if (saving) "Speichern…" else "Einstellungen speichern")
             }
 
             Spacer(Modifier.size(8.dp))

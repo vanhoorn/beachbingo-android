@@ -23,6 +23,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.SnackbarHost
@@ -115,6 +116,22 @@ fun ProfileScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
                     }
                 },
+                actions = {
+                    TextButton(
+                        onClick = { viewModel.signOut(); onSignOut() },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) { Text("Abmelden") }
+                    TextButton(
+                        onClick = { viewModel.updateProfile(displayName, selectedAvatar) },
+                        enabled = !uiState.isLoading && displayName.isNotBlank(),
+                    ) {
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("Speichern")
+                        }
+                    }
+                },
                 windowInsets = TopAppBarDefaults.windowInsets,
             )
         },
@@ -193,46 +210,7 @@ fun ProfileScreen(
                 shape = RoundedCornerShape(12.dp)
             )
 
-            Button(
-                onClick = { viewModel.updateProfile(displayName, selectedAvatar) },
-                enabled = !uiState.isLoading && displayName.isNotBlank(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(14.dp)
-            ) {
-                if (uiState.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(22.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Text("Speichern", style = MaterialTheme.typography.labelLarge)
-                }
-            }
-
-            Spacer(Modifier.weight(1f))
-
-            HorizontalDivider()
-
-            OutlinedButton(
-                onClick = {
-                    viewModel.signOut()
-                    onSignOut()
-                },
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(14.dp)
-            ) {
-                Text("Abmelden", style = MaterialTheme.typography.labelLarge)
-            }
-
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
         }
     }
 }

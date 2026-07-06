@@ -53,7 +53,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestfriends.beachbingo.feature.auth.viewmodel.AuthViewModel
 
-val BEACH_AVATARS    = listOf("🏄", "🤿", "🦀", "🐚", "🌊", "🦞", "☀️", "🏖️", "🐠", "🦈", "🐡", "🦭", "🌴", "⛵", "🐬")
+val BEACH_AVATARS    = listOf("🏄", "🤿", "🦀", "🐚", "🌊", "🦞", "🌞", "🌅", "🐠", "🦈", "🐡", "🦭", "🌴", "⛵", "🐬")
 val COCKTAIL_AVATARS = listOf("🍸", "🥂", "🍾", "🥃", "🍷", "🧋", "🍺", "🍻", "🫗", "🧃", "🍵", "🥤", "🍋", "🫧", "🍑")
 val HOTPROMS_AVATARS = listOf("🦁👑", "🐍👑", "💜🎤", "🤠🎸", "🎸🔥", "🤡🃏", "💣🎤", "🌹💃", "🦆🎬", "💃🕺", "🎀🔮", "🌹🎸", "🎭✨", "⚡🌟", "☂️💄")
 

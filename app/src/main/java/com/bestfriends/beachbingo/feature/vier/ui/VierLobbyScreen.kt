@@ -25,9 +25,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -109,7 +111,33 @@ fun VierLobbyScreen(
 
     val context = LocalContext.current
 
-    Scaffold(containerColor = BgDark) { padding ->
+    Scaffold(
+        containerColor = BgDark,
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text("VIER4BIER", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                        Text("🍺 Lobby", style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.ExtraBold)
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück", tint = TextPrimary)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onNavigateToResults) {
+                        Icon(Icons.Default.EmojiEvents, contentDescription = "Ergebnisse", tint = SandGold)
+                    }
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Einstellungen", tint = TextSub)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark),
+            )
+        },
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -119,21 +147,6 @@ fun VierLobbyScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Spacer(Modifier.height(8.dp))
-
-            // Back to home
-            OutlinedButton(
-                onClick = onNavigateBack,
-                modifier = Modifier.align(Alignment.Start),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSub),
-            ) {
-                Text("‹ Spielauswahl")
-            }
-
-            VierHeader(
-                onNavigateToResults = onNavigateToResults,
-                onNavigateToSettings = onNavigateToSettings,
-            )
 
             // ── Step: Mode ──
             if (step == "mode") {
@@ -435,63 +448,6 @@ fun VierLobbyScreen(
     }
 }
 
-@Composable
-private fun VierHeader(
-    onNavigateToResults: () -> Unit,
-    onNavigateToSettings: () -> Unit,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = Color(0xFF7C2D12),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Text("🍺", fontSize = 44.sp)
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Vier4Bier",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.6f),
-                    letterSpacing = 1.5.sp,
-                )
-                Text(
-                    text = "Vier in einer Reihe",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White,
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(
-                    onClick = onNavigateToResults,
-                    modifier = Modifier.size(42.dp),
-                ) {
-                    Icon(
-                        Icons.Default.EmojiEvents,
-                        contentDescription = "Ergebnisse",
-                        tint = Color.White.copy(alpha = 0.8f),
-                    )
-                }
-                IconButton(
-                    onClick = onNavigateToSettings,
-                    modifier = Modifier.size(42.dp),
-                ) {
-                    Icon(
-                        Icons.Default.Settings,
-                        contentDescription = "Einstellungen",
-                        tint = Color.White.copy(alpha = 0.8f),
-                    )
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun ModeCard(

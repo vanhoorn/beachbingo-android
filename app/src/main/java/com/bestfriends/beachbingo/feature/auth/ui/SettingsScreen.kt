@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -95,6 +96,18 @@ fun SettingsScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
+                    }
+                },
+                actions = {
+                    TextButton(
+                        onClick = { viewModel.updateGamePreferences(selectedGameMode, selectedDrawStyle, eliminationInterval) },
+                        enabled = !uiState.isLoading
+                    ) {
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("Speichern")
+                        }
                     }
                 }
             )
@@ -213,25 +226,6 @@ fun SettingsScreen(
             )
 
             Spacer(Modifier.height(4.dp))
-
-            Button(
-                onClick = { viewModel.updateGamePreferences(selectedGameMode, selectedDrawStyle, eliminationInterval) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(14.dp),
-                enabled = !uiState.isLoading
-            ) {
-                if (uiState.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(22.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Text("Einstellungen speichern", style = MaterialTheme.typography.labelLarge)
-                }
-            }
 
             HorizontalDivider()
 

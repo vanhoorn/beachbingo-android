@@ -8,7 +8,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -41,6 +42,7 @@ fun PiratesLobbyScreen(
     onNavigateToGame: (difficulty: String, fireRate: Int, controlMode: String) -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToHome: () -> Unit,
+    onNavigateToResults: () -> Unit = {},
 ) {
     val auth = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
@@ -66,13 +68,21 @@ fun PiratesLobbyScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("BeachPirates", color = TextPrimary) },
+                title = {
+                    Column {
+                        Text("BEACHPIRATES", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                        Text("🐙 Lobby", style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.ExtraBold)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateToHome) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Zurück", tint = TextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück", tint = TextPrimary)
                     }
                 },
                 actions = {
+                    IconButton(onClick = onNavigateToResults) {
+                        Icon(Icons.Default.EmojiEvents, contentDescription = "Ergebnisse", tint = SandGold)
+                    }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Einstellungen", tint = TextMuted)
                     }

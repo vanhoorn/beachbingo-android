@@ -183,7 +183,7 @@ fun PongLobbyScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("BeachVolley", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                        Text("BEACHVOLLEY", style = MaterialTheme.typography.labelSmall, color = TextMuted)
                         Text("🏓 Lobby", style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.ExtraBold)
                     }
                 },
