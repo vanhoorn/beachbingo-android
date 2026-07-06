@@ -44,6 +44,7 @@ sealed interface Screen {
         val controlMode: String,
     ) : Screen
     @Serializable object PiratesSettings : Screen
+    @Serializable object PiratesHighscore : Screen
     @Serializable data class PiratesResults(
         val score: Int,
         val wave: Int,

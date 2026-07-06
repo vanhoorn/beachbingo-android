@@ -51,7 +51,6 @@ fun PiratesLobbyScreen(
     var difficulty by remember { mutableStateOf("SNIPER") }
     var fireRate by remember { mutableIntStateOf(5) }
     var controlMode by remember { mutableStateOf("BUTTONS") }
-    var highScores by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
     var loading by remember { mutableStateOf(true) }
 
     LaunchedEffect(uid) {
@@ -60,8 +59,6 @@ fun PiratesLobbyScreen(
         difficulty = snap.getString("preferredPiratesDifficulty") ?: "SNIPER"
         fireRate = (snap.getLong("preferredPiratesFireRate") ?: 5L).toInt()
         controlMode = snap.getString("preferredPiratesControlMode") ?: "BUTTONS"
-        @Suppress("UNCHECKED_CAST")
-        highScores = (snap.get("piratesHighScores") as? Map<String, Long>) ?: emptyMap()
         loading = false
     }
 
@@ -127,47 +124,6 @@ fun PiratesLobbyScreen(
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-
-                // High scores
-                Text("Rekorde", style = MaterialTheme.typography.labelLarge, color = TextSub,
-                    modifier = Modifier.padding(start = 4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    DIFF_OPTIONS.forEach { diff ->
-                        val hs = highScores[diff.id]
-                        val isActive = difficulty == diff.id
-                        Surface(
-                            color = if (isActive) Purple.copy(alpha = 0.15f) else SurfaceDark,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .border(
-                                    width = if (isActive) 2.dp else 1.dp,
-                                    color = if (isActive) Purple else BorderColor,
-                                    shape = RoundedCornerShape(12.dp),
-                                ),
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
-                                Text(diff.emoji, fontSize = 20.sp)
-                                Text(
-                                    diff.label,
-                                    fontSize = 10.sp,
-                                    color = if (isActive) Purple else TextMuted,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                                Text(
-                                    if (hs != null) "$hs" else "–",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isActive) Purple else TextPrimary,
-                                )
-                            }
-                        }
-                    }
-                }
 
                 // Difficulty selection
                 Text("Schwierigkeit", style = MaterialTheme.typography.labelLarge, color = TextSub,

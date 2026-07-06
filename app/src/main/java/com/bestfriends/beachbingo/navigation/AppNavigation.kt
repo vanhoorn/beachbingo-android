@@ -34,6 +34,7 @@ import com.bestfriends.beachbingo.feature.vier.ui.VierResultsScreen
 import com.bestfriends.beachbingo.feature.vier.ui.VierSettingsScreen
 import com.bestfriends.beachbingo.feature.pirates.ui.PiratesLobbyScreen
 import com.bestfriends.beachbingo.feature.pirates.ui.PiratesGameScreen
+import com.bestfriends.beachbingo.feature.pirates.ui.PiratesHighscoreScreen
 import com.bestfriends.beachbingo.feature.pirates.ui.PiratesResultsScreen
 import com.bestfriends.beachbingo.feature.pirates.ui.PiratesSettingsScreen
 
@@ -266,7 +267,12 @@ fun AppNavigation() {
                         popUpTo(Screen.Home) { inclusive = false }
                     }
                 },
+                onNavigateToResults = { navController.navigate(Screen.PiratesHighscore) },
             )
+        }
+
+        composable<Screen.PiratesHighscore> {
+            PiratesHighscoreScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable<Screen.PiratesGame> { backStack ->
