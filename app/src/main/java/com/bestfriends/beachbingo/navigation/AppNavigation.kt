@@ -55,10 +55,8 @@ fun AppNavigation() {
 
     LaunchedEffect(currentUser) {
         if (currentUser != null) {
-            val onAuthScreen = navController.currentBackStackEntry
-                ?.destination
-                ?.run { hasRoute(Screen.Login::class) || hasRoute(Screen.Register::class) }
-                ?: false
+            val route = navController.currentBackStackEntry?.destination?.route ?: ""
+            val onAuthScreen = "Screen.Login" in route || "Screen.Register" in route
             if (onAuthScreen) {
                 navController.navigate(Screen.Home) {
                     popUpTo(Screen.Login) { inclusive = true }
