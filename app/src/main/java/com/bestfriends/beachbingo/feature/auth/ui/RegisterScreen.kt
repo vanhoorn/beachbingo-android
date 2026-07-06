@@ -3,6 +3,7 @@ package com.bestfriends.beachbingo.feature.auth.ui
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment as UiAlignment
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -50,7 +53,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestfriends.beachbingo.feature.auth.viewmodel.AuthViewModel
 
-val BEACH_AVATARS = listOf("🏄", "🤿", "🦀", "🐚", "🌊", "🦞", "☀️", "🏖️", "🐠", "🦈", "🐡", "🦭", "🌴", "🍹", "⛵")
+val BEACH_AVATARS    = listOf("🏄", "🤿", "🦀", "🐚", "🌊", "🦞", "☀️", "🏖️", "🐠", "🦈", "🐡", "🦭", "🌴", "⛵", "🐬")
+val COCKTAIL_AVATARS = listOf("🍸", "🥂", "🍾", "🥃", "🍷", "🧋", "🍺", "🍻", "🫗", "🧃", "🍵", "🥤", "🍋", "🫧", "🍑")
+val HOTPROMS_AVATARS = listOf("🦁👑", "🐍👑", "💜🎤", "🤠🎸", "🎸🔥", "🤡🃏", "💣🎤", "🌹💃", "🦆🎬", "💃🕺", "🎀🔮", "🌹🎸", "🎭✨", "⚡🌟", "☂️💄")
+
+data class AvatarCategory(val label: String, val emoji: String, val avatars: List<String>)
+val AVATAR_CATEGORIES = listOf(
+    AvatarCategory("Beach",    "🏖️", BEACH_AVATARS),
+    AvatarCategory("Cocktails","🍸", COCKTAIL_AVATARS),
+    AvatarCategory("HotProms", "⭐", HOTPROMS_AVATARS),
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -191,28 +203,56 @@ fun RegisterScreen(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun AvatarPicker(selected: String, onSelect: (String) -> Unit, modifier: Modifier = Modifier) {
+fun AvatarPicker(
+    selected: String,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    avatars: List<String> = BEACH_AVATARS
+) {
     FlowRow(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        BEACH_AVATARS.forEach { emoji ->
+        avatars.forEach { emoji ->
             val isSelected = emoji == selected
-            Text(
-                text = emoji,
-                fontSize = 28.sp,
+            val isDouble = emoji.length >= 4 && emoji[0].isHighSurrogate() && emoji[2].isHighSurrogate()
+            val shape = RoundedCornerShape(14.dp)
+            Box(
+                contentAlignment = UiAlignment.Center,
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
+                    .size(64.dp)
+                    .clip(shape)
                     .then(
-                        if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                        if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape)
                         else Modifier
                     )
                     .clickable { onSelect(emoji) }
-                    .padding(8.dp),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
+            ) {
+                if (isDouble) {
+                    Column(
+                        horizontalAlignment = UiAlignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = emoji.substring(0, 2),
+                            fontSize = 22.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Text(
+                            text = emoji.substring(2),
+                            fontSize = 18.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                } else {
+                    Text(
+                        text = emoji,
+                        fontSize = 28.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
         }
     }
 }

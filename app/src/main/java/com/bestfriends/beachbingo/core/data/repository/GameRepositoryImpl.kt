@@ -35,17 +35,14 @@ class GameRepositoryImpl @Inject constructor(
     override fun observeUserResults(userId: String): Flow<List<GameResult>> = callbackFlow {
         val listener = results
             .whereArrayContains("playerIds", userId)
-            .orderBy("finishedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    // Fehlende Firestore-Indizes → leere Liste statt Crash
-                    // Index-Link erscheint im Logcat
                     trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val list = snapshot?.documents?.mapNotNull { doc ->
                     doc.toObject(GameResult::class.java)?.copy(resultId = doc.id)
-                } ?: emptyList()
+                }?.sortedByDescending { it.finishedAt } ?: emptyList()
                 trySend(list)
             }
         awaitClose { listener.remove() }
@@ -134,7 +131,7 @@ class GameRepositoryImpl @Inject constructor(
                 "totalDrawCount" to newTotalDrawCount
             )
             val interval = (snap.get("eliminationInterval") as? Long)?.toInt()?.takeIf { it > 0 } ?: 5
-            if (mode == GameMode.BOSS_LEVEL && newTotalDrawCount % interval == 0) {
+            if ((mode == GameMode.BOSS_LEVEL || mode == GameMode.MINI_BOSS_LEVEL) && newTotalDrawCount % interval == 0) {
                 val playerIds = (snap.get("playerIds") as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
                 if (playerIds.isNotEmpty()) {
                     updates["eliminationPendingPlayerId"] = playerIds.random()

@@ -2,6 +2,7 @@ package com.bestfriends.beachbingo.core.data.repository
 
 import com.bestfriends.beachbingo.core.model.DrawStyle
 import com.bestfriends.beachbingo.core.model.GameMode
+import com.bestfriends.beachbingo.core.model.PongDifficulty
 import com.bestfriends.beachbingo.core.model.User
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
@@ -47,7 +48,12 @@ class AuthRepositoryImpl @Inject constructor(
                                 preferredDrawStyle = (data["preferredDrawStyle"] as? String)?.let {
                                     runCatching { DrawStyle.valueOf(it) }.getOrDefault(DrawStyle.INSTANT)
                                 } ?: DrawStyle.INSTANT,
-                                bossLevelEliminationInterval = (data["bossLevelEliminationInterval"] as? Long)?.toInt() ?: 5
+                                bossLevelEliminationInterval = (data["bossLevelEliminationInterval"] as? Long)?.toInt() ?: 5,
+                                preferredPongDifficulty = (data["preferredPongDifficulty"] as? String)?.let {
+                                    runCatching { PongDifficulty.valueOf(it) }.getOrNull()
+                                },
+                                preferredPongScoreLimit = (data["preferredPongScoreLimit"] as? Long)?.toInt(),
+                                preferredPongPaddles = (data["preferredPongPaddles"] as? Long)?.toInt(),
                             )
                         } else {
                             User(uid = fbUser.uid, email = fbUser.email ?: "", displayName = fbUser.displayName ?: "")

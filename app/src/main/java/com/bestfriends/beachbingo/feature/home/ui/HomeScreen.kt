@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -73,10 +74,10 @@ private val GAMES = listOf(
     GameEntry(
         id = "pong",
         emoji = "🏓",
-        title = "BeachPong",
+        title = "BeachVolley",
         description = "Klassisches Tischtennis am Strand – wer gewinnt die Runde?",
         accentColor = Coral,
-        available = false,
+        available = true,
     ),
     GameEntry(
         id = "vier",
@@ -84,14 +85,17 @@ private val GAMES = listOf(
         title = "Vier4Bier",
         description = "Vier in einer Reihe mit Beach-Twist.",
         accentColor = SandGold,
-        available = false,
+        available = true,
     ),
 )
 
 @Composable
 fun HomeScreen(
     onNavigateToBingoLobby: () -> Unit,
+    onNavigateToPongLobby: () -> Unit,
+    onNavigateToVierLobby: () -> Unit,
     onNavigateToProfile: () -> Unit,
+    onNavigateToJoin: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel(),
 ) {
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
@@ -100,6 +104,7 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(BgDark)
+            .statusBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
         // Hero
@@ -195,12 +200,62 @@ fun HomeScreen(
                 GameCard(
                     game = game,
                     onClick = {
-                        if (game.available) {
-                            when (game.id) {
-                                "bingo" -> onNavigateToBingoLobby()
-                            }
+                        when (game.id) {
+                            "bingo" -> onNavigateToBingoLobby()
+                            "pong"  -> onNavigateToPongLobby()
+                            "vier"  -> onNavigateToVierLobby()
                         }
                     }
+                )
+            }
+        }
+
+        // Join button
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = SurfaceDark,
+            modifier = Modifier
+                .padding(horizontal = 20.dp)
+                .fillMaxWidth()
+                .border(
+                    width = 1.5.dp,
+                    color = BorderColor,
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .clickable { onNavigateToJoin() }
+        ) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = OceanBlue.copy(alpha = 0.12f),
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text("🔗", fontSize = 26.sp)
+                    }
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Spiel beitreten",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                    )
+                    Text(
+                        text = "QR-Code scannen oder Code eingeben",
+                        fontSize = 12.sp,
+                        color = TextMuted,
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = TextMuted,
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }

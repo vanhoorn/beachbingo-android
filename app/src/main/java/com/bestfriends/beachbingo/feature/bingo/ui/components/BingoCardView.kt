@@ -105,22 +105,28 @@ private fun BingoCell(
     modifier: Modifier = Modifier
 ) {
     val backgroundColor = when {
+        isFree -> Color(0xFFFFD600)
         isMarked -> MaterialTheme.colorScheme.primary
-        isDrawn && showDrawnHighlight -> MaterialTheme.colorScheme.primaryContainer
         else -> MaterialTheme.colorScheme.surface
     }
     val textColor = when {
+        isFree -> Color(0xFF5D4037)
         isMarked -> MaterialTheme.colorScheme.onPrimary
-        isDrawn && showDrawnHighlight -> MaterialTheme.colorScheme.onPrimaryContainer
         else -> MaterialTheme.colorScheme.onSurface
     }
+    val borderColor = when {
+        isDrawn && showDrawnHighlight && !isMarked && !isFree ->
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+    }
+    val borderWidth = if (isDrawn && showDrawnHighlight && !isMarked && !isFree) 2.dp else 1.dp
 
     Box(
         modifier = modifier
             .aspectRatio(1f)
             .clip(RoundedCornerShape(6.dp))
             .background(backgroundColor)
-            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+            .border(borderWidth, borderColor, RoundedCornerShape(6.dp))
             .clickable(enabled = !isMarked && isDrawn && !isFree, onClick = onClick)
             .padding(2.dp),
         contentAlignment = Alignment.Center

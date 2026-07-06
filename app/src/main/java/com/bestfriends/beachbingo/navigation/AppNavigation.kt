@@ -24,6 +24,14 @@ import com.bestfriends.beachbingo.feature.bingo.ui.JoinGameScreen
 import com.bestfriends.beachbingo.feature.bingo.ui.LobbyScreen
 import com.bestfriends.beachbingo.feature.bingo.ui.ResultsScreen
 import com.bestfriends.beachbingo.feature.home.ui.HomeScreen
+import com.bestfriends.beachbingo.feature.pong.ui.PongGameScreen
+import com.bestfriends.beachbingo.feature.pong.ui.PongLobbyScreen
+import com.bestfriends.beachbingo.feature.pong.ui.PongResultsScreen
+import com.bestfriends.beachbingo.feature.pong.ui.PongSettingsScreen
+import com.bestfriends.beachbingo.feature.vier.ui.VierGameScreen
+import com.bestfriends.beachbingo.feature.vier.ui.VierLobbyScreen
+import com.bestfriends.beachbingo.feature.vier.ui.VierResultsScreen
+import com.bestfriends.beachbingo.feature.vier.ui.VierSettingsScreen
 
 @Composable
 fun AppNavigation() {
@@ -77,7 +85,10 @@ fun AppNavigation() {
         composable<Screen.Home> {
             HomeScreen(
                 onNavigateToBingoLobby = { navController.navigate(Screen.Lobby) },
+                onNavigateToPongLobby = { navController.navigate(Screen.PongLobby) },
+                onNavigateToVierLobby = { navController.navigate(Screen.VierLobby) },
                 onNavigateToProfile = { navController.navigate(Screen.Profile) },
+                onNavigateToJoin = { navController.navigate(Screen.JoinGame) },
                 viewModel = authViewModel
             )
         }
@@ -89,9 +100,7 @@ fun AppNavigation() {
                         popUpTo(Screen.Home) { inclusive = false }
                     }
                 },
-                onNavigateToJoinGame = { navController.navigate(Screen.JoinGame) },
                 onNavigateToGame = { gameId -> navController.navigate(Screen.Game(gameId)) },
-                onNavigateToProfile = { navController.navigate(Screen.Profile) },
                 onNavigateToResults = { navController.navigate(Screen.Results) },
                 onNavigateToSettings = { navController.navigate(Screen.Settings) }
             )
@@ -99,10 +108,20 @@ fun AppNavigation() {
 
         composable<Screen.JoinGame> {
             JoinGameScreen(
-                onNavigateToGame = { gameId ->
+                onNavigateToBingo = { gameId ->
                     navController.navigate(Screen.Game(gameId)) {
-                        popUpTo(Screen.Lobby)
+                        popUpTo(Screen.Home)
                     }
+                },
+                onNavigateToPong = { gameId, totalPaddles, humanCount, difficulty, scoreLimit, isHost, mySide ->
+                    navController.navigate(
+                        Screen.PongGame(gameId, totalPaddles, humanCount, difficulty, scoreLimit, isHost, mySide)
+                    ) { popUpTo(Screen.Home) }
+                },
+                onNavigateToVier = { gameId, myDrinkId ->
+                    navController.navigate(
+                        Screen.VierGame("online", gameId, myDrinkId, null)
+                    ) { popUpTo(Screen.Home) }
                 },
                 onNavigateBack = { navController.popBackStack() }
             )
@@ -141,6 +160,91 @@ fun AppNavigation() {
                 onNavigateBack = { navController.popBackStack() },
                 viewModel = authViewModel
             )
+        }
+
+        // ── BeachPong ──────────────────────────────────────────────────────────
+        composable<Screen.PongLobby> {
+            PongLobbyScreen(
+                onNavigateToHome = {
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Home) { inclusive = false }
+                    }
+                },
+                onNavigateToGame = { gameId, totalPaddles, humanCount, difficulty, scoreLimit, isHost, mySide ->
+                    navController.navigate(
+                        Screen.PongGame(gameId, totalPaddles, humanCount, difficulty, scoreLimit, isHost, mySide)
+                    ) { popUpTo(Screen.PongLobby) }
+                },
+                onNavigateToResults = { navController.navigate(Screen.PongResults) },
+                onNavigateToSettings = { navController.navigate(Screen.PongSettings) },
+            )
+        }
+
+        composable<Screen.PongGame> { backStack ->
+            val route: Screen.PongGame = backStack.toRoute()
+            PongGameScreen(
+                gameId = route.gameId,
+                totalPaddles = route.totalPaddles,
+                humanCount = route.humanCount,
+                difficulty = route.difficulty,
+                scoreLimit = route.scoreLimit,
+                isHost = route.isHost,
+                mySide = route.mySide,
+                onNavigateToLobby = {
+                    navController.navigate(Screen.PongLobby) {
+                        popUpTo(Screen.PongLobby) { inclusive = true }
+                    }
+                },
+            )
+        }
+
+        composable<Screen.PongSettings> {
+            PongSettingsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable<Screen.PongResults> {
+            PongResultsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable<Screen.VierLobby> {
+            VierLobbyScreen(
+                onNavigateBack = {
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Home) { inclusive = false }
+                    }
+                },
+                onNavigateToGame = { mode, gameId, myDrinkId, aiDrinkId, aiDifficulty ->
+                    navController.navigate(Screen.VierGame(mode, gameId, myDrinkId, aiDrinkId, aiDifficulty)) {
+                        popUpTo(Screen.VierLobby)
+                    }
+                },
+                onNavigateToResults = { navController.navigate(Screen.VierResults) },
+                onNavigateToSettings = { navController.navigate(Screen.VierSettings) },
+            )
+        }
+
+        composable<Screen.VierGame> { backStack ->
+            val route: Screen.VierGame = backStack.toRoute()
+            VierGameScreen(
+                mode = route.mode,
+                gameId = route.gameId,
+                myDrinkId = route.myDrinkId,
+                aiDrinkId = route.aiDrinkId,
+                aiDifficulty = route.aiDifficulty,
+                onNavigateBack = {
+                    navController.navigate(Screen.VierLobby) {
+                        popUpTo(Screen.VierLobby) { inclusive = true }
+                    }
+                },
+            )
+        }
+
+        composable<Screen.VierSettings> {
+            VierSettingsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable<Screen.VierResults> {
+            VierResultsScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
 }

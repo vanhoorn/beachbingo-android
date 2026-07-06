@@ -12,4 +12,28 @@ sealed interface Screen {
     @Serializable object Profile : Screen
     @Serializable object Results : Screen
     @Serializable object Settings : Screen
+    // BeachPong
+    @Serializable object PongLobby : Screen
+    @Serializable data class PongGame(
+        val gameId: String?,
+        val totalPaddles: Int,
+        val humanCount: Int,
+        val difficulty: String,
+        val scoreLimit: Int,
+        val isHost: Boolean,
+        val mySide: String,
+    ) : Screen
+    @Serializable object PongSettings : Screen
+    @Serializable object PongResults : Screen
+    // Vier4Bier
+    @Serializable object VierLobby : Screen
+    @Serializable data class VierGame(
+        val mode: String,
+        val gameId: String?,
+        val myDrinkId: String,
+        val aiDrinkId: String?,
+        val aiDifficulty: String = "SNIPER",
+    ) : Screen
+    @Serializable object VierSettings : Screen
+    @Serializable object VierResults : Screen
 }

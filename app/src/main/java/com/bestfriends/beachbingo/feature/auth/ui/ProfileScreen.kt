@@ -24,14 +24,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,6 +47,28 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestfriends.beachbingo.feature.auth.viewmodel.AuthViewModel
+
+private val HOTPROMS_NAMES = mapOf(
+    "🦁👑" to "Beyoncé",        "🐍👑" to "Taylor Swift",   "💜🎤" to "Prince",
+    "🤠🎸" to "Elvis",          "🎸🔥" to "Freddie Mercury", "🤡🃏" to "Joker / Joaquin",
+    "💣🎤" to "Eminem",         "🌹💃" to "Jennifer Lopez",  "🦆🎬" to "Tarantino",
+    "💃🕺" to "ABBA",           "🎀🔮" to "Madonna",         "🌹🎸" to "The Smiths",
+    "🎭✨" to "Lady Gaga",       "⚡🌟" to "David Bowie",    "☂️💄" to "Rihanna",
+)
+private val COCKTAIL_NAMES = mapOf(
+    "🍸" to "Martini",   "🥂" to "Champagner", "🍾" to "Flasche",    "🥃" to "Whisky",
+    "🍷" to "Rotwein",   "🧋" to "Bubble Tea", "🍺" to "Bier",        "🍻" to "Prost!",
+    "🫗" to "Eingießen", "🧃" to "Saft",        "🍵" to "Matcha",      "🥤" to "Smoothie",
+    "🍋" to "Limoncello","🫧" to "Sprudel",     "🍑" to "Bellini",
+)
+
+private fun avatarName(av: String) = HOTPROMS_NAMES[av] ?: COCKTAIL_NAMES[av] ?: ""
+
+/** Returns first emoji from a (possibly two-emoji) avatar string. */
+private fun String.firstEmoji(): String {
+    if (isEmpty()) return this
+    return if (length >= 2 && this[0].isHighSurrogate()) substring(0, 2) else substring(0, 1)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,6 +86,10 @@ fun ProfileScreen(
     }
     var selectedAvatar by remember(currentUser) {
         mutableStateOf(currentUser?.avatarUrl?.ifEmpty { BEACH_AVATARS.first() } ?: BEACH_AVATARS.first())
+    }
+    var activeTab by remember(selectedAvatar) {
+        val idx = AVATAR_CATEGORIES.indexOfFirst { selectedAvatar in it.avatars }.takeIf { it >= 0 } ?: 0
+        mutableIntStateOf(idx)
     }
 
     LaunchedEffect(uiState.error) {
@@ -84,7 +114,8 @@ fun ProfileScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
                     }
-                }
+                },
+                windowInsets = TopAppBarDefaults.windowInsets,
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -108,12 +139,28 @@ fun ProfileScreen(
             ) {
                 Text(
                     text = selectedAvatar,
-                    fontSize = 56.sp,
+                    fontSize = if (selectedAvatar.length > 2) 40.sp else 56.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(top = 10.dp)
+                        .padding(top = if (selectedAvatar.length > 2) 18.dp else 10.dp)
                 )
+            }
+
+            // Prominame-Badge (nur bei HotProms / Cocktails)
+            val prominame = avatarName(selectedAvatar)
+            if (prominame.isNotEmpty()) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                ) {
+                    Text(
+                        text = "⭐ $prominame",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
+                }
             }
 
             Text(
@@ -126,10 +173,15 @@ fun ProfileScreen(
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text("Avatar ändern", style = MaterialTheme.typography.titleMedium)
-                AvatarPicker(selected = selectedAvatar, onSelect = { selectedAvatar = it })
+                TabbedAvatarPicker(
+                    selected = selectedAvatar,
+                    activeTab = activeTab,
+                    onTabChange = { activeTab = it },
+                    onSelect = { selectedAvatar = it }
+                )
             }
 
             OutlinedTextField(
@@ -182,5 +234,35 @@ fun ProfileScreen(
 
             Spacer(Modifier.height(16.dp))
         }
+    }
+}
+
+@Composable
+fun TabbedAvatarPicker(
+    selected: String,
+    activeTab: Int,
+    onTabChange: (Int) -> Unit,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        ScrollableTabRow(
+            selectedTabIndex = activeTab,
+            edgePadding = 0.dp,
+        ) {
+            AVATAR_CATEGORIES.forEachIndexed { index, cat ->
+                Tab(
+                    selected = activeTab == index,
+                    onClick = { onTabChange(index) },
+                    text = { Text("${cat.emoji} ${cat.label}", style = MaterialTheme.typography.labelMedium) }
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        AvatarPicker(
+            avatars = AVATAR_CATEGORIES[activeTab].avatars,
+            selected = selected,
+            onSelect = onSelect,
+        )
     }
 }

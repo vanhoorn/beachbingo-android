@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -64,9 +63,7 @@ import com.bestfriends.beachbingo.feature.bingo.viewmodel.LobbyViewModel
 @Composable
 fun LobbyScreen(
     onNavigateToHome: () -> Unit,
-    onNavigateToJoinGame: () -> Unit,
     onNavigateToGame: (String) -> Unit,
-    onNavigateToProfile: () -> Unit,
     onNavigateToResults: () -> Unit,
     onNavigateToSettings: () -> Unit,
     viewModel: LobbyViewModel = hiltViewModel()
@@ -134,6 +131,7 @@ fun LobbyScreen(
                                     "Level: ${when (user.preferredGameMode) {
                                         GameMode.AUTO_MARK -> "🌊 Rookie"
                                         GameMode.MANUAL_MARK -> "🎯 Sniper"
+                                        GameMode.MINI_BOSS_LEVEL -> "🔵 Mini Boss Level"
                                         GameMode.BOSS_LEVEL -> "💪 Boss Level"
                                     }}",
                                     style = MaterialTheme.typography.bodyMedium
@@ -194,9 +192,6 @@ fun LobbyScreen(
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Einstellungen", modifier = Modifier.size(28.dp))
                     }
-                    IconButton(onClick = onNavigateToProfile) {
-                        Icon(Icons.Default.Person, contentDescription = "Profil", modifier = Modifier.size(28.dp))
-                    }
                 },
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.largeTopAppBarColors(
@@ -228,18 +223,6 @@ fun LobbyScreen(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            item {
-                OutlinedButton(
-                    onClick = onNavigateToJoinGame,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("🔑  Spiel beitreten (Code eingeben)", style = MaterialTheme.typography.labelLarge)
-                }
-            }
-
             if (userGames.isEmpty()) {
                 item {
                     Column(
@@ -314,6 +297,7 @@ private fun GameCard(game: BingoGame, isAdmin: Boolean, onClick: () -> Unit, onD
                         when (game.gameMode) {
                             GameMode.AUTO_MARK -> "🌊 Rookie"
                             GameMode.MANUAL_MARK -> "🎯 Sniper"
+                            GameMode.MINI_BOSS_LEVEL -> "🔵 Mini Boss Level"
                             GameMode.BOSS_LEVEL -> "💪 Boss Level"
                         }
                     }",

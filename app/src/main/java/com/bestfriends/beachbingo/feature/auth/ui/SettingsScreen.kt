@@ -133,13 +133,19 @@ fun SettingsScreen(
                 description = "Spieler tippen selbst auf ihre Zahlen. Klassisches Bingo-Feeling."
             )
             SettingsOption(
+                selected = selectedGameMode == GameMode.MINI_BOSS_LEVEL,
+                onClick = { selectedGameMode = GameMode.MINI_BOSS_LEVEL },
+                title = "🔵 3. Mini Boss Level",
+                description = "Wie Boss Level, aber gezogene Zahlen werden blau umrandet — du siehst sofort welche du noch antippen kannst."
+            )
+            SettingsOption(
                 selected = selectedGameMode == GameMode.BOSS_LEVEL,
                 onClick = { selectedGameMode = GameMode.BOSS_LEVEL },
-                title = "💪 3. Boss Level",
-                description = "Alle N Züge wirft ein Spieler eine gezogene Zahl zurück in die Lostrommel — mit Animation auf allen Geräten."
+                title = "💪 4. Boss Level",
+                description = "Alle N Züge wirft ein Spieler eine gezogene Zahl zurück in die Lostrommel — kein Highlight, voller Überblick selbst gefragt."
             )
 
-            if (selectedGameMode == GameMode.BOSS_LEVEL) {
+            if (selectedGameMode == GameMode.BOSS_LEVEL || selectedGameMode == GameMode.MINI_BOSS_LEVEL) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),

@@ -838,9 +838,10 @@ private fun LobbyQrCard(gameId: String, game: BingoGame) {
                 }
                 Spacer(Modifier.height(4.dp))
                 val modeLabel = when (game.gameMode) {
-                    GameMode.AUTO_MARK -> "Level: 1. Rookie"
-                    GameMode.MANUAL_MARK -> "Level: 2. Sniper"
-                    GameMode.BOSS_LEVEL -> "Level: 3. Boss Level 😈"
+                    GameMode.AUTO_MARK    -> "Level: 1. Rookie"
+                    GameMode.MANUAL_MARK  -> "Level: 2. Sniper"
+                    GameMode.MINI_BOSS_LEVEL -> "Level: 3. Mini Boss Level 🔵"
+                    GameMode.BOSS_LEVEL   -> "Level: 4. Boss Level 😈"
                 }
                 Text(
                     modeLabel,
@@ -1047,10 +1048,12 @@ private fun RunningStateContent(
             item {
                 val isAutoMode = game.gameMode == GameMode.AUTO_MARK
                 val modeLabel = when (game.gameMode) {
-                    GameMode.AUTO_MARK -> "Deine Karte (automatisch markiert)"
-                    GameMode.MANUAL_MARK -> "Deine Karte (tippe zum Markieren)"
-                    GameMode.BOSS_LEVEL -> "Deine Karte — Boss Level 😈"
+                    GameMode.AUTO_MARK    -> "Deine Karte (automatisch markiert)"
+                    GameMode.MANUAL_MARK  -> "Deine Karte (tippe zum Markieren)"
+                    GameMode.MINI_BOSS_LEVEL -> "Deine Karte — Mini Boss Level 🔵"
+                    GameMode.BOSS_LEVEL   -> "Deine Karte — Boss Level 😈"
                 }
+                val highlightDrawn = isAutoMode || game.gameMode == GameMode.MINI_BOSS_LEVEL || game.gameMode == GameMode.MANUAL_MARK
                 Text(modeLabel, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 4.dp))
                 Spacer(Modifier.height(4.dp))
                 BingoCardView(
@@ -1059,7 +1062,7 @@ private fun RunningStateContent(
                     onNumberClick = onMarkNumber,
                     interactive = !isAutoMode,
                     autoMarkWithDrawn = isAutoMode,
-                    highlightDrawn = isAutoMode
+                    highlightDrawn = highlightDrawn
                 )
             }
 

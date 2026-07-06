@@ -1,4 +1,4 @@
-package com.bestfriends.beachbingo.feature.bingo.ui
+package com.bestfriends.beachbingo.feature.pong.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,17 +27,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.bestfriends.beachbingo.core.model.GameResult
-import com.bestfriends.beachbingo.feature.bingo.viewmodel.LobbyViewModel
+import com.bestfriends.beachbingo.core.model.PongGame
+import com.bestfriends.beachbingo.core.model.PongStatus
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.OceanBlue
 import com.bestfriends.beachbingo.ui.theme.SandGold
@@ -46,6 +47,7 @@ import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -77,7 +79,7 @@ private fun rankEmoji(rank: Int, isLast: Boolean, total: Int): String = when {
     else -> "${rank + 1}."
 }
 
-private data class BingoPlayerStat(
+private data class PlayerStat(
     val userId: String,
     val displayName: String,
     val avatarUrl: String,
@@ -85,63 +87,90 @@ private data class BingoPlayerStat(
     val played: Int,
 )
 
-private data class BingoTeam(
+private data class PongTeam(
     val key: String,
     val name: String,
-    val playerStats: List<BingoPlayerStat>,
-    val results: List<GameResult>,
+    val isSolo: Boolean,
+    val playerStats: List<PlayerStat>,
+    val games: List<PongGame>,
 )
 
-private fun buildTeams(results: List<GameResult>): List<BingoTeam> {
-    val map = mutableMapOf<String, Pair<MutableMap<String, BingoPlayerStat>, MutableList<GameResult>>>()
-    for (r in results) {
-        val ids = r.playerIds.sorted()
-        val key = if (ids.isEmpty()) r.winnerId else ids.joinToString("|")
+private fun buildTeams(games: List<PongGame>): List<PongTeam> {
+    val map = mutableMapOf<String, Pair<MutableMap<String, PlayerStat>, MutableList<PongGame>>>()
+    for (g in games) {
+        val key = g.playerIds.sorted().joinToString("|")
         val entry = map.getOrPut(key) { Pair(mutableMapOf(), mutableListOf()) }
-        entry.second.add(r)
-
-        r.playerIds.forEachIndexed { i, uid ->
-            val name = r.playerNames.getOrElse(i) { uid }
-            val avatar = r.playerAvatars.getOrElse(i) { "" }
-            val existing = entry.first[uid]
-            val won = uid == r.winnerId
-            entry.first[uid] = existing?.copy(wins = existing.wins + if (won) 1 else 0, played = existing.played + 1)
-                ?: BingoPlayerStat(uid, name, avatar, if (won) 1 else 0, 1)
-        }
-        // Fallback if playerIds missing — use winnerId only
-        if (r.playerIds.isEmpty() && r.winnerId.isNotEmpty()) {
-            val existing = entry.first[r.winnerId]
-            entry.first[r.winnerId] = existing?.copy(wins = existing.wins + 1, played = existing.played + 1)
-                ?: BingoPlayerStat(r.winnerId, r.winnerName, r.winnerAvatar, 1, 1)
+        entry.second.add(g)
+        for (p in g.players) {
+            val existing = entry.first[p.userId]
+            val wins = if (p.userId == g.winnerId) 1 else 0
+            entry.first[p.userId] = existing?.copy(wins = existing.wins + wins, played = existing.played + 1)
+                ?: PlayerStat(p.userId, p.displayName, p.avatarUrl, wins, 1)
         }
     }
     return map.entries.map { (key, pair) ->
         val stats = pair.first.values.sortedByDescending { it.wins }
-        BingoTeam(
+        PongTeam(
             key = key,
             name = teamName(key),
+            isSolo = pair.first.size == 1,
             playerStats = stats,
-            results = pair.second.sortedByDescending { it.finishedAt },
+            games = pair.second.sortedByDescending { it.createdAt },
         )
-    }.sortedByDescending { it.results.size }
+    }.sortedByDescending { it.games.size }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ResultsScreen(
-    onNavigateBack: () -> Unit,
-    viewModel: LobbyViewModel = hiltViewModel()
-) {
-    val results by viewModel.userResults.collectAsStateWithLifecycle()
-    val teams = remember(results) { buildTeams(results) }
-    val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.GERMAN) }
+fun PongResultsScreen(onNavigateBack: () -> Unit) {
     val uid = Firebase.auth.currentUser?.uid ?: ""
+    var teams by remember { mutableStateOf<List<PongTeam>>(emptyList()) }
+    val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.GERMAN) }
+
+    LaunchedEffect(uid) {
+        if (uid.isBlank()) return@LaunchedEffect
+        Firebase.firestore.collection("pongGames")
+            .whereArrayContains("playerIds", uid)
+            .whereEqualTo("status", "FINISHED")
+            .addSnapshotListener { snap, _ ->
+                if (snap == null) return@addSnapshotListener
+                val games = snap.documents.mapNotNull { doc ->
+                    val data = doc.data ?: return@mapNotNull null
+                    PongGame(
+                        gameId = doc.id,
+                        adminId = data["adminId"] as? String ?: "",
+                        status = PongStatus.FINISHED,
+                        totalPaddles = (data["totalPaddles"] as? Long)?.toInt() ?: 2,
+                        humanCount = (data["humanCount"] as? Long)?.toInt() ?: 1,
+                        players = (data["players"] as? List<*>)?.mapNotNull { p ->
+                            (p as? Map<*, *>)?.let { m ->
+                                com.bestfriends.beachbingo.core.model.PongPlayer(
+                                    userId = m["userId"] as? String ?: "",
+                                    displayName = m["displayName"] as? String ?: "",
+                                    avatarUrl = m["avatarUrl"] as? String ?: "",
+                                    side = m["side"] as? String ?: "left",
+                                )
+                            }
+                        } ?: emptyList(),
+                        playerIds = (data["playerIds"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
+                        scoreLeft = (data["scoreLeft"] as? Long)?.toInt() ?: 0,
+                        scoreRight = (data["scoreRight"] as? Long)?.toInt() ?: 0,
+                        scoreTop = (data["scoreTop"] as? Long)?.toInt() ?: 0,
+                        scoreBottom = (data["scoreBottom"] as? Long)?.toInt() ?: 0,
+                        scoreLimit = (data["scoreLimit"] as? Long)?.toInt() ?: 7,
+                        winnerId = data["winnerId"] as? String,
+                        createdAt = (data["createdAt"] as? Long) ?: 0L,
+                    )
+                }.sortedByDescending { it.createdAt }
+                teams = buildTeams(games)
+            }
+    }
 
     Scaffold(
         containerColor = BgDark,
         topBar = {
             TopAppBar(
-                title = { Text("BeachBingo Ergebnisse 🏆", color = TextPrimary, fontWeight = FontWeight.Bold) },
+                title = { Text("BeachVolley Ergebnisse 🏆", color = TextPrimary, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück", tint = OceanBlue)
@@ -157,9 +186,9 @@ fun ResultsScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text("🏖️", fontSize = 64.sp)
+                Text("🏓", fontSize = 64.sp)
                 Spacer(Modifier.height(16.dp))
-                Text("Noch keine abgeschlossenen Spiele", style = MaterialTheme.typography.titleMedium, color = TextMuted)
+                Text("Noch keine Ergebnisse", style = MaterialTheme.typography.titleMedium, color = TextMuted)
                 Spacer(Modifier.height(6.dp))
                 Text("Beende ein Spiel, um es hier zu sehen.", style = MaterialTheme.typography.bodyMedium, color = TextMuted)
             }
@@ -170,7 +199,7 @@ fun ResultsScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 items(teams, key = { it.key }) { team ->
-                    BingoTeamCard(team = team, currentUid = uid, dateFormat = dateFormat)
+                    PongTeamCard(team = team, currentUid = uid, dateFormat = dateFormat)
                 }
             }
         }
@@ -178,9 +207,10 @@ fun ResultsScreen(
 }
 
 @Composable
-private fun BingoTeamCard(team: BingoTeam, currentUid: String, dateFormat: SimpleDateFormat) {
+private fun PongTeamCard(team: PongTeam, currentUid: String, dateFormat: SimpleDateFormat) {
     val total = team.playerStats.size
-    val lastResult = team.results.firstOrNull()
+    val lastGame = team.games.firstOrNull()
+    val lastWinner = lastGame?.players?.find { it.userId == lastGame.winnerId }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -189,16 +219,17 @@ private fun BingoTeamCard(team: BingoTeam, currentUid: String, dateFormat: Simpl
         colors = CardDefaults.cardColors(containerColor = SurfaceDark)
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
+            // Team header
             Text(
-                text = "🎱 ${team.name}",
+                text = if (team.isSolo) "🎮 Solo vs KI" else "🏄 ${team.name}",
                 style = MaterialTheme.typography.titleSmall,
                 color = OceanBlue,
                 fontWeight = FontWeight.ExtraBold
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = "${team.results.size} ${if (team.results.size == 1) "Spiel" else "Spiele"}" +
-                    (lastResult?.let { " · Zuletzt: ${dateFormat.format(Date(it.finishedAt))}" } ?: ""),
+                text = "${team.games.size} ${if (team.games.size == 1) "Spiel" else "Spiele"}" +
+                    (lastGame?.let { " · Zuletzt: ${dateFormat.format(Date(it.createdAt))}" } ?: ""),
                 style = MaterialTheme.typography.bodySmall,
                 color = TextMuted
             )
@@ -207,6 +238,7 @@ private fun BingoTeamCard(team: BingoTeam, currentUid: String, dateFormat: Simpl
             HorizontalDivider(color = Surface2Dark)
             Spacer(Modifier.height(10.dp))
 
+            // Leaderboard
             team.playerStats.forEachIndexed { rank, p ->
                 val isLast = rank == total - 1
                 val winPct = if (p.played > 0) (p.wins * 100 / p.played) else 0
@@ -223,7 +255,10 @@ private fun BingoTeamCard(team: BingoTeam, currentUid: String, dateFormat: Simpl
                         fontSize = 18.sp,
                         modifier = Modifier.width(30.dp)
                     )
-                    Text(text = p.avatarUrl.ifEmpty { "🏄" }, fontSize = 24.sp)
+                    Text(
+                        text = p.avatarUrl.ifEmpty { "🏄" },
+                        fontSize = 24.sp
+                    )
                     Spacer(Modifier.width(10.dp))
                     Text(
                         text = p.displayName + if (isMe) " 👤" else "",
@@ -248,15 +283,17 @@ private fun BingoTeamCard(team: BingoTeam, currentUid: String, dateFormat: Simpl
                 }
             }
 
-            if (lastResult != null) {
+            // Last game info
+            if (lastGame != null) {
                 Spacer(Modifier.height(12.dp))
                 HorizontalDivider(color = Surface2Dark)
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(lastResult.winnerAvatar.ifEmpty { "🏆" }, fontSize = 18.sp)
+                    Text(lastWinner?.avatarUrl?.ifEmpty { "🏓" } ?: "🏓", fontSize = 18.sp)
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "Letztes Spiel: ${lastResult.winnerName} hat gewonnen · ${lastResult.drawnNumbersCount} Zahlen",
+                        text = if (lastWinner != null) "Letztes Spiel: ${lastWinner.displayName} hat gewonnen"
+                               else "Letztes Spiel beendet",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextMuted
                     )

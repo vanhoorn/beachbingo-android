@@ -9,6 +9,7 @@ data class GameResult(
     val playerCount: Int = 0,
     val drawnNumbersCount: Int = 0,
     val finishedAt: Long = System.currentTimeMillis(),
+    val playerIds: List<String> = emptyList(),
     val playerNames: List<String> = emptyList(),
     val playerAvatars: List<String> = emptyList()
 )

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -41,20 +42,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.bestfriends.beachbingo.feature.bingo.viewmodel.LobbyViewModel
+import com.bestfriends.beachbingo.feature.join.viewmodel.JoinDestination
+import com.bestfriends.beachbingo.feature.join.viewmodel.JoinViewModel
 import com.google.zxing.integration.android.IntentIntegrator
 import com.google.zxing.integration.android.IntentResult
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JoinGameScreen(
-    onNavigateToGame: (String) -> Unit,
+    onNavigateToBingo: (String) -> Unit,
+    onNavigateToPong: (String, Int, Int, String, Int, Boolean, String) -> Unit,
+    onNavigateToVier: (String, String) -> Unit,
     onNavigateBack: () -> Unit,
-    viewModel: LobbyViewModel = hiltViewModel()
+    viewModel: JoinViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -68,9 +71,13 @@ fun JoinGameScreen(
             val intentResult: IntentResult = IntentIntegrator.parseActivityResult(
                 result.resultCode, result.data
             )
-            intentResult.contents?.let { scannedCode ->
-                gameCode = scannedCode
-                viewModel.joinGame(scannedCode)
+            intentResult.contents?.let { scanned ->
+                // QR may encode a URL or bare gameId
+                val match = scanned.trim().let { raw ->
+                    Regex("[A-Za-z0-9]{6,}").findAll(raw).lastOrNull()?.value ?: raw
+                }
+                gameCode = match
+                viewModel.joinGame(match)
             }
         }
     }
@@ -89,10 +96,17 @@ fun JoinGameScreen(
         }
     }
 
-    LaunchedEffect(uiState.navigateToGameId) {
-        uiState.navigateToGameId?.let { gameId ->
+    LaunchedEffect(uiState.destination) {
+        uiState.destination?.let { dest ->
             viewModel.clearNavigate()
-            onNavigateToGame(gameId)
+            when (dest) {
+                is JoinDestination.Bingo -> onNavigateToBingo(dest.gameId)
+                is JoinDestination.Pong  -> onNavigateToPong(
+                    dest.gameId, dest.totalPaddles, dest.humanCount,
+                    dest.difficulty, dest.scoreLimit, dest.isHost, dest.mySide
+                )
+                is JoinDestination.Vier  -> onNavigateToVier(dest.gameId, dest.myDrinkId)
+            }
         }
     }
 
@@ -125,9 +139,13 @@ fun JoinGameScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text("🎯", style = MaterialTheme.typography.displayMedium)
+
+            Spacer(Modifier.height(8.dp))
             Text(
-                "🎯",
-                style = MaterialTheme.typography.displayMedium
+                "BeachBingo · BeachPong · Vier4Bier",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(Modifier.height(32.dp))
