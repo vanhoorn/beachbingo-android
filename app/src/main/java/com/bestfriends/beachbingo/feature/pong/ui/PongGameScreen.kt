@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,10 +20,15 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import com.bestfriends.beachbingo.ui.components.GameHudBar
+import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
+import com.google.firebase.firestore.FieldValue
+import kotlinx.coroutines.tasks.await
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -99,6 +105,20 @@ fun PongGameScreen(
 
     var frameCount by remember { mutableIntStateOf(0) }
     val isPhysicsOwner = humanCount == 1 || isHost
+    var manualPaused by remember { mutableStateOf(false) }
+    var showQuitDialog by remember { mutableStateOf(false) }
+    var isFavorite by remember { mutableStateOf(false) }
+
+    val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+    val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+    val uid = auth.currentUser?.uid
+
+    LaunchedEffect(uid) {
+        if (uid == null) return@LaunchedEffect
+        val snap = try { firestore.collection("users").document(uid).get().await() } catch (_: Exception) { return@LaunchedEffect }
+        @Suppress("UNCHECKED_CAST")
+        isFavorite = (snap.get("favoriteGames") as? List<String>)?.contains("pong") == true
+    }
 
     // Game loop — runs on physics owner, or applies remote state for guests
     LaunchedEffect(loserSide, isPhysicsOwner) {
@@ -106,6 +126,7 @@ fun PongGameScreen(
         while (true) {
             delay(16L)
             frameCount++
+            if (manualPaused) continue
             if (isPhysicsOwner) {
                 viewModel.tick(frameCount)
             } else {
@@ -125,7 +146,7 @@ fun PongGameScreen(
     val activeSides = PongGameViewModel.sidesForPaddles(totalPaddles, gs.wallSide)
 
     Box(modifier = Modifier.fillMaxSize().background(BgDark)) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
 
             // ── Header / Score bar ────────────────────────────────────────────
             Row(
@@ -243,6 +264,41 @@ fun PongGameScreen(
                 }
             }
 
+            // ── HUD bar ───────────────────────────────────────────────────────
+            GameHudBar(
+                paused = manualPaused,
+                isFavorite = isFavorite,
+                onPauseToggle = { manualPaused = !manualPaused },
+                onQuit = { manualPaused = true; showQuitDialog = true },
+                onFavoriteToggle = {
+                    isFavorite = !isFavorite
+                    if (uid != null) {
+                        val update = if (isFavorite) FieldValue.arrayUnion("pong") else FieldValue.arrayRemove("pong")
+                        firestore.collection("users").document(uid).update("favoriteGames", update)
+                    }
+                },
+            ) {
+                androidx.compose.foundation.layout.Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        activeSides.forEachIndexed { idx, side ->
+                            if (idx > 0) Text("·", color = Surface2Dark, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                            androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(labelForSide(side).uppercase(), fontSize = 8.sp, color = SIDE_COLOR[side] ?: TextMuted, fontWeight = FontWeight.Bold)
+                                Text("${PongGameViewModel.scoreOf(gs, side)}", fontSize = 16.sp, fontWeight = FontWeight.Black,
+                                    color = if (PongGameViewModel.scoreOf(gs, side) >= scoreLimit - 1) Coral else TextPrimary)
+                            }
+                        }
+                    }
+                }
+            }
+
             // ── Touch hint ────────────────────────────────────────────────────
             Text(
                 if (mySide == "left" || mySide == "right") "↕ Ziehe zum Steuern" else "↔ Ziehe zum Steuern",
@@ -253,6 +309,14 @@ fun PongGameScreen(
                 fontSize = 11.sp,
                 color = (SIDE_COLOR[mySide] ?: TextMuted).copy(alpha = 0.6f),
                 fontWeight = FontWeight.Bold
+            )
+        }
+
+        if (showQuitDialog) {
+            QuitConfirmDialog(
+                message = "Das laufende Spiel wird beendet.",
+                onConfirm = { onNavigateToLobby() },
+                onDismiss = { showQuitDialog = false; manualPaused = false },
             )
         }
 

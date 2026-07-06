@@ -23,6 +23,7 @@ import com.bestfriends.beachbingo.feature.bingo.ui.GameScreen
 import com.bestfriends.beachbingo.feature.bingo.ui.JoinGameScreen
 import com.bestfriends.beachbingo.feature.bingo.ui.LobbyScreen
 import com.bestfriends.beachbingo.feature.bingo.ui.ResultsScreen
+import com.bestfriends.beachbingo.feature.home.ui.CategoryScreen
 import com.bestfriends.beachbingo.feature.home.ui.HomeScreen
 import com.bestfriends.beachbingo.feature.pong.ui.PongGameScreen
 import com.bestfriends.beachbingo.feature.pong.ui.PongLobbyScreen
@@ -95,7 +96,20 @@ fun AppNavigation() {
                 onNavigateToPiratesLobby = { navController.navigate(Screen.PiratesLobby) },
                 onNavigateToProfile = { navController.navigate(Screen.Profile) },
                 onNavigateToJoin = { navController.navigate(Screen.JoinGame) },
+                onNavigateToCategory = { playerCount -> navController.navigate(Screen.Category(playerCount)) },
                 viewModel = authViewModel
+            )
+        }
+
+        composable<Screen.Category> { backStack ->
+            val route: Screen.Category = backStack.toRoute()
+            CategoryScreen(
+                playerCountName = route.playerCount,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToBingoLobby = { navController.navigate(Screen.Lobby) { popUpTo(Screen.Home) } },
+                onNavigateToPongLobby = { navController.navigate(Screen.PongLobby) { popUpTo(Screen.Home) } },
+                onNavigateToVierLobby = { navController.navigate(Screen.VierLobby) { popUpTo(Screen.Home) } },
+                onNavigateToPiratesLobby = { navController.navigate(Screen.PiratesLobby) { popUpTo(Screen.Home) } },
             )
         }
 

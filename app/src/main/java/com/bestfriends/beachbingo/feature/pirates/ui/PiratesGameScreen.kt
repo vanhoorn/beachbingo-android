@@ -19,9 +19,12 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.bestfriends.beachbingo.ui.components.GameHudBar
+import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
 import com.bestfriends.beachbingo.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.tasks.await
 import kotlin.math.*
@@ -169,6 +172,14 @@ fun PiratesGameScreen(
     var paused        by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
     var resultHandled  by remember { mutableStateOf(false) }
+    var isFavorite    by remember { mutableStateOf(false) }
+
+    LaunchedEffect(uid) {
+        if (uid == null) return@LaunchedEffect
+        val snap = try { firestore.collection("users").document(uid).get().await() } catch (_: Exception) { return@LaunchedEffect }
+        @Suppress("UNCHECKED_CAST")
+        isFavorite = (snap.get("favoriteGames") as? List<String>)?.contains("pirates") == true
+    }
 
     // Game loop — delta-time aware
     LaunchedEffect(Unit) {
@@ -208,12 +219,33 @@ fun PiratesGameScreen(
         modifier = Modifier.fillMaxSize().background(BgDark).statusBarsPadding(),
     ) {
         // ── HUD ────────────────────────────────────────────────────────────
-        HudBar(
-            gs       = gs,
-            paused   = paused,
-            onPause  = { paused = !paused },
-            onQuit   = { paused = true; showQuitDialog = true },
-        )
+        GameHudBar(
+            paused          = paused,
+            isFavorite      = isFavorite,
+            onPauseToggle   = { paused = !paused },
+            onQuit          = { paused = true; showQuitDialog = true },
+            onFavoriteToggle = {
+                isFavorite = !isFavorite
+                if (uid != null) {
+                    val update = if (isFavorite) FieldValue.arrayUnion("pirates") else FieldValue.arrayRemove("pirates")
+                    firestore.collection("users").document(uid).update("favoriteGames", update)
+                }
+            },
+        ) {
+            HudCell(value = "${gs.score}", label = "Score", color = PurpleGame, modifier = Modifier.weight(1.4f))
+            HudCell(value = "W${gs.wave}", label = "Welle", color = OceanBlue, modifier = Modifier.weight(0.8f))
+            androidx.compose.foundation.layout.Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.weight(1.2f),
+            ) {
+                androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+                    repeat(3) { i -> Text(if (i < gs.lives) "🐙" else "💀", fontSize = 13.sp) }
+                }
+                Text("Leben", fontSize = 8.sp, color = TextMuted)
+            }
+            HudBar2("⚡", gs.currentSpeed(), 30, SandGold)
+            HudBar2("🔱", gs.currentFiring(), 30, PurpleGame)
+        }
 
         // ── Game canvas ────────────────────────────────────────────────────
         Box(
@@ -284,10 +316,10 @@ fun PiratesGameScreen(
 
     // ── Quit dialog ────────────────────────────────────────────────────────
     if (showQuitDialog) {
-        QuitDialog(
-            score       = gs.score,
-            onConfirm   = onNavigateToLobby,
-            onDismiss   = { showQuitDialog = false; paused = false },
+        QuitConfirmDialog(
+            message   = "Score: ${gs.score} — Fortschritt geht verloren.",
+            onConfirm = onNavigateToLobby,
+            onDismiss = { showQuitDialog = false; paused = false },
         )
     }
 }
@@ -560,105 +592,6 @@ private fun drawOverlay(scope: DrawScope, emoji: String, title: String, subtitle
     }
 }
 
-// ── HUD ───────────────────────────────────────────────────────────────────────
-
-@Composable
-private fun HudBar(
-    gs: GameState,
-    paused: Boolean,
-    onPause: () -> Unit,
-    onQuit: () -> Unit,
-) {
-    // gs.score / gs.lives / gs.wave / gs.phase are mutableStateOf → auto recompose
-    Surface(
-        color = SurfaceDark,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            // Pause / play
-            Surface(
-                color = if (paused) OceanBlue.copy(0.25f) else Surface2Dark,
-                shape  = RoundedCornerShape(8.dp),
-                modifier = Modifier
-                    .size(36.dp)
-                    .border(1.dp, if (paused) OceanBlue else BorderColor, RoundedCornerShape(8.dp)),
-            ) {
-                Box(contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize().then(
-                        Modifier.pointerInput(Unit) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val e = awaitPointerEvent()
-                                    if (e.changes.any { it.pressed }) onPause()
-                                    e.changes.forEach { it.consume() }
-                                }
-                            }
-                        }
-                    )
-                ) {
-                    Text(if (paused) "▶" else "⏸", fontSize = 16.sp, color = TextPrimary)
-                }
-            }
-
-            // Score
-            HudCell(value = "${gs.score}", label = "Score", color = PurpleGame,
-                modifier = Modifier.weight(1.4f))
-
-            // Wave
-            HudCell(value = "W${gs.wave}", label = "Welle", color = OceanBlue,
-                modifier = Modifier.weight(0.8f))
-
-            // Lives as octopus / skull
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(1.2f),
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-                    repeat(3) { i ->
-                        Text(if (i < gs.lives) "🐙" else "💀", fontSize = 13.sp)
-                    }
-                }
-                Text("Leben", fontSize = 8.sp, color = TextMuted)
-            }
-
-            // Speed bar
-            HudBar2("⚡", gs.currentSpeed(), 30, SandGold)
-            // Fire bar
-            HudBar2("🔱", gs.currentFiring(), 30, PurpleGame)
-
-            // Quit
-            Surface(
-                color = Danger.copy(0.18f),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier
-                    .size(36.dp)
-                    .border(1.dp, Danger.copy(0.5f), RoundedCornerShape(8.dp)),
-            ) {
-                Box(contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize().then(
-                        Modifier.pointerInput(Unit) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val e = awaitPointerEvent()
-                                    if (e.changes.any { it.pressed }) onQuit()
-                                    e.changes.forEach { it.consume() }
-                                }
-                            }
-                        }
-                    )
-                ) {
-                    Text("✕", fontSize = 16.sp, color = Danger, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun HudCell(value: String, label: String, color: Color, modifier: Modifier = Modifier) {
@@ -722,61 +655,3 @@ private fun ControlButton(
     }
 }
 
-// ── Quit dialog ───────────────────────────────────────────────────────────────
-
-@Composable
-private fun QuitDialog(score: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f))
-            .pointerInput(Unit) { /* consume touches outside dialog */ },
-        contentAlignment = Alignment.Center,
-    ) {
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = SurfaceDark,
-            modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .border(1.5.dp, Danger.copy(alpha = 0.4f), RoundedCornerShape(20.dp)),
-        ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 28.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text("🏳️", fontSize = 40.sp)
-                Text(
-                    "Spiel wirklich beenden?",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = TextPrimary,
-                )
-                Text(
-                    "Dein aktueller Fortschritt (Score: $score) geht verloren. " +
-                    "Du kommst zurück zur BeachPirates Seite.",
-                    fontSize = 13.sp,
-                    color = TextMuted,
-                    lineHeight = 18.sp,
-                )
-                Spacer(Modifier.height(4.dp))
-                Button(
-                    onClick = onConfirm,
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Danger.copy(alpha = 0.85f)),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text("Ja, Spiel beenden", fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                }
-                Button(
-                    onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PurpleGame.copy(alpha = 0.85f)),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text("▶  Weiterspielen", fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-    }
-}

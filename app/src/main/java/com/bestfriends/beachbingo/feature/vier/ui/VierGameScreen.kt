@@ -39,6 +39,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.bestfriends.beachbingo.ui.components.GameHudBar
+import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
+import com.google.firebase.firestore.FieldValue
+import kotlinx.coroutines.tasks.await
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -135,10 +141,33 @@ fun VierGameScreen(
 
     val gameOver = winnerPlayer != null || draw
 
+    var manualPaused by remember { mutableStateOf(false) }
+    var showQuitDialog by remember { mutableStateOf(false) }
+    var isFavorite by remember { mutableStateOf(false) }
+
+    val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+    val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+    val vierUid = auth.currentUser?.uid
+
+    LaunchedEffect(vierUid) {
+        if (vierUid == null) return@LaunchedEffect
+        val snap = try { firestore.collection("users").document(vierUid).get().await() } catch (_: Exception) { return@LaunchedEffect }
+        @Suppress("UNCHECKED_CAST")
+        isFavorite = (snap.get("favoriteGames") as? List<String>)?.contains("vier") == true
+    }
+
     fun handleDrop(col: Int) {
         if (gameOver) return
         if (isAiMode) viewModel.dropPieceAi(col, aiDifficulty)
         else if (gameId != null) viewModel.dropPieceOnline(col, gameId)
+    }
+
+    if (showQuitDialog) {
+        QuitConfirmDialog(
+            message = "Das laufende Spiel wird beendet.",
+            onConfirm = { onNavigateBack() },
+            onDismiss = { showQuitDialog = false; manualPaused = false },
+        )
     }
 
     Scaffold(
@@ -158,6 +187,27 @@ fun VierGameScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark),
             )
+        },
+        bottomBar = {
+            GameHudBar(
+                paused = manualPaused,
+                isFavorite = isFavorite,
+                onPauseToggle = { manualPaused = !manualPaused },
+                onQuit = { manualPaused = true; showQuitDialog = true },
+                onFavoriteToggle = {
+                    isFavorite = !isFavorite
+                    if (vierUid != null) {
+                        val update = if (isFavorite) FieldValue.arrayUnion("vier") else FieldValue.arrayRemove("vier")
+                        firestore.collection("users").document(vierUid).update("favoriteGames", update)
+                    }
+                },
+            ) {
+                val turnLabel = when { gameOver -> "Fertig"; myTurn -> "Du bist dran"; else -> "Gegner denkt..." }
+                androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(turnLabel, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text(if (isAiMode) "vs KI" else "Online", fontSize = 9.sp, color = TextMuted)
+                }
+            }
         },
         containerColor = BgDark,
     ) { padding ->

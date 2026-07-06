@@ -106,8 +106,15 @@ import com.bestfriends.beachbingo.feature.bingo.ui.components.BingoCardView
 import com.bestfriends.beachbingo.feature.bingo.ui.components.QrCodeImage
 import com.bestfriends.beachbingo.feature.bingo.viewmodel.BingoViewModel
 import com.bestfriends.beachbingo.feature.bingo.viewmodel.TabletUiState
+import com.bestfriends.beachbingo.ui.components.GameHudBar
+import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
+import com.bestfriends.beachbingo.ui.theme.OceanBlue
+import com.bestfriends.beachbingo.ui.theme.TextMuted
+import com.bestfriends.beachbingo.ui.theme.TextPrimary
+import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -121,6 +128,19 @@ fun GameScreen(
     viewModel: BingoViewModel = hiltViewModel()
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showQuitDialog by remember { mutableStateOf(false) }
+    var isFavorite by remember { mutableStateOf(false) }
+
+    val bingoAuth = com.google.firebase.auth.FirebaseAuth.getInstance()
+    val bingoFirestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+    val bingoUid = bingoAuth.currentUser?.uid
+
+    LaunchedEffect(bingoUid) {
+        if (bingoUid == null) return@LaunchedEffect
+        val snap = try { bingoFirestore.collection("users").document(bingoUid).get().await() } catch (_: Exception) { return@LaunchedEffect }
+        @Suppress("UNCHECKED_CAST")
+        isFavorite = (snap.get("favoriteGames") as? List<String>)?.contains("bingo") == true
+    }
 
     val game by viewModel.game.collectAsStateWithLifecycle()
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
@@ -163,6 +183,14 @@ fun GameScreen(
         )
     }
 
+    if (showQuitDialog) {
+        QuitConfirmDialog(
+            message = "Du verlässt das Spiel.",
+            onConfirm = { viewModel.leaveGame(); onNavigateBack() },
+            onDismiss = { showQuitDialog = false },
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
@@ -188,6 +216,30 @@ fun GameScreen(
                         }
                     }
                 )
+            },
+            bottomBar = {
+                if (game.status == GameStatus.RUNNING) {
+                    GameHudBar(
+                        paused = false,
+                        isFavorite = isFavorite,
+                        onPauseToggle = {},
+                        onQuit = { showQuitDialog = true },
+                        onFavoriteToggle = {
+                            isFavorite = !isFavorite
+                            if (bingoUid != null) {
+                                val update = if (isFavorite) FieldValue.arrayUnion("bingo") else FieldValue.arrayRemove("bingo")
+                                bingoFirestore.collection("users").document(bingoUid).update("favoriteGames", update)
+                            }
+                        },
+                    ) {
+                        val playerCount = game.players.size
+                        val drawnCount = game.drawnNumbers.size
+                        androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("$playerCount Spieler · $drawnCount Zahlen", fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = TextPrimary)
+                            Text("BeachBingo", fontSize = 9.sp, color = TextMuted)
+                        }
+                    }
+                }
             },
             snackbarHost = { SnackbarHost(snackbarHostState) }
         ) { padding ->

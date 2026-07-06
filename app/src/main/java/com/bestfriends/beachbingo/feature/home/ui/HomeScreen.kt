@@ -3,6 +3,7 @@ package com.bestfriends.beachbingo.feature.home.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,24 +17,22 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -41,60 +40,33 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bestfriends.beachbingo.core.model.ALL_GAMES
+import com.bestfriends.beachbingo.core.model.GameMetadata
+import com.bestfriends.beachbingo.core.model.PlayerCount
 import com.bestfriends.beachbingo.feature.auth.viewmodel.AuthViewModel
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.BorderColor
-import com.bestfriends.beachbingo.ui.theme.Coral
-import com.bestfriends.beachbingo.ui.theme.OceanBlue
-import com.bestfriends.beachbingo.ui.theme.SandGold
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
 import com.bestfriends.beachbingo.ui.theme.TextSub
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
-data class GameEntry(
-    val id: String,
+private data class PlayerCountEntry(
+    val key: PlayerCount,
+    val label: String,
     val emoji: String,
-    val title: String,
-    val description: String,
-    val accentColor: Color,
-    val available: Boolean,
 )
 
-private val GAMES = listOf(
-    GameEntry(
-        id = "bingo",
-        emoji = "🎱",
-        title = "BeachBingo",
-        description = "Ziehe Zahlen, markiere deine Karte – BINGO!",
-        accentColor = OceanBlue,
-        available = true,
-    ),
-    GameEntry(
-        id = "pong",
-        emoji = "🏓",
-        title = "BeachVolley",
-        description = "Klassisches Tischtennis am Strand – wer gewinnt die Runde?",
-        accentColor = Coral,
-        available = true,
-    ),
-    GameEntry(
-        id = "vier",
-        emoji = "🍺",
-        title = "Vier4Bier",
-        description = "Vier in einer Reihe mit Beach-Twist.",
-        accentColor = SandGold,
-        available = true,
-    ),
-    GameEntry(
-        id = "pirates",
-        emoji = "🐙",
-        title = "BeachPirates",
-        description = "Verteidige den Strand gegen die Meereskreaturen!",
-        accentColor = Color(0xFFA855F7),
-        available = true,
-    ),
+private val PLAYER_COUNT_LIST = listOf(
+    PlayerCountEntry(PlayerCount.ONE,       "1 Spieler",   "👤"),
+    PlayerCountEntry(PlayerCount.ONE_TWO,   "1-2 Spieler", "🤝"),
+    PlayerCountEntry(PlayerCount.TWO_FOUR,  "2-4 Spieler", "👥"),
+    PlayerCountEntry(PlayerCount.FOUR_PLUS, "4+ Spieler",  "🎉"),
 )
 
 @Composable
@@ -105,9 +77,54 @@ fun HomeScreen(
     onNavigateToPiratesLobby: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToJoin: () -> Unit,
+    onNavigateToCategory: (String) -> Unit,
     viewModel: AuthViewModel = hiltViewModel(),
 ) {
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
+
+    var favoriteIds by remember { mutableStateOf<List<String>>(emptyList()) }
+    var recentIds by remember { mutableStateOf<List<String>>(emptyList()) }
+
+    val auth = FirebaseAuth.getInstance()
+    val firestore = FirebaseFirestore.getInstance()
+    val uid = auth.currentUser?.uid
+
+    LaunchedEffect(uid) {
+        if (uid == null) return@LaunchedEffect
+        try {
+            val snap = firestore.collection("users").document(uid).get().await()
+            @Suppress("UNCHECKED_CAST")
+            favoriteIds = (snap.get("favoriteGames") as? List<String>) ?: emptyList()
+            @Suppress("UNCHECKED_CAST")
+            recentIds = (snap.get("recentGames") as? List<String>) ?: emptyList()
+        } catch (_: Exception) {}
+    }
+
+    fun handleGameClick(gameId: String, navigate: () -> Unit) {
+        if (uid != null) {
+            scope.launch {
+                try {
+                    val userRef = firestore.collection("users").document(uid)
+                    val snap = userRef.get().await()
+                    @Suppress("UNCHECKED_CAST")
+                    val current = (snap.get("recentGames") as? List<String>) ?: emptyList()
+                    val filtered = current.filter { it != gameId }
+                    val updated = (listOf(gameId) + filtered).take(10)
+                    recentIds = updated
+                    userRef.update("recentGames", updated)
+                } catch (_: Exception) {}
+            }
+        }
+        navigate()
+    }
+
+    val favoriteGames = ALL_GAMES
+        .filter { it.id in favoriteIds }
+        .sortedBy { it.title }
+
+    val recentGames = recentIds.take(3)
+        .mapNotNull { id -> ALL_GAMES.find { it.id == id } }
 
     Column(
         modifier = Modifier
@@ -116,30 +133,24 @@ fun HomeScreen(
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
-        // Hero
+        // ── Hero ─────────────────────────────────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(listOf(SurfaceDark, Surface2Dark))
-                )
+                .background(Brush.linearGradient(listOf(SurfaceDark, Surface2Dark)))
                 .padding(horizontal = 20.dp, vertical = 28.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Avatar
                 Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = Surface2Dark,
                     modifier = Modifier.size(60.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = currentUser?.avatarUrl ?: "🏖️",
-                            fontSize = 32.sp
-                        )
+                        Text(text = currentUser?.avatarUrl ?: "🏖️", fontSize = 32.sp)
                     }
                 }
 
@@ -148,39 +159,29 @@ fun HomeScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "WILLKOMMEN ZURÜCK",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextMuted,
-                        letterSpacing = 1.5.sp,
+                        fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                        color = TextMuted, letterSpacing = 1.5.sp,
                     )
                     Text(
                         text = currentUser?.displayName ?: "…",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = TextPrimary,
+                        fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
                     )
                 }
 
-                // Join button
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = Surface2Dark,
+                    shape = RoundedCornerShape(14.dp), color = Surface2Dark,
                     modifier = Modifier
                         .size(48.dp)
                         .border(1.dp, BorderColor, RoundedCornerShape(14.dp))
                         .clickable { onNavigateToJoin() }
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text("🔗", fontSize = 22.sp)
-                    }
+                    Box(contentAlignment = Alignment.Center) { Text("🔗", fontSize = 22.sp) }
                 }
 
                 Spacer(Modifier.width(8.dp))
 
-                // Profile button
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = Surface2Dark,
+                    shape = RoundedCornerShape(14.dp), color = Surface2Dark,
                     modifier = Modifier
                         .size(48.dp)
                         .border(1.dp, BorderColor, RoundedCornerShape(14.dp))
@@ -190,133 +191,169 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.Person,
                             contentDescription = "Profil",
-                            tint = TextSub,
-                            modifier = Modifier.size(24.dp)
+                            tint = TextSub, modifier = Modifier.size(24.dp)
                         )
                     }
                 }
             }
         }
 
-        // Headline
-        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp)) {
-            Text(
-                text = "BeachBande",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextMuted,
-                letterSpacing = 0.5.sp,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "Spiel auswählen",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = TextPrimary,
-            )
-        }
-
-        // Game cards
-        Column(
-            modifier = Modifier.padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            GAMES.forEach { game ->
-                GameCard(
-                    game = game,
-                    onClick = {
-                        when (game.id) {
-                            "bingo"    -> onNavigateToBingoLobby()
-                            "pong"     -> onNavigateToPongLobby()
-                            "vier"     -> onNavigateToVierLobby()
-                            "pirates"  -> onNavigateToPiratesLobby()
+        // ── Favoriten ─────────────────────────────────────────────────────────────
+        if (favoriteGames.isNotEmpty()) {
+            SectionHeader(title = "FAVORITEN", emoji = "★", modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp))
+            Row(
+                modifier = Modifier
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                favoriteGames.forEach { game ->
+                    MiniGameCard(game = game, onClick = {
+                        handleGameClick(game.id) {
+                            when (game.id) {
+                                "bingo"   -> onNavigateToBingoLobby()
+                                "pong"    -> onNavigateToPongLobby()
+                                "vier"    -> onNavigateToVierLobby()
+                                "pirates" -> onNavigateToPiratesLobby()
+                            }
                         }
-                    }
-                )
+                    })
+                }
             }
         }
 
-        Spacer(Modifier.height(24.dp))
+        // ── Zuletzt gespielt ──────────────────────────────────────────────────────
+        if (recentGames.isNotEmpty()) {
+            SectionHeader(title = "ZULETZT GESPIELT", emoji = "🕐", modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp))
+            Row(
+                modifier = Modifier.padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                recentGames.forEach { game ->
+                    MiniGameCard(game = game, onClick = {
+                        handleGameClick(game.id) {
+                            when (game.id) {
+                                "bingo"   -> onNavigateToBingoLobby()
+                                "pong"    -> onNavigateToPongLobby()
+                                "vier"    -> onNavigateToVierLobby()
+                                "pirates" -> onNavigateToPiratesLobby()
+                            }
+                        }
+                    })
+                }
+            }
+        }
+
+        // ── Spieleranzahl ─────────────────────────────────────────────────────────
+        SectionHeader(title = "SPIELERANZAHL", emoji = "🎮", modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp))
+
+        // 3-column grid — first 3 in a row, last one below
+        Column(
+            modifier = Modifier.padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                PLAYER_COUNT_LIST.take(3).forEach { entry ->
+                    val gameCount = ALL_GAMES.count { entry.key in it.playerCounts }
+                    CategoryTile(
+                        entry = entry,
+                        gameCount = gameCount,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigateToCategory(entry.key.name) }
+                    )
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                val entry = PLAYER_COUNT_LIST[3]
+                val gameCount = ALL_GAMES.count { entry.key in it.playerCounts }
+                CategoryTile(
+                    entry = entry,
+                    gameCount = gameCount,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onNavigateToCategory(entry.key.name) }
+                )
+                // Empty spacers to keep tile same width as grid columns
+                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.weight(1f))
+            }
+        }
+
+        Spacer(Modifier.height(32.dp))
     }
 }
 
 @Composable
-private fun GameCard(game: GameEntry, onClick: () -> Unit) {
+private fun SectionHeader(title: String, emoji: String, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(text = emoji, fontSize = 16.sp)
+        Text(
+            text = title,
+            fontSize = 12.sp, fontWeight = FontWeight.Bold,
+            color = TextMuted, letterSpacing = 1.sp,
+        )
+    }
+}
+
+@Composable
+private fun MiniGameCard(game: GameMetadata, onClick: () -> Unit) {
+    val accentColor = Color(game.color)
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(14.dp),
         color = SurfaceDark,
         modifier = Modifier
-            .fillMaxWidth()
-            .alpha(if (game.available) 1f else 0.55f)
-            .border(
-                width = 1.5.dp,
-                color = if (game.available) game.accentColor.copy(alpha = 0.35f) else BorderColor,
-                shape = RoundedCornerShape(16.dp)
-            )
-            .then(if (game.available) Modifier.clickable { onClick() } else Modifier)
+            .width(90.dp)
+            .border(1.5.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+            .clickable { onClick() }
     ) {
-        Row(
-            modifier = Modifier.padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Emoji icon box
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = if (game.available) game.accentColor.copy(alpha = 0.15f) else Surface2Dark,
-                modifier = Modifier.size(64.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(text = game.emoji, fontSize = 32.sp)
-                }
-            }
+            Text(text = game.emoji, fontSize = 28.sp)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = game.title,
+                fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                color = TextPrimary, lineHeight = 14.sp,
+            )
+        }
+    }
+}
 
-            Spacer(Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = game.title,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
-                    )
-                    if (!game.available) {
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = Surface2Dark,
-                        ) {
-                            Text(
-                                text = "BALD",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextMuted,
-                                letterSpacing = 0.8.sp,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            )
-                        }
-                    }
-                }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = game.description,
-                    fontSize = 13.sp,
-                    color = TextMuted,
-                    lineHeight = 18.sp,
-                )
-            }
-
-            if (game.available) {
-                Spacer(Modifier.width(8.dp))
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = TextMuted,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+@Composable
+private fun CategoryTile(
+    entry: PlayerCountEntry,
+    gameCount: Int,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = SurfaceDark,
+        modifier = modifier
+            .border(1.5.dp, BorderColor, RoundedCornerShape(14.dp))
+            .clickable { onClick() }
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = entry.emoji, fontSize = 26.sp)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = entry.label,
+                fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                color = TextPrimary, lineHeight = 15.sp,
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(
+                text = "$gameCount ${if (gameCount == 1) "Spiel" else "Spiele"}",
+                fontSize = 10.sp, color = TextMuted,
+            )
         }
     }
 }
