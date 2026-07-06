@@ -87,6 +87,14 @@ private val GAMES = listOf(
         accentColor = SandGold,
         available = true,
     ),
+    GameEntry(
+        id = "pirates",
+        emoji = "🐙",
+        title = "BeachPirates",
+        description = "Verteidige den Strand gegen die Meereskreaturen!",
+        accentColor = Color(0xFFA855F7),
+        available = true,
+    ),
 )
 
 @Composable
@@ -94,6 +102,7 @@ fun HomeScreen(
     onNavigateToBingoLobby: () -> Unit,
     onNavigateToPongLobby: () -> Unit,
     onNavigateToVierLobby: () -> Unit,
+    onNavigateToPiratesLobby: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToJoin: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel(),
@@ -201,9 +210,10 @@ fun HomeScreen(
                     game = game,
                     onClick = {
                         when (game.id) {
-                            "bingo" -> onNavigateToBingoLobby()
-                            "pong"  -> onNavigateToPongLobby()
-                            "vier"  -> onNavigateToVierLobby()
+                            "bingo"    -> onNavigateToBingoLobby()
+                            "pong"     -> onNavigateToPongLobby()
+                            "vier"     -> onNavigateToVierLobby()
+                            "pirates"  -> onNavigateToPiratesLobby()
                         }
                     }
                 )

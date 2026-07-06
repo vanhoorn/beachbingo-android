@@ -32,6 +32,10 @@ import com.bestfriends.beachbingo.feature.vier.ui.VierGameScreen
 import com.bestfriends.beachbingo.feature.vier.ui.VierLobbyScreen
 import com.bestfriends.beachbingo.feature.vier.ui.VierResultsScreen
 import com.bestfriends.beachbingo.feature.vier.ui.VierSettingsScreen
+import com.bestfriends.beachbingo.feature.pirates.ui.PiratesLobbyScreen
+import com.bestfriends.beachbingo.feature.pirates.ui.PiratesGameScreen
+import com.bestfriends.beachbingo.feature.pirates.ui.PiratesResultsScreen
+import com.bestfriends.beachbingo.feature.pirates.ui.PiratesSettingsScreen
 
 @Composable
 fun AppNavigation() {
@@ -87,6 +91,7 @@ fun AppNavigation() {
                 onNavigateToBingoLobby = { navController.navigate(Screen.Lobby) },
                 onNavigateToPongLobby = { navController.navigate(Screen.PongLobby) },
                 onNavigateToVierLobby = { navController.navigate(Screen.VierLobby) },
+                onNavigateToPiratesLobby = { navController.navigate(Screen.PiratesLobby) },
                 onNavigateToProfile = { navController.navigate(Screen.Profile) },
                 onNavigateToJoin = { navController.navigate(Screen.JoinGame) },
                 viewModel = authViewModel
@@ -245,6 +250,67 @@ fun AppNavigation() {
 
         composable<Screen.VierResults> {
             VierResultsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        // ── BeachPirates ───────────────────────────────────────────────────────
+        composable<Screen.PiratesLobby> {
+            PiratesLobbyScreen(
+                onNavigateToGame = { difficulty, fireRate, controlMode ->
+                    navController.navigate(Screen.PiratesGame(difficulty, fireRate, controlMode)) {
+                        popUpTo(Screen.PiratesLobby)
+                    }
+                },
+                onNavigateToSettings = { navController.navigate(Screen.PiratesSettings) },
+                onNavigateToHome = {
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Home) { inclusive = false }
+                    }
+                },
+            )
+        }
+
+        composable<Screen.PiratesGame> { backStack ->
+            val route: Screen.PiratesGame = backStack.toRoute()
+            PiratesGameScreen(
+                difficulty = route.difficulty,
+                fireRate = route.fireRate,
+                controlMode = route.controlMode,
+                onNavigateToResults = { score, wave, highScore, newHighScore ->
+                    navController.navigate(
+                        Screen.PiratesResults(score, wave, route.difficulty, highScore, newHighScore)
+                    ) { popUpTo(Screen.PiratesLobby) }
+                },
+                onNavigateToLobby = {
+                    navController.navigate(Screen.PiratesLobby) {
+                        popUpTo(Screen.PiratesLobby) { inclusive = true }
+                    }
+                },
+            )
+        }
+
+        composable<Screen.PiratesSettings> {
+            PiratesSettingsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable<Screen.PiratesResults> { backStack ->
+            val route: Screen.PiratesResults = backStack.toRoute()
+            PiratesResultsScreen(
+                score = route.score,
+                wave = route.wave,
+                difficulty = route.difficulty,
+                highScore = route.highScore,
+                newHighScore = route.newHighScore,
+                onPlayAgain = {
+                    navController.navigate(Screen.PiratesLobby) {
+                        popUpTo(Screen.PiratesLobby) { inclusive = true }
+                    }
+                },
+                onNavigateToHome = {
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Home) { inclusive = false }
+                    }
+                },
+            )
         }
     }
 }

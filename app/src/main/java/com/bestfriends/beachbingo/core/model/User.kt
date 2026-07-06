@@ -15,4 +15,8 @@ data class User(
     val preferredPongPaddles: Int? = null,
     val preferredVierDrinkId: String? = null,
     val preferredVierDifficulty: VierDifficulty? = null,
+    val preferredPiratesDifficulty: PiratesDifficulty? = null,
+    val preferredPiratesFireRate: Int? = null,
+    val preferredPiratesControlMode: String? = null,
+    val piratesHighScores: Map<String, Long> = emptyMap(),
 )

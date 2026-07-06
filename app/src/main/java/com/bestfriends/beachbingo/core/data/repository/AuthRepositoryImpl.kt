@@ -2,6 +2,7 @@ package com.bestfriends.beachbingo.core.data.repository
 
 import com.bestfriends.beachbingo.core.model.DrawStyle
 import com.bestfriends.beachbingo.core.model.GameMode
+import com.bestfriends.beachbingo.core.model.PiratesDifficulty
 import com.bestfriends.beachbingo.core.model.PongDifficulty
 import com.bestfriends.beachbingo.core.model.User
 import com.google.firebase.auth.EmailAuthProvider
@@ -54,6 +55,14 @@ class AuthRepositoryImpl @Inject constructor(
                                 },
                                 preferredPongScoreLimit = (data["preferredPongScoreLimit"] as? Long)?.toInt(),
                                 preferredPongPaddles = (data["preferredPongPaddles"] as? Long)?.toInt(),
+                                preferredPiratesDifficulty = (data["preferredPiratesDifficulty"] as? String)?.let {
+                                    runCatching { PiratesDifficulty.valueOf(it) }.getOrNull()
+                                },
+                                preferredPiratesFireRate = (data["preferredPiratesFireRate"] as? Long)?.toInt(),
+                                preferredPiratesControlMode = data["preferredPiratesControlMode"] as? String,
+                                piratesHighScores = (data["piratesHighScores"] as? Map<*, *>)
+                                    ?.mapNotNull { (k, v) -> (k as? String)?.let { key -> (v as? Long)?.let { score -> key to score } } }
+                                    ?.toMap() ?: emptyMap(),
                             )
                         } else {
                             User(uid = fbUser.uid, email = fbUser.email ?: "", displayName = fbUser.displayName ?: "")

@@ -36,4 +36,19 @@ sealed interface Screen {
     ) : Screen
     @Serializable object VierSettings : Screen
     @Serializable object VierResults : Screen
+    // BeachPirates
+    @Serializable object PiratesLobby : Screen
+    @Serializable data class PiratesGame(
+        val difficulty: String,
+        val fireRate: Int,
+        val controlMode: String,
+    ) : Screen
+    @Serializable object PiratesSettings : Screen
+    @Serializable data class PiratesResults(
+        val score: Int,
+        val wave: Int,
+        val difficulty: String,
+        val highScore: Int,
+        val newHighScore: Boolean,
+    ) : Screen
 }
