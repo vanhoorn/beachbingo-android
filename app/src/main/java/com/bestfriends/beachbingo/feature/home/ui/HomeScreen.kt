@@ -103,16 +103,11 @@ fun HomeScreen(
 
     fun handleGameClick(gameId: String, navigate: () -> Unit) {
         if (uid != null) {
+            val updated = (listOf(gameId) + recentIds.filter { it != gameId }).take(10)
+            recentIds = updated
             scope.launch {
                 try {
-                    val userRef = firestore.collection("users").document(uid)
-                    val snap = userRef.get().await()
-                    @Suppress("UNCHECKED_CAST")
-                    val current = (snap.get("recentGames") as? List<String>) ?: emptyList()
-                    val filtered = current.filter { it != gameId }
-                    val updated = (listOf(gameId) + filtered).take(10)
-                    recentIds = updated
-                    userRef.update("recentGames", updated)
+                    firestore.collection("users").document(uid).update("recentGames", updated)
                 } catch (_: Exception) {}
             }
         }

@@ -52,10 +52,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 private val PLAYER_COUNT_INFO = mapOf(
-    PlayerCount.ONE       to Triple("1 Spieler",   "👤", "Solo"),
-    PlayerCount.ONE_TWO   to Triple("1-2 Spieler", "🤝", "Solo oder zu zweit"),
-    PlayerCount.TWO_FOUR  to Triple("2-4 Spieler", "👥", "Kleine Gruppe"),
-    PlayerCount.FOUR_PLUS to Triple("4+ Spieler",  "🎉", "Große Runde"),
+    PlayerCount.ONE       to Triple("👤", "1 Spieler",   "Solo"),
+    PlayerCount.ONE_TWO   to Triple("🤝", "1-2 Spieler", "Solo oder zu zweit"),
+    PlayerCount.TWO_FOUR  to Triple("👥", "2-4 Spieler", "Kleine Gruppe"),
+    PlayerCount.FOUR_PLUS to Triple("🎉", "4+ Spieler",  "Große Runde"),
 )
 
 @Composable
@@ -79,6 +79,7 @@ fun CategoryScreen(
     val uid = auth.currentUser?.uid
 
     fun handleGameClick(gameId: String, navigate: () -> Unit) {
+        navigate()
         if (uid != null) {
             scope.launch {
                 try {
@@ -86,13 +87,11 @@ fun CategoryScreen(
                     val snap = userRef.get().await()
                     @Suppress("UNCHECKED_CAST")
                     val current = (snap.get("recentGames") as? List<String>) ?: emptyList()
-                    val filtered = current.filter { it != gameId }
-                    val updated = (listOf(gameId) + filtered).take(10)
+                    val updated = (listOf(gameId) + current.filter { it != gameId }).take(10)
                     userRef.update("recentGames", updated)
                 } catch (_: Exception) {}
             }
         }
-        navigate()
     }
 
     Column(

@@ -55,8 +55,14 @@ fun AppNavigation() {
 
     LaunchedEffect(currentUser) {
         if (currentUser != null) {
-            navController.navigate(Screen.Home) {
-                popUpTo(Screen.Login) { inclusive = true }
+            val onAuthScreen = navController.currentBackStackEntry
+                ?.destination
+                ?.run { hasRoute(Screen.Login::class) || hasRoute(Screen.Register::class) }
+                ?: false
+            if (onAuthScreen) {
+                navController.navigate(Screen.Home) {
+                    popUpTo(Screen.Login) { inclusive = true }
+                }
             }
         }
     }
@@ -106,10 +112,10 @@ fun AppNavigation() {
             CategoryScreen(
                 playerCountName = route.playerCount,
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToBingoLobby = { navController.navigate(Screen.Lobby) { popUpTo(Screen.Home) } },
-                onNavigateToPongLobby = { navController.navigate(Screen.PongLobby) { popUpTo(Screen.Home) } },
-                onNavigateToVierLobby = { navController.navigate(Screen.VierLobby) { popUpTo(Screen.Home) } },
-                onNavigateToPiratesLobby = { navController.navigate(Screen.PiratesLobby) { popUpTo(Screen.Home) } },
+                onNavigateToBingoLobby = { navController.navigate(Screen.Lobby) },
+                onNavigateToPongLobby = { navController.navigate(Screen.PongLobby) },
+                onNavigateToVierLobby = { navController.navigate(Screen.VierLobby) },
+                onNavigateToPiratesLobby = { navController.navigate(Screen.PiratesLobby) },
             )
         }
 
