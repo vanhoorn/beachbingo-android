@@ -21,6 +21,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Settings
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -50,8 +54,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bestfriends.beachbingo.ui.theme.SandGold
 import com.bestfriends.beachbingo.core.model.BingoGame
 import com.bestfriends.beachbingo.core.model.GameMode
 import com.bestfriends.beachbingo.core.model.GameStatus
@@ -73,6 +79,24 @@ fun LobbyScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var gameToDelete by remember { mutableStateOf<String?>(null) }
     var showCreateDialog by remember { mutableStateOf(false) }
+    var isFavorite by remember { mutableStateOf(false) }
+
+    val lobbyAuth = FirebaseAuth.getInstance()
+    val lobbyFirestore = FirebaseFirestore.getInstance()
+    val lobbyUid = lobbyAuth.currentUser?.uid
+
+    LaunchedEffect(lobbyUid) {
+        if (lobbyUid == null) return@LaunchedEffect
+        val snap = try { lobbyFirestore.collection("users").document(lobbyUid).get().await() } catch (_: Exception) { return@LaunchedEffect }
+        @Suppress("UNCHECKED_CAST")
+        isFavorite = (snap.get("favoriteGames") as? List<String>)?.contains("bingo") == true
+    }
+
+    fun toggleFavorite() {
+        isFavorite = !isFavorite
+        val update = if (isFavorite) FieldValue.arrayUnion("bingo") else FieldValue.arrayRemove("bingo")
+        if (lobbyUid != null) lobbyFirestore.collection("users").document(lobbyUid).update("favoriteGames", update)
+    }
 
     LaunchedEffect(uiState.navigateToGameId) {
         uiState.navigateToGameId?.let { gameId ->
@@ -184,7 +208,14 @@ fun LobbyScreen(
                 },
                 actions = {
                     IconButton(onClick = onNavigateToResults) {
-                        Icon(Icons.Default.EmojiEvents, contentDescription = "Ergebnisse", modifier = Modifier.size(28.dp))
+                        Icon(Icons.Default.EmojiEvents, contentDescription = "Ergebnisse", tint = SandGold, modifier = Modifier.size(28.dp))
+                    }
+                    IconButton(onClick = { toggleFavorite() }) {
+                        Text(
+                            if (isFavorite) "★" else "☆",
+                            fontSize = 22.sp,
+                            color = if (isFavorite) SandGold else com.bestfriends.beachbingo.ui.theme.TextMuted,
+                        )
                     }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Einstellungen", modifier = Modifier.size(28.dp))

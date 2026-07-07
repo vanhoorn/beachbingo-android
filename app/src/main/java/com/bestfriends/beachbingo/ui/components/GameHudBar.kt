@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.ui.theme.BorderColor
 import com.bestfriends.beachbingo.ui.theme.Danger
 import com.bestfriends.beachbingo.ui.theme.OceanBlue
-import com.bestfriends.beachbingo.ui.theme.SandGold
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
@@ -35,10 +34,8 @@ import com.bestfriends.beachbingo.ui.theme.TextPrimary
 @Composable
 fun GameHudBar(
     paused: Boolean,
-    isFavorite: Boolean,
     onPauseToggle: () -> Unit,
     onQuit: () -> Unit,
-    onFavoriteToggle: () -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -61,15 +58,6 @@ fun GameHudBar(
             ) {
                 content()
             }
-
-            // Favorit-Stern
-            HudButton(
-                label = if (isFavorite) "★" else "☆",
-                color = if (isFavorite) SandGold else SurfaceDark,
-                borderColor = if (isFavorite) SandGold else BorderColor,
-                textColor = if (isFavorite) SandGold else TextPrimary.copy(alpha = 0.5f),
-                onClick = onFavoriteToggle,
-            )
 
             // Pause / Play
             HudButton(

@@ -111,7 +111,6 @@ import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
 import com.bestfriends.beachbingo.ui.theme.OceanBlue
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
-import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -129,18 +128,10 @@ fun GameScreen(
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
-    var isFavorite by remember { mutableStateOf(false) }
 
     val bingoAuth = com.google.firebase.auth.FirebaseAuth.getInstance()
     val bingoFirestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
     val bingoUid = bingoAuth.currentUser?.uid
-
-    LaunchedEffect(bingoUid) {
-        if (bingoUid == null) return@LaunchedEffect
-        val snap = try { bingoFirestore.collection("users").document(bingoUid).get().await() } catch (_: Exception) { return@LaunchedEffect }
-        @Suppress("UNCHECKED_CAST")
-        isFavorite = (snap.get("favoriteGames") as? List<String>)?.contains("bingo") == true
-    }
 
     val game by viewModel.game.collectAsStateWithLifecycle()
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
@@ -221,16 +212,8 @@ fun GameScreen(
                 if (game.status == GameStatus.RUNNING) {
                     GameHudBar(
                         paused = false,
-                        isFavorite = isFavorite,
                         onPauseToggle = {},
                         onQuit = { showQuitDialog = true },
-                        onFavoriteToggle = {
-                            isFavorite = !isFavorite
-                            if (bingoUid != null) {
-                                val update = if (isFavorite) FieldValue.arrayUnion("bingo") else FieldValue.arrayRemove("bingo")
-                                bingoFirestore.collection("users").document(bingoUid).update("favoriteGames", update)
-                            }
-                        },
                     ) {
                         val playerCount = game.players.size
                         val drawnCount = game.drawnNumbers.size

@@ -66,6 +66,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestfriends.beachbingo.feature.bingo.ui.components.QrCodeImage
 import com.bestfriends.beachbingo.feature.vier.viewmodel.VierLobbyViewModel
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.Coral
 import com.bestfriends.beachbingo.ui.theme.Danger
@@ -95,6 +99,24 @@ fun VierLobbyScreen(
     var myDrinkId by remember { mutableStateOf("lager") }
     var joinCode by remember { mutableStateOf(initialJoinCode ?: "") }
     var joining by remember { mutableStateOf(false) }
+    var isFavorite by remember { mutableStateOf(false) }
+
+    val vierAuth = FirebaseAuth.getInstance()
+    val vierFirestore = FirebaseFirestore.getInstance()
+    val vierUid = vierAuth.currentUser?.uid
+
+    LaunchedEffect(vierUid) {
+        if (vierUid == null) return@LaunchedEffect
+        val snap = try { vierFirestore.collection("users").document(vierUid).get().await() } catch (_: Exception) { return@LaunchedEffect }
+        @Suppress("UNCHECKED_CAST")
+        isFavorite = (snap.get("favoriteGames") as? List<String>)?.contains("vier") == true
+    }
+
+    fun toggleFavorite() {
+        isFavorite = !isFavorite
+        val update = if (isFavorite) FieldValue.arrayUnion("vier") else FieldValue.arrayRemove("vier")
+        if (vierUid != null) vierFirestore.collection("users").document(vierUid).update("favoriteGames", update)
+    }
 
     // Sync preferred drink + difficulty from VM
     LaunchedEffect(uiState.preferredDrinkId) {
@@ -129,6 +151,13 @@ fun VierLobbyScreen(
                 actions = {
                     IconButton(onClick = onNavigateToResults) {
                         Icon(Icons.Default.EmojiEvents, contentDescription = "Ergebnisse", tint = SandGold)
+                    }
+                    IconButton(onClick = { toggleFavorite() }) {
+                        Text(
+                            if (isFavorite) "★" else "☆",
+                            fontSize = 22.sp,
+                            color = if (isFavorite) SandGold else TextMuted,
+                        )
                     }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Einstellungen", tint = TextSub)

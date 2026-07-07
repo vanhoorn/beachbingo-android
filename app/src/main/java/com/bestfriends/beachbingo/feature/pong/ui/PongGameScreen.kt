@@ -22,7 +22,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import com.bestfriends.beachbingo.ui.components.GameHudBar
 import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
-import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.tasks.await
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -107,18 +106,10 @@ fun PongGameScreen(
     val isPhysicsOwner = humanCount == 1 || isHost
     var manualPaused by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
-    var isFavorite by remember { mutableStateOf(false) }
 
     val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
     val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid
-
-    LaunchedEffect(uid) {
-        if (uid == null) return@LaunchedEffect
-        val snap = try { firestore.collection("users").document(uid).get().await() } catch (_: Exception) { return@LaunchedEffect }
-        @Suppress("UNCHECKED_CAST")
-        isFavorite = (snap.get("favoriteGames") as? List<String>)?.contains("pong") == true
-    }
 
     // Game loop — runs on physics owner, or applies remote state for guests
     LaunchedEffect(loserSide, isPhysicsOwner) {
@@ -267,16 +258,8 @@ fun PongGameScreen(
             // ── HUD bar ───────────────────────────────────────────────────────
             GameHudBar(
                 paused = manualPaused,
-                isFavorite = isFavorite,
                 onPauseToggle = { manualPaused = !manualPaused },
                 onQuit = { manualPaused = true; showQuitDialog = true },
-                onFavoriteToggle = {
-                    isFavorite = !isFavorite
-                    if (uid != null) {
-                        val update = if (isFavorite) FieldValue.arrayUnion("pong") else FieldValue.arrayRemove("pong")
-                        firestore.collection("users").document(uid).update("favoriteGames", update)
-                    }
-                },
             ) {
                 androidx.compose.foundation.layout.Column(
                     horizontalAlignment = Alignment.CenterHorizontally,

@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
@@ -52,6 +53,7 @@ fun PiratesLobbyScreen(
     var fireRate by remember { mutableIntStateOf(5) }
     var controlMode by remember { mutableStateOf("BUTTONS") }
     var loading by remember { mutableStateOf(true) }
+    var isFavorite by remember { mutableStateOf(false) }
 
     LaunchedEffect(uid) {
         if (uid == null) { loading = false; return@LaunchedEffect }
@@ -59,7 +61,15 @@ fun PiratesLobbyScreen(
         difficulty = snap.getString("preferredPiratesDifficulty") ?: "SNIPER"
         fireRate = (snap.getLong("preferredPiratesFireRate") ?: 5L).toInt()
         controlMode = snap.getString("preferredPiratesControlMode") ?: "BUTTONS"
+        @Suppress("UNCHECKED_CAST")
+        isFavorite = (snap.get("favoriteGames") as? List<String>)?.contains("pirates") == true
         loading = false
+    }
+
+    fun toggleFavorite() {
+        isFavorite = !isFavorite
+        val update = if (isFavorite) FieldValue.arrayUnion("pirates") else FieldValue.arrayRemove("pirates")
+        if (uid != null) firestore.collection("users").document(uid).update("favoriteGames", update)
     }
 
     Scaffold(
@@ -79,6 +89,13 @@ fun PiratesLobbyScreen(
                 actions = {
                     IconButton(onClick = onNavigateToResults) {
                         Icon(Icons.Default.EmojiEvents, contentDescription = "Ergebnisse", tint = SandGold)
+                    }
+                    IconButton(onClick = { toggleFavorite() }) {
+                        Text(
+                            if (isFavorite) "★" else "☆",
+                            fontSize = 22.sp,
+                            color = if (isFavorite) SandGold else TextMuted,
+                        )
                     }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Einstellungen", tint = TextMuted)

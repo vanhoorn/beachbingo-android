@@ -27,6 +27,10 @@ import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Settings
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -116,6 +120,24 @@ fun PongLobbyScreen(
     var scoreLimit by rememberSaveable { mutableIntStateOf(7) }
     var joinCode by rememberSaveable { mutableStateOf("") }
     var deleteGameId by remember { mutableStateOf<String?>(null) }
+    var isFavorite by remember { mutableStateOf(false) }
+
+    val pongAuth = FirebaseAuth.getInstance()
+    val pongFirestore = FirebaseFirestore.getInstance()
+    val pongUid = pongAuth.currentUser?.uid
+
+    LaunchedEffect(pongUid) {
+        if (pongUid == null) return@LaunchedEffect
+        val snap = try { pongFirestore.collection("users").document(pongUid).get().await() } catch (_: Exception) { return@LaunchedEffect }
+        @Suppress("UNCHECKED_CAST")
+        isFavorite = (snap.get("favoriteGames") as? List<String>)?.contains("pong") == true
+    }
+
+    fun toggleFavorite() {
+        isFavorite = !isFavorite
+        val update = if (isFavorite) FieldValue.arrayUnion("pong") else FieldValue.arrayRemove("pong")
+        if (pongUid != null) pongFirestore.collection("users").document(pongUid).update("favoriteGames", update)
+    }
 
     // QR scanner
     val qrScanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
@@ -195,6 +217,13 @@ fun PongLobbyScreen(
                 actions = {
                     IconButton(onClick = onNavigateToResults) {
                         Icon(Icons.Default.EmojiEvents, contentDescription = "Ergebnisse", tint = SandGold)
+                    }
+                    IconButton(onClick = { toggleFavorite() }) {
+                        Text(
+                            if (isFavorite) "★" else "☆",
+                            fontSize = 22.sp,
+                            color = if (isFavorite) SandGold else TextMuted,
+                        )
                     }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Einstellungen", tint = TextSub)

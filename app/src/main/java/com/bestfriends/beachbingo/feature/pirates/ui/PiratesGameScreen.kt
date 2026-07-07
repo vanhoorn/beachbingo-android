@@ -24,7 +24,6 @@ import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
 import com.bestfriends.beachbingo.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.FieldValue
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.tasks.await
 import kotlin.math.*
@@ -172,14 +171,6 @@ fun PiratesGameScreen(
     var paused        by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
     var resultHandled  by remember { mutableStateOf(false) }
-    var isFavorite    by remember { mutableStateOf(false) }
-
-    LaunchedEffect(uid) {
-        if (uid == null) return@LaunchedEffect
-        val snap = try { firestore.collection("users").document(uid).get().await() } catch (_: Exception) { return@LaunchedEffect }
-        @Suppress("UNCHECKED_CAST")
-        isFavorite = (snap.get("favoriteGames") as? List<String>)?.contains("pirates") == true
-    }
 
     // Game loop — delta-time aware
     LaunchedEffect(Unit) {
@@ -221,16 +212,8 @@ fun PiratesGameScreen(
         // ── HUD ────────────────────────────────────────────────────────────
         GameHudBar(
             paused          = paused,
-            isFavorite      = isFavorite,
             onPauseToggle   = { paused = !paused },
             onQuit          = { paused = true; showQuitDialog = true },
-            onFavoriteToggle = {
-                isFavorite = !isFavorite
-                if (uid != null) {
-                    val update = if (isFavorite) FieldValue.arrayUnion("pirates") else FieldValue.arrayRemove("pirates")
-                    firestore.collection("users").document(uid).update("favoriteGames", update)
-                }
-            },
         ) {
             HudCell(value = "${gs.score}", label = "Score", color = PurpleGame, modifier = Modifier.weight(1.4f))
             HudCell(value = "W${gs.wave}", label = "Welle", color = OceanBlue, modifier = Modifier.weight(0.8f))
