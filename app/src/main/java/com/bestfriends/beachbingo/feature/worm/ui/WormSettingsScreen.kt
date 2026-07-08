@@ -29,9 +29,9 @@ private val WormGreen = Color(0xFF22C55E)
 private data class OptionItem(val id: String, val title: String, val desc: String)
 
 private val DIFF_OPTIONS = listOf(
-    OptionItem("ROOKIE",     "🌊 Rookie",     "150ms/Schritt · Wände töten · Ideal zum Starten"),
-    OptionItem("SNIPER",     "🎯 Sniper",     "100ms/Schritt · Wände töten · Echte Herausforderung"),
-    OptionItem("BOSS_LEVEL", "💪 Boss Level", "65ms/Schritt · Wände = Teleport · Viel Spaß 😈"),
+    OptionItem("ROOKIE",     "🌊 Rookie",     "Gemütliches Tempo · Wände töten · Ideal zum Starten"),
+    OptionItem("SNIPER",     "🎯 Sniper",     "Flottes Tempo · Wände töten · Echte Herausforderung"),
+    OptionItem("BOSS_LEVEL", "💪 Boss Level", "Volles Tempo · Wände töten · Viel Spaß 😈"),
 )
 
 private val CONTROL_OPTIONS = listOf(

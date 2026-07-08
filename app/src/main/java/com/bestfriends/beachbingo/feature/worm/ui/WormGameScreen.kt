@@ -54,8 +54,8 @@ private val FOOD_TYPES = listOf(
     FoodType("🐟", 30, 10),
 )
 
-private val STEP_MS = mapOf("ROOKIE" to 150L, "SNIPER" to 100L, "BOSS_LEVEL" to 65L)
-private val WALLS_WRAP = mapOf("ROOKIE" to false, "SNIPER" to false, "BOSS_LEVEL" to true)
+private val STEP_MS = mapOf("ROOKIE" to 300L, "SNIPER" to 150L, "BOSS_LEVEL" to 75L)
+private val WALLS_WRAP = mapOf("ROOKIE" to false, "SNIPER" to false, "BOSS_LEVEL" to false)
 
 // ── Data classes ──────────────────────────────────────────────────────────────
 
@@ -145,6 +145,14 @@ private fun DrawScope.drawGame(gs: WormState, scale: Float) {
     for (j in 0..ROWS) {
         drawLine(GridColor, Offset(0f, j * cell), Offset(VIRT_W * scale, j * cell), strokeWidth = 0.5f)
     }
+
+    // Outer border – marks the deadly wall
+    drawRect(
+        color = Color(0xEFEF4444.toInt()),
+        topLeft = Offset(1.5f, 1.5f),
+        size = Size(VIRT_W * scale - 3f, VIRT_H * scale - 3f),
+        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3f),
+    )
 
     // Snake segments
     gs.snake.forEachIndexed { i, seg ->
