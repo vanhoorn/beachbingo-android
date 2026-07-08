@@ -66,6 +66,7 @@ fun CategoryScreen(
     onNavigateToPongLobby: () -> Unit,
     onNavigateToVierLobby: () -> Unit,
     onNavigateToPiratesLobby: () -> Unit,
+    onNavigateToWormLobby: () -> Unit,
 ) {
     val playerCount = runCatching { PlayerCount.valueOf(playerCountName) }.getOrNull()
         ?: return
@@ -183,6 +184,7 @@ fun CategoryScreen(
                                         "pong"    -> onNavigateToPongLobby()
                                         "vier"    -> onNavigateToVierLobby()
                                         "pirates" -> onNavigateToPiratesLobby()
+                                        "worm"    -> onNavigateToWormLobby()
                                     }
                                 }
                             }

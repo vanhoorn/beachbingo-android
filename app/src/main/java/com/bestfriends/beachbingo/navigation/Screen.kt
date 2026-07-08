@@ -45,6 +45,22 @@ sealed interface Screen {
     ) : Screen
     @Serializable object PiratesSettings : Screen
     @Serializable object PiratesHighscore : Screen
+    // Wattwurm
+    @Serializable object WormLobby : Screen
+    @Serializable data class WormGame(
+        val difficulty: String,
+        val controlMode: String,
+    ) : Screen
+    @Serializable object WormSettings : Screen
+    @Serializable object WormHighscore : Screen
+    @Serializable data class WormResults(
+        val score: Int,
+        val length: Int,
+        val difficulty: String,
+        val controlMode: String,
+        val highScore: Int,
+        val newHighScore: Boolean,
+    ) : Screen
     @Serializable data class Category(val playerCount: String) : Screen
     @Serializable data class PiratesResults(
         val score: Int,

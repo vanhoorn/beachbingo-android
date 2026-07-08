@@ -62,4 +62,13 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         playerCounts = listOf(PlayerCount.ONE),
         genres = listOf(GameGenre.ACTION),
     ),
+    GameMetadata(
+        id = "worm",
+        emoji = "🪱",
+        title = "Wattwurm",
+        description = "Frisst Krabben, Muscheln und Fische. Werde nie die Grenzen!",
+        color = 0xFF22C55E,
+        playerCounts = listOf(PlayerCount.ONE),
+        genres = listOf(GameGenre.ACTION),
+    ),
 )

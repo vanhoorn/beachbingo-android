@@ -75,6 +75,7 @@ fun HomeScreen(
     onNavigateToPongLobby: () -> Unit,
     onNavigateToVierLobby: () -> Unit,
     onNavigateToPiratesLobby: () -> Unit,
+    onNavigateToWormLobby: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToJoin: () -> Unit,
     onNavigateToCategory: (String) -> Unit,
@@ -210,6 +211,7 @@ fun HomeScreen(
                                 "pong"    -> onNavigateToPongLobby()
                                 "vier"    -> onNavigateToVierLobby()
                                 "pirates" -> onNavigateToPiratesLobby()
+                                "worm"    -> onNavigateToWormLobby()
                             }
                         }
                     })
@@ -232,6 +234,7 @@ fun HomeScreen(
                                 "pong"    -> onNavigateToPongLobby()
                                 "vier"    -> onNavigateToVierLobby()
                                 "pirates" -> onNavigateToPiratesLobby()
+                                "worm"    -> onNavigateToWormLobby()
                             }
                         }
                     })

@@ -38,6 +38,11 @@ import com.bestfriends.beachbingo.feature.pirates.ui.PiratesGameScreen
 import com.bestfriends.beachbingo.feature.pirates.ui.PiratesHighscoreScreen
 import com.bestfriends.beachbingo.feature.pirates.ui.PiratesResultsScreen
 import com.bestfriends.beachbingo.feature.pirates.ui.PiratesSettingsScreen
+import com.bestfriends.beachbingo.feature.worm.ui.WormLobbyScreen
+import com.bestfriends.beachbingo.feature.worm.ui.WormGameScreen
+import com.bestfriends.beachbingo.feature.worm.ui.WormSettingsScreen
+import com.bestfriends.beachbingo.feature.worm.ui.WormResultsScreen
+import com.bestfriends.beachbingo.feature.worm.ui.WormHighscoreScreen
 
 @Composable
 fun AppNavigation() {
@@ -98,6 +103,7 @@ fun AppNavigation() {
                 onNavigateToPongLobby = { navController.navigate(Screen.PongLobby) },
                 onNavigateToVierLobby = { navController.navigate(Screen.VierLobby) },
                 onNavigateToPiratesLobby = { navController.navigate(Screen.PiratesLobby) },
+                onNavigateToWormLobby = { navController.navigate(Screen.WormLobby) },
                 onNavigateToProfile = { navController.navigate(Screen.Profile) },
                 onNavigateToJoin = { navController.navigate(Screen.JoinGame) },
                 onNavigateToCategory = { playerCount -> navController.navigate(Screen.Category(playerCount)) },
@@ -114,6 +120,7 @@ fun AppNavigation() {
                 onNavigateToPongLobby = { navController.navigate(Screen.PongLobby) },
                 onNavigateToVierLobby = { navController.navigate(Screen.VierLobby) },
                 onNavigateToPiratesLobby = { navController.navigate(Screen.PiratesLobby) },
+                onNavigateToWormLobby = { navController.navigate(Screen.WormLobby) },
             )
         }
 
@@ -327,6 +334,71 @@ fun AppNavigation() {
                 onPlayAgain = {
                     navController.navigate(Screen.PiratesLobby) {
                         popUpTo(Screen.PiratesLobby) { inclusive = true }
+                    }
+                },
+                onNavigateToHome = {
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Home) { inclusive = false }
+                    }
+                },
+            )
+        }
+
+        // ── Wattwurm ───────────────────────────────────────────────────────────
+        composable<Screen.WormLobby> {
+            WormLobbyScreen(
+                onNavigateToGame = { difficulty, controlMode ->
+                    navController.navigate(Screen.WormGame(difficulty, controlMode)) {
+                        popUpTo(Screen.WormLobby)
+                    }
+                },
+                onNavigateToSettings = { navController.navigate(Screen.WormSettings) },
+                onNavigateToHighscore = { navController.navigate(Screen.WormHighscore) },
+                onNavigateToHome = {
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Home) { inclusive = false }
+                    }
+                },
+            )
+        }
+
+        composable<Screen.WormHighscore> {
+            WormHighscoreScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable<Screen.WormGame> { backStack ->
+            val route: Screen.WormGame = backStack.toRoute()
+            WormGameScreen(
+                difficulty = route.difficulty,
+                controlMode = route.controlMode,
+                onNavigateToResults = { score, length, highScore, newHighScore ->
+                    navController.navigate(
+                        Screen.WormResults(score, length, route.difficulty, route.controlMode, highScore, newHighScore)
+                    ) { popUpTo(Screen.WormLobby) }
+                },
+                onNavigateToLobby = {
+                    navController.navigate(Screen.WormLobby) {
+                        popUpTo(Screen.WormLobby) { inclusive = true }
+                    }
+                },
+            )
+        }
+
+        composable<Screen.WormSettings> {
+            WormSettingsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable<Screen.WormResults> { backStack ->
+            val route: Screen.WormResults = backStack.toRoute()
+            WormResultsScreen(
+                score = route.score,
+                length = route.length,
+                difficulty = route.difficulty,
+                highScore = route.highScore,
+                newHighScore = route.newHighScore,
+                onPlayAgain = {
+                    navController.navigate(Screen.WormGame(route.difficulty, route.controlMode)) {
+                        popUpTo(Screen.WormLobby)
                     }
                 },
                 onNavigateToHome = {
