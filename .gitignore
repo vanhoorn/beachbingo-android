@@ -22,4 +22,5 @@ local.properties
 # Keystores
 *.jks
 *.keystore
+keystore.properties
 bingo.md
