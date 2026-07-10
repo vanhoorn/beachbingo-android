@@ -268,7 +268,8 @@ fun WormGameScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(BgDark)
-            .statusBarsPadding(),
+            .statusBarsPadding()
+            .navigationBarsPadding(),
     ) {
         // HUD
         GameHudBar(

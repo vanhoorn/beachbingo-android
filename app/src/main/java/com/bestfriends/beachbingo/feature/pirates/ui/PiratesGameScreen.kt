@@ -207,7 +207,7 @@ fun PiratesGameScreen(
     val density = LocalDensity.current
 
     Column(
-        modifier = Modifier.fillMaxSize().background(BgDark).statusBarsPadding(),
+        modifier = Modifier.fillMaxSize().background(BgDark).statusBarsPadding().navigationBarsPadding(),
     ) {
         // ── HUD ────────────────────────────────────────────────────────────
         GameHudBar(

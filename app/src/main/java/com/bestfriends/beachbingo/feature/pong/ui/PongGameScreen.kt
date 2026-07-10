@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -137,7 +138,7 @@ fun PongGameScreen(
     val activeSides = PongGameViewModel.sidesForPaddles(totalPaddles, gs.wallSide)
 
     Box(modifier = Modifier.fillMaxSize().background(BgDark)) {
-        Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
 
             // ── Header / Score bar ────────────────────────────────────────────
             Row(

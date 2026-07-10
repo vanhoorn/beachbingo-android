@@ -88,15 +88,19 @@ fun VierSettingsScreen(
         if (uid == null) return
         scope.launch {
             saving = true
-            firestore.collection("users").document(uid)
-                .update(mapOf(
-                    "preferredVierDrinkId" to selectedDrinkId,
-                    "preferredVierDifficulty" to selectedDifficulty,
-                )).await()
-            saving = false
-            saved = true
-            kotlinx.coroutines.delay(2500)
-            saved = false
+            try {
+                firestore.collection("users").document(uid)
+                    .update(mapOf(
+                        "preferredVierDrinkId" to selectedDrinkId,
+                        "preferredVierDifficulty" to selectedDifficulty,
+                    )).await()
+                saved = true
+                kotlinx.coroutines.delay(2500)
+                saved = false
+            } catch (_: Exception) {
+            } finally {
+                saving = false
+            }
         }
     }
 

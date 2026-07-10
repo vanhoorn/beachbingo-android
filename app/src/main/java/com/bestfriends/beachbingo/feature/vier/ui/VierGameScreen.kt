@@ -9,6 +9,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -55,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -78,8 +80,8 @@ private val BoardBorder = Color(0xFF1E3A5F)
 private val EmptyCellBg = Color(0xFF091525)
 private val BeerOrange = Color(0xFFC2410C)
 
-private const val CELL_DP = 44
-private const val PIECE_DP = 36
+private val CELL_DP_MIN = 36.dp
+private val CELL_DP_MAX = 80.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -194,10 +196,21 @@ fun VierGameScreen(
         },
         containerColor = BgDark,
     ) { padding ->
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            // Column padding is 12.dp each side (24dp total), board padding 10.dp each side (20dp),
+            // gaps between COLS cells: (COLS-1)*4.dp = 24.dp
+            val totalGaps = ((COLS - 1) * 4).dp
+            val cellDp = ((maxWidth - 24.dp - 20.dp - totalGaps) / COLS)
+                .coerceIn(CELL_DP_MIN, CELL_DP_MAX)
+            val pieceDp = (cellDp.value * 0.82f).dp
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -247,7 +260,7 @@ fun VierGameScreen(
                             val canDrop = !gameOver && myTurn && available
                             Box(
                                 modifier = Modifier
-                                    .size(CELL_DP.dp, 40.dp)
+                                    .size(cellDp, 40.dp)
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(
                                         if (canDrop) getDrink(myDrinkId).color.copy(alpha = 0.18f)
@@ -295,7 +308,7 @@ fun VierGameScreen(
                                 // Outer Box: no clip, so piece can overflow upward during animation
                                 Box(
                                     modifier = Modifier
-                                        .size(CELL_DP.dp)
+                                        .size(cellDp)
                                         .clickable(enabled = !gameOver && myTurn && piece == 0 && getAvailableRow(board, col) == row) {
                                             handleDrop(col)
                                         },
@@ -304,7 +317,7 @@ fun VierGameScreen(
                                     // Cell background circle (always visible, clipped to circle)
                                     Box(
                                         Modifier
-                                            .size(CELL_DP.dp)
+                                            .size(cellDp)
                                             .clip(CircleShape)
                                             .background(EmptyCellBg)
                                             .border(2.dp, BoardBorder, CircleShape)
@@ -316,6 +329,8 @@ fun VierGameScreen(
                                                 drinkId = drinkId,
                                                 isDropping = isDropping,
                                                 dropRow = dropRow,
+                                                cellDp = cellDp,
+                                                pieceDp = pieceDp,
                                             )
                                         }
                                     }
@@ -407,6 +422,7 @@ fun VierGameScreen(
 
             Spacer(Modifier.height(24.dp))
         }
+        } // BoxWithConstraints
     }
 }
 
@@ -415,12 +431,15 @@ private fun DroppingPiece(
     drinkId: String,
     isDropping: Boolean,
     dropRow: Int,
+    cellDp: Dp,
+    pieceDp: Dp,
 ) {
     if (isDropping && dropRow >= 0) {
-        val cellPlusPadding = CELL_DP + 4
+        val cellInt = cellDp.value.toInt()
+        val cellPlusPadding = cellInt + 4
         // Distance from above board top (10dp padding + 40dp indicator + 8dp gap) to target cell center
         val boardTopOffset = 10 + 40 + 8
-        val totalDrop = boardTopOffset + dropRow * cellPlusPadding + CELL_DP / 2
+        val totalDrop = boardTopOffset + dropRow * cellPlusPadding + cellInt / 2
         val offsetY = remember { Animatable(-totalDrop.toFloat()) }
         val duration = (120 + dropRow * 55).coerceAtLeast(200)
 
@@ -443,11 +462,11 @@ private fun DroppingPiece(
 
         DrinkPiece(
             drinkId = drinkId,
-            size = PIECE_DP.dp,
+            size = pieceDp,
             modifier = Modifier.offset { IntOffset(0, offsetY.value.dp.roundToPx()) },
         )
     } else {
-        DrinkPiece(drinkId = drinkId, size = PIECE_DP.dp)
+        DrinkPiece(drinkId = drinkId, size = pieceDp)
     }
 }
 

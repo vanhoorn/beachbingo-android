@@ -8,7 +8,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,9 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -217,39 +213,41 @@ fun VierLobbyScreen(
                     color = TextPrimary,
                 )
 
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(3),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.height(320.dp),
-                    userScrollEnabled = false,
-                ) {
-                    items(DRINKS) { drink ->
-                        val selected = myDrinkId == drink.id
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .border(
-                                    width = 2.dp,
-                                    color = if (selected) drink.color else Color(0xFF1E3050),
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    DRINKS.chunked(3).forEach { rowDrinks ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            rowDrinks.forEach { drink ->
+                                val selected = myDrinkId == drink.id
+                                Surface(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .border(
+                                            width = 2.dp,
+                                            color = if (selected) drink.color else Color(0xFF1E3050),
+                                            shape = RoundedCornerShape(8.dp),
+                                        )
+                                        .clickable { myDrinkId = drink.id },
+                                    color = if (selected) drink.color.copy(alpha = 0.2f) else SurfaceDark,
                                     shape = RoundedCornerShape(8.dp),
-                                )
-                                .clickable { myDrinkId = drink.id },
-                            color = if (selected) drink.color.copy(alpha = 0.2f) else SurfaceDark,
-                            shape = RoundedCornerShape(8.dp),
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                DrinkPiece(drinkId = drink.id, size = 44.dp)
-                                Text(
-                                    text = drink.name,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = TextSub,
-                                )
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        DrinkPiece(drinkId = drink.id, size = 44.dp)
+                                        Text(
+                                            text = drink.name,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextSub,
+                                        )
+                                    }
+                                }
+                            }
+                            // Leere Zellen auffüllen falls letzte Zeile < 3 Elemente
+                            repeat(3 - rowDrinks.size) {
+                                Spacer(modifier = Modifier.weight(1f))
                             }
                         }
                     }

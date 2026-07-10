@@ -65,15 +65,19 @@ fun PiratesSettingsScreen(onNavigateBack: () -> Unit) {
         if (uid == null) return
         scope.launch {
             saving = true
-            firestore.collection("users").document(uid).update(mapOf(
-                "preferredPiratesDifficulty" to selectedDifficulty,
-                "preferredPiratesFireRate" to fireRate,
-                "preferredPiratesControlMode" to controlMode,
-            )).await()
-            saving = false
-            saved = true
-            kotlinx.coroutines.delay(2500)
-            saved = false
+            try {
+                firestore.collection("users").document(uid).update(mapOf(
+                    "preferredPiratesDifficulty" to selectedDifficulty,
+                    "preferredPiratesFireRate" to fireRate,
+                    "preferredPiratesControlMode" to controlMode,
+                )).await()
+                saved = true
+                kotlinx.coroutines.delay(2500)
+                saved = false
+            } catch (_: Exception) {
+            } finally {
+                saving = false
+            }
         }
     }
 

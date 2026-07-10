@@ -37,7 +37,9 @@ fun PiratesResultsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BgDark),
+            .background(BgDark)
+            .statusBarsPadding()
+            .navigationBarsPadding(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // Header
