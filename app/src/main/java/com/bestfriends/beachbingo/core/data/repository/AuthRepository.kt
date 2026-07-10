@@ -12,5 +12,6 @@ interface AuthRepository {
     suspend fun signOut()
     suspend fun updateProfile(displayName: String, avatarUrl: String = ""): Result<Unit>
     suspend fun updateGamePreferences(gameMode: GameMode, drawStyle: DrawStyle, eliminationInterval: Int): Result<Unit>
+    suspend fun updateAudioPreferences(soundEnabled: Boolean, musicEnabled: Boolean): Result<Unit>
     suspend fun updateEmail(newEmail: String, currentPassword: String): Result<Unit>
 }

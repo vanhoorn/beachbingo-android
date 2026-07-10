@@ -19,4 +19,11 @@ data class User(
     val preferredPiratesFireRate: Int? = null,
     val preferredPiratesControlMode: String? = null,
     val piratesHighScores: Map<String, Long> = emptyMap(),
+    // Strandturm
+    val preferredStrandturmControlMode: String? = null,
+    val strandturmHighScore: Int = 0,
+    val strandturmBestLevel: Int = 0,
+    // Audio (all games)
+    val soundEnabled: Boolean = true,
+    val musicEnabled: Boolean = true,
 )

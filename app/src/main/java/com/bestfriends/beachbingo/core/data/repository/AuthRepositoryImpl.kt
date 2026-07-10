@@ -63,6 +63,11 @@ class AuthRepositoryImpl @Inject constructor(
                                 piratesHighScores = (data["piratesHighScores"] as? Map<*, *>)
                                     ?.mapNotNull { (k, v) -> (k as? String)?.let { key -> (v as? Long)?.let { score -> key to score } } }
                                     ?.toMap() ?: emptyMap(),
+                                preferredStrandturmControlMode = data["preferredStrandturmControlMode"] as? String,
+                                strandturmHighScore = (data["strandturmHighScore"] as? Long)?.toInt() ?: 0,
+                                strandturmBestLevel = (data["strandturmBestLevel"] as? Long)?.toInt() ?: 0,
+                                soundEnabled = data["soundEnabled"] as? Boolean ?: true,
+                                musicEnabled = data["musicEnabled"] as? Boolean ?: true,
                             )
                         } else {
                             User(uid = fbUser.uid, email = fbUser.email ?: "", displayName = fbUser.displayName ?: "")
@@ -145,6 +150,13 @@ class AuthRepositoryImpl @Inject constructor(
                 ),
                 SetOptions.merge()
             )
+            .await()
+    }
+
+    override suspend fun updateAudioPreferences(soundEnabled: Boolean, musicEnabled: Boolean): Result<Unit> = runCatching {
+        val uid = auth.currentUser?.uid ?: error("Nicht eingeloggt")
+        firestore.collection("users").document(uid)
+            .set(mapOf("soundEnabled" to soundEnabled, "musicEnabled" to musicEnabled), SetOptions.merge())
             .await()
     }
 }

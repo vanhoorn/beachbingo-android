@@ -91,6 +91,12 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    fun updateAudioPreferences(soundEnabled: Boolean, musicEnabled: Boolean) {
+        viewModelScope.launch {
+            authRepository.updateAudioPreferences(soundEnabled, musicEnabled)
+        }
+    }
+
     fun clearState() = _uiState.update { it.copy(error = null, isSuccess = false) }
 }
 

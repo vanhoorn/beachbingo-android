@@ -61,6 +61,19 @@ sealed interface Screen {
         val highScore: Int,
         val newHighScore: Boolean,
     ) : Screen
+    // Strandturm
+    @Serializable object StrandturmLobby : Screen
+    @Serializable data class StrandturmGame(val controlMode: String) : Screen
+    @Serializable object StrandturmSettings : Screen
+    @Serializable object StrandturmHighscore : Screen
+    @Serializable data class StrandturmResults(
+        val score: Int,
+        val level: Int,
+        val highScore: Int,
+        val bestLevel: Int,
+        val newHighScore: Boolean,
+        val newBestLevel: Boolean,
+    ) : Screen
     @Serializable data class Category(val playerCount: String) : Screen
     @Serializable data class PiratesResults(
         val score: Int,

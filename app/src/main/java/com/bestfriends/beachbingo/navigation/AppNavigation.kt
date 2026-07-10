@@ -43,6 +43,11 @@ import com.bestfriends.beachbingo.feature.worm.ui.WormGameScreen
 import com.bestfriends.beachbingo.feature.worm.ui.WormSettingsScreen
 import com.bestfriends.beachbingo.feature.worm.ui.WormResultsScreen
 import com.bestfriends.beachbingo.feature.worm.ui.WormHighscoreScreen
+import com.bestfriends.beachbingo.feature.strandturm.ui.StrandturmLobbyScreen
+import com.bestfriends.beachbingo.feature.strandturm.ui.StrandturmGameScreen
+import com.bestfriends.beachbingo.feature.strandturm.ui.StrandturmSettingsScreen
+import com.bestfriends.beachbingo.feature.strandturm.ui.StrandturmHighscoreScreen
+import com.bestfriends.beachbingo.feature.strandturm.ui.StrandturmResultsScreen
 
 @Composable
 fun AppNavigation() {
@@ -104,6 +109,7 @@ fun AppNavigation() {
                 onNavigateToVierLobby = { navController.navigate(Screen.VierLobby) },
                 onNavigateToPiratesLobby = { navController.navigate(Screen.PiratesLobby) },
                 onNavigateToWormLobby = { navController.navigate(Screen.WormLobby) },
+                onNavigateToStrandturmLobby = { navController.navigate(Screen.StrandturmLobby) },
                 onNavigateToProfile = { navController.navigate(Screen.Profile) },
                 onNavigateToJoin = { navController.navigate(Screen.JoinGame) },
                 onNavigateToCategory = { playerCount -> navController.navigate(Screen.Category(playerCount)) },
@@ -121,6 +127,7 @@ fun AppNavigation() {
                 onNavigateToVierLobby = { navController.navigate(Screen.VierLobby) },
                 onNavigateToPiratesLobby = { navController.navigate(Screen.PiratesLobby) },
                 onNavigateToWormLobby = { navController.navigate(Screen.WormLobby) },
+                onNavigateToStrandturmLobby = { navController.navigate(Screen.StrandturmLobby) },
             )
         }
 
@@ -399,6 +406,71 @@ fun AppNavigation() {
                 onPlayAgain = {
                     navController.navigate(Screen.WormGame(route.difficulty, route.controlMode)) {
                         popUpTo(Screen.WormLobby)
+                    }
+                },
+                onNavigateToHome = {
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Home) { inclusive = false }
+                    }
+                },
+            )
+        }
+
+        // ── Strandturm ─────────────────────────────────────────────────────────
+        composable<Screen.StrandturmLobby> {
+            StrandturmLobbyScreen(
+                onNavigateToGame = { controlMode ->
+                    navController.navigate(Screen.StrandturmGame(controlMode)) {
+                        popUpTo(Screen.StrandturmLobby)
+                    }
+                },
+                onNavigateToSettings  = { navController.navigate(Screen.StrandturmSettings) },
+                onNavigateToHighscore = { navController.navigate(Screen.StrandturmHighscore) },
+                onNavigateToHome = {
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Home) { inclusive = false }
+                    }
+                },
+            )
+        }
+
+        composable<Screen.StrandturmHighscore> {
+            StrandturmHighscoreScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable<Screen.StrandturmGame> { backStack ->
+            val route: Screen.StrandturmGame = backStack.toRoute()
+            StrandturmGameScreen(
+                controlMode = route.controlMode,
+                onNavigateToResults = { score, level, highScore, bestLevel, newHighScore, newBestLevel ->
+                    navController.navigate(
+                        Screen.StrandturmResults(score, level, highScore, bestLevel, newHighScore, newBestLevel)
+                    ) { popUpTo(Screen.StrandturmLobby) }
+                },
+                onNavigateToLobby = {
+                    navController.navigate(Screen.StrandturmLobby) {
+                        popUpTo(Screen.StrandturmLobby) { inclusive = true }
+                    }
+                },
+            )
+        }
+
+        composable<Screen.StrandturmSettings> {
+            StrandturmSettingsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        composable<Screen.StrandturmResults> { backStack ->
+            val route: Screen.StrandturmResults = backStack.toRoute()
+            StrandturmResultsScreen(
+                score        = route.score,
+                level        = route.level,
+                highScore    = route.highScore,
+                bestLevel    = route.bestLevel,
+                newHighScore = route.newHighScore,
+                newBestLevel = route.newBestLevel,
+                onPlayAgain = {
+                    navController.navigate(Screen.StrandturmLobby) {
+                        popUpTo(Screen.StrandturmLobby) { inclusive = true }
                     }
                 },
                 onNavigateToHome = {

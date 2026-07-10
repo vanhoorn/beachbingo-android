@@ -71,4 +71,13 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         playerCounts = listOf(PlayerCount.ONE),
         genres = listOf(GameGenre.ACTION),
     ),
+    GameMetadata(
+        id = "strandturm",
+        emoji = "🗼",
+        title = "Strandturm",
+        description = "Klettere den Pier hoch, weiche Kokosnüssen aus — bis zum Gipfel!",
+        color = 0xFFDC2626,
+        playerCounts = listOf(PlayerCount.ONE),
+        genres = listOf(GameGenre.ACTION),
+    ),
 )

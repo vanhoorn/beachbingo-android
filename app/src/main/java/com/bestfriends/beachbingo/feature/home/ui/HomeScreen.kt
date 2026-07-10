@@ -77,6 +77,7 @@ fun HomeScreen(
     onNavigateToVierLobby: () -> Unit,
     onNavigateToPiratesLobby: () -> Unit,
     onNavigateToWormLobby: () -> Unit,
+    onNavigateToStrandturmLobby: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToJoin: () -> Unit,
     onNavigateToCategory: (String) -> Unit,
@@ -209,11 +210,12 @@ fun HomeScreen(
                     MiniGameCard(game = game, onClick = {
                         handleGameClick(game.id) {
                             when (game.id) {
-                                "bingo"   -> onNavigateToBingoLobby()
-                                "pong"    -> onNavigateToPongLobby()
-                                "vier"    -> onNavigateToVierLobby()
-                                "pirates" -> onNavigateToPiratesLobby()
-                                "worm"    -> onNavigateToWormLobby()
+                                "bingo"       -> onNavigateToBingoLobby()
+                                "pong"        -> onNavigateToPongLobby()
+                                "vier"        -> onNavigateToVierLobby()
+                                "pirates"     -> onNavigateToPiratesLobby()
+                                "worm"        -> onNavigateToWormLobby()
+                                "strandturm"  -> onNavigateToStrandturmLobby()
                             }
                         }
                     })
@@ -232,11 +234,12 @@ fun HomeScreen(
                     MiniGameCard(game = game, onClick = {
                         handleGameClick(game.id) {
                             when (game.id) {
-                                "bingo"   -> onNavigateToBingoLobby()
-                                "pong"    -> onNavigateToPongLobby()
-                                "vier"    -> onNavigateToVierLobby()
-                                "pirates" -> onNavigateToPiratesLobby()
-                                "worm"    -> onNavigateToWormLobby()
+                                "bingo"       -> onNavigateToBingoLobby()
+                                "pong"        -> onNavigateToPongLobby()
+                                "vier"        -> onNavigateToVierLobby()
+                                "pirates"     -> onNavigateToPiratesLobby()
+                                "worm"        -> onNavigateToWormLobby()
+                                "strandturm"  -> onNavigateToStrandturmLobby()
                             }
                         }
                     })
