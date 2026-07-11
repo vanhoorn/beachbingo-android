@@ -17,7 +17,10 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -43,14 +46,14 @@ private const val PH       = 26f
 private const val GRAVITY  = 0.48f
 private const val MAX_FALL = 11f
 private const val WALK_SPD = 2.2f
-private const val JUMP_VY  = -9.8f
+private const val JUMP_VY  = -7.5f
 private const val CLIMB_SPD = 1.7f
 private const val COCO_R   = 8f
-private const val BONUS_START     = 5000
+private const val BONUS_START      = 5000
 private const val BONUS_DEC_FRAMES = 6
+private const val HAMMER_DURATION  = 300
 private const val GOAL_X   = 340f
 private const val MOEVE_X  = 55f
-private const val MOEVE_Y  = 48f
 private const val LADD_W   = 18f
 private const val PLAT_H   = 11f
 
@@ -70,12 +73,23 @@ private val PLATS = listOf(
 )
 private val LADDERS = listOf(
     Ladd(355f, 420f, 505f),
+    Ladd(130f, 420f, 505f), // extra
     Ladd( 25f, 335f, 420f),
+    Ladd(255f, 335f, 420f), // extra
     Ladd(355f, 250f, 335f),
+    Ladd(130f, 250f, 335f), // extra
     Ladd( 25f, 165f, 250f),
+    Ladd(255f, 165f, 250f), // extra
     Ladd(355f,  80f, 165f),
+    Ladd(130f,  80f, 165f), // extra
 )
 private val ROLL_DIR = floatArrayOf(-1f, 1f, -1f, 1f, -1f, 1f)
+
+private data class HammerDef(val x: Float, val platIdx: Int)
+private val HAMMER_DEFS = listOf(
+    HammerDef(190f, 1),
+    HammerDef(190f, 3),
+)
 
 private fun bonusForLevel(lvl: Int)  = max(400, BONUS_START - (lvl - 1) * 200)
 private fun spawnInterval(lvl: Int)  = max(80,  240          - (lvl - 1) * 20)
@@ -115,6 +129,14 @@ private class StrandturmState {
     var bonusTimer by mutableIntStateOf(bonusForLevel(1))
     var phase      by mutableStateOf("PLAYING")   // PLAYING | LIFE_LOST | LEVEL_COMPLETE | GAME_OVER
 
+    // Hammer power-up
+    var hasHammer    = false
+    var hammerTimer  = 0
+    val hammerPickups = MutableList(HAMMER_DEFS.size) { false }
+
+    // Jump-over bonus tracking
+    val jumpedCocoIds = mutableSetOf<Int>()
+
     // Internal
     var bonusTickAcc = 0
     var phaseTimer   = 0
@@ -130,6 +152,9 @@ private class StrandturmState {
         cocos.clear(); cocoSpawnAcc = 0
         bonusTimer = bonusForLevel(level); bonusTickAcc = 0
         pinvTimer  = 120
+        hasHammer = false; hammerTimer = 0
+        hammerPickups.fill(false)
+        jumpedCocoIds.clear()
         phase      = "PLAYING"
     }
 
@@ -140,6 +165,9 @@ private class StrandturmState {
         score = newScore; lives = newLives; level = newLevel
         bonusTimer = bonusForLevel(newLevel); bonusTickAcc = 0
         phase = "PLAYING"; phaseTimer = 0; totalFrame = 0
+        hasHammer = false; hammerTimer = 0
+        hammerPickups.fill(false)
+        jumpedCocoIds.clear()
     }
 
     fun loseLife() {
@@ -174,6 +202,24 @@ private class StrandturmState {
             if (bonusTimer == 0) { loseLife(); return }
         }
 
+        // ── Hammer pickup ─────────────────────────────────────────────────
+        if (!hasHammer) {
+            for (hi in HAMMER_DEFS.indices) {
+                if (hammerPickups[hi]) continue
+                val h = HAMMER_DEFS[hi]
+                val hy = PLATS[h.platIdx].y
+                if (abs(px - h.x) < 14f && abs(py - hy) < 6f) {
+                    hasHammer = true
+                    hammerTimer = HAMMER_DURATION
+                    hammerPickups[hi] = true
+                    score += 500
+                }
+            }
+        } else {
+            hammerTimer--
+            if (hammerTimer <= 0) { hasHammer = false; hammerTimer = 0 }
+        }
+
         // ── Spawn coconut ──────────────────────────────────────────────────
         cocoSpawnAcc++
         if (cocoSpawnAcc >= spawnInterval(level)) {
@@ -199,16 +245,21 @@ private class StrandturmState {
             if (upHeld && wasOnGround) {
                 for (i in LADDERS.indices) {
                     val l = LADDERS[i]
-                    if (abs(px - l.cx) <= LADD_W / 2 + 4 && abs(py - l.y2) <= 8) {
-                        ponLadder = true; pladderIdx = i; ponGround = false; pvx = 0f; pvy = 0f; break
+                    if (abs(px - l.cx) <= LADD_W / 2 + 14 && abs(py - l.y2) <= 12) {
+                        ponLadder = true; pladderIdx = i; ponGround = false; pvx = 0f; pvy = 0f
+                        py = l.y2 - 2f
+                        px = l.cx
+                        break
                     }
                 }
             }
             if (downHeld && wasOnGround) {
                 for (i in LADDERS.indices) {
                     val l = LADDERS[i]
-                    if (abs(px - l.cx) <= LADD_W / 2 + 4 && abs(py - l.y1) <= 5) {
-                        ponLadder = true; pladderIdx = i; ponGround = false; pvx = 0f; pvy = CLIMB_SPD; break
+                    if (abs(px - l.cx) <= LADD_W / 2 + 14 && abs(py - l.y1) <= 8) {
+                        ponLadder = true; pladderIdx = i; ponGround = false; pvx = 0f; pvy = CLIMB_SPD
+                        px = l.cx
+                        break
                     }
                 }
             }
@@ -277,10 +328,17 @@ private class StrandturmState {
                 c.vx = ROLL_DIR[c.platIdx] * spd
                 c.x += c.vx
                 c.y  = p.y - COCO_R
-                if (c.x < p.x - COCO_R || c.x > p.x + p.w + COCO_R) { c.platIdx = -1; c.vy = 1f }
+                if (c.x < p.x - COCO_R || c.x > p.x + p.w + COCO_R) {
+                    val nextPIdx = c.platIdx - 1
+                    if (nextPIdx >= 0) {
+                        val np = PLATS[nextPIdx]
+                        c.x = c.x.coerceIn(np.x + COCO_R, np.x + np.w - COCO_R)
+                    }
+                    c.y = p.y + PLAT_H + 1f
+                    c.platIdx = -1; c.vy = 1f; c.vx = 0f
+                }
             } else {
                 c.vy = min(c.vy + 0.6f, 14f)
-                c.x += c.vx * 0.4f
                 c.y += c.vy
                 for (pi in PLATS.indices) {
                     val p = PLATS[pi]
@@ -290,10 +348,25 @@ private class StrandturmState {
                 }
                 if (c.y > VIRT_H + 30) toRemove.add(ci)
             }
+
+            // Jump-over bonus
+            if (c.platIdx >= 0 && !ponGround && !ponLadder && !jumpedCocoIds.contains(c.id)
+                && abs(c.x - px) < PW / 2 + COCO_R + 4 && py < c.y - COCO_R) {
+                jumpedCocoIds.add(c.id)
+                score += 100
+            }
+
             if (pinvTimer == 0) {
                 val dx = abs(c.x - px)
                 val dy = abs(c.y - (py - PH / 2))
-                if (dx < PW / 2 + COCO_R - 2 && dy < PH / 2 + COCO_R - 2) { loseLife(); return }
+                if (dx < PW / 2 + COCO_R - 2 && dy < PH / 2 + COCO_R - 2) {
+                    if (hasHammer) {
+                        toRemove.add(ci)
+                        score += 300
+                    } else {
+                        loseLife(); return
+                    }
+                }
             }
         }
         for (i in toRemove.reversed()) cocos.removeAt(i)
@@ -330,48 +403,96 @@ private fun DrawScope.drawLadder(l: Ladd, s: Float) {
     }
 }
 
-private fun DrawScope.drawMoeve(frame: Int, s: Float) {
-    val mx = MOEVE_X; val my = MOEVE_Y
-    val wing = if (frame % 60 < 30) -6f else 0f
+private fun DrawScope.drawSeeloewe(frame: Int, s: Float) {
+    val mx = MOEVE_X
+    val gy = PLATS[5].y
+    val flipRaise = kotlin.math.sin(frame * 0.1).toFloat() * 5f
 
-    val bodyColor  = Color(0xFFE2E8F0)
-    val wingColor  = Color(0xFFCBD5E1)
-    val beakColor  = Color(0xFFF97316)
-    val eyeColor   = Color(0xFF0F172A)
+    drawIntoCanvas { canvas ->
+        val nc = canvas.nativeCanvas
 
-    // Body ellipse
-    drawOval(bodyColor, Offset((mx - 20) * s, (my + 8 - 11) * s), Size(40f * s, 22f * s))
+        fun fillEllipse(cx: Float, cy: Float, rx: Float, ry: Float, angleDeg: Float, colorArgb: Int) {
+            val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                color = colorArgb; style = android.graphics.Paint.Style.FILL
+            }
+            nc.save()
+            nc.translate(cx * s, cy * s)
+            nc.rotate(angleDeg)
+            nc.drawOval(-rx * s, -ry * s, rx * s, ry * s, p)
+            nc.restore()
+        }
 
-    // Left wing
-    val lwPath = Path().apply {
-        moveTo((mx - 5) * s, (my + 6) * s)
-        quadraticBezierTo((mx - 26) * s, (my + wing) * s, (mx - 36) * s, (my + 3 + wing) * s)
-        quadraticBezierTo((mx - 26) * s, (my + 10) * s,  (mx - 5) * s,  (my + 14) * s)
-        close()
+        fun fillCircle(cx: Float, cy: Float, r: Float, colorArgb: Int) {
+            val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                color = colorArgb; style = android.graphics.Paint.Style.FILL
+            }
+            nc.drawCircle(cx * s, cy * s, r * s, p)
+        }
+
+        fun strokeLine(x1: Float, y1: Float, x2: Float, y2: Float, colorArgb: Int, w: Float) {
+            val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                color = colorArgb; style = android.graphics.Paint.Style.STROKE
+                strokeWidth = w * s; strokeCap = android.graphics.Paint.Cap.ROUND
+            }
+            nc.drawLine(x1 * s, y1 * s, x2 * s, y2 * s, p)
+        }
+
+        val dark   = android.graphics.Color.argb(255, 0x2A, 0x20, 0x18)
+        val body   = android.graphics.Color.argb(255, 0x4A, 0x38, 0x28)
+        val belly  = android.graphics.Color.argb(255, 0x6B, 0x52, 0x40)
+        val head   = android.graphics.Color.argb(255, 0x5A, 0x45, 0x35)
+        val ear    = android.graphics.Color.argb(255, 0x3D, 0x2E, 0x20)
+        val snout  = android.graphics.Color.argb(255, 0x7A, 0x60, 0x50)
+        val nose   = android.graphics.Color.argb(255, 0x1A, 0x0F, 0x0A)
+        val eyeC   = android.graphics.Color.argb(255, 0x0A, 0x0A, 0x12)
+        val brow   = android.graphics.Color.argb(255, 0x1A, 0x0F, 0x0A)
+        val whisk  = android.graphics.Color.argb(255, 0xC8, 0xB8, 0xA0)
+
+        // Hind flippers
+        fillEllipse(mx - 7, gy + 5, 11f, 5f, Math.toDegrees(-0.25).toFloat(), dark)
+        fillEllipse(mx + 7, gy + 5, 11f, 5f, Math.toDegrees( 0.25).toFloat(), dark)
+        // Main body
+        fillEllipse(mx, gy - 15, 15f, 17f, 0f, body)
+        // Belly patch
+        fillEllipse(mx + 2, gy - 13, 8f, 11f, 0f, belly)
+        // Left front flipper
+        fillEllipse(mx - 16, gy - 17, 8f, 4f, Math.toDegrees(0.6).toFloat(), dark)
+        // Right front flipper (throwing pose, animated)
+        fillEllipse(mx + 17, gy - 24 - flipRaise, 9f, 4f, Math.toDegrees(-0.7).toFloat(), dark)
+        // Neck
+        fillEllipse(mx + 4, gy - 34, 8f, 9f, Math.toDegrees(0.15).toFloat(), body)
+        // Head
+        fillCircle(mx + 6, gy - 46, 10f, head)
+        // Ear bumps
+        fillCircle(mx + 1, gy - 55, 3.5f, ear)
+        fillCircle(mx + 10, gy - 54, 3f, ear)
+        // Snout
+        fillEllipse(mx + 13, gy - 46, 6f, 4f, 0f, snout)
+        // Nose
+        fillEllipse(mx + 18, gy - 46, 2.2f, 1.5f, 0f, nose)
+        // Eye
+        fillCircle(mx + 10, gy - 50, 3f, eyeC)
+        fillCircle(mx + 11, gy - 51, 1.1f, android.graphics.Color.WHITE)
+        // Grumpy brow
+        strokeLine(mx + 6, gy - 54, mx + 13, gy - 52, brow, 1.5f)
+        // Whiskers
+        for (i in 0..3) {
+            val wy = gy - 49 + i * 1.4f
+            strokeLine(mx + 15, wy, mx + 28, wy - 1 + i * 0.3f, whisk, 0.9f)
+            strokeLine(mx + 8,  wy, mx - 4,  wy - 0.5f + i * 0.3f, whisk, 0.9f)
+        }
     }
-    drawPath(lwPath, wingColor)
+}
 
-    // Right wing
-    val rwPath = Path().apply {
-        moveTo((mx + 5) * s, (my + 6) * s)
-        quadraticBezierTo((mx + 26) * s, (my + wing) * s, (mx + 36) * s, (my + 3 + wing) * s)
-        quadraticBezierTo((mx + 26) * s, (my + 10) * s,   (mx + 5) * s,  (my + 14) * s)
-        close()
-    }
-    drawPath(rwPath, wingColor)
-
-    // Beak triangle
-    val beakPath = Path().apply {
-        moveTo((mx + 18) * s, (my + 7) * s)
-        lineTo((mx + 26) * s, (my + 4) * s)
-        lineTo((mx + 18) * s, (my + 13) * s)
-        close()
-    }
-    drawPath(beakPath, beakColor)
-
-    // Eye
-    drawCircle(eyeColor, 2.5f * s, Offset((mx + 10) * s, (my + 5) * s))
-    drawCircle(Color.White, 0.9f * s, Offset((mx + 11) * s, (my + 4.5f) * s))
+private fun DrawScope.drawHammerPickup(x: Float, y: Float, s: Float) {
+    // Handle
+    drawRect(Color(0xFF92400E), Offset((x - 2) * s, (y - 17) * s), Size(3f * s, 13f * s))
+    // Head
+    drawRect(Color(0xFF94A3B8), Offset((x - 7) * s, (y - 22) * s), Size(13f * s, 6f * s))
+    // Glint
+    drawRect(Color(0x59FFFFFF), Offset((x - 6) * s, (y - 21) * s), Size(5f * s, 2f * s))
+    // Glow
+    drawCircle(Color(0x40FBB124), 10f * s, Offset(x * s, (y - 16) * s))
 }
 
 private fun DrawScope.drawPlayer(gs: StrandturmState, s: Float) {
@@ -406,6 +527,18 @@ private fun DrawScope.drawPlayer(gs: StrandturmState, s: Float) {
         val swing = if (gs.panimTick % 2 == 0) 5f else -5f
         drawLine(legColor, Offset((px - 3) * s, (py - PH + 29) * s), Offset((px - 3 + swing * f) * s, py * s), strokeWidth = legSW)
         drawLine(legColor, Offset((px + 3) * s, (py - PH + 29) * s), Offset((px + 3 - swing * f) * s, py * s), strokeWidth = legSW)
+    }
+
+    // Hammer held above head
+    if (gs.hasHammer) {
+        val swingUp = gs.totalFrame % 24 < 12
+        val hx = px + f * 6f
+        val hy = py - PH - (if (swingUp) 8f else 3f)
+        drawRect(Color(0xFF92400E), Offset((hx - 1) * s, hy * s), Size(3f * s, 11f * s))
+        drawRect(Color(0xFF94A3B8), Offset((hx - 6) * s, (hy - (if (swingUp) 6f else 2f)) * s), Size(12f * s, 5f * s))
+        if (gs.hammerTimer > 0 && gs.totalFrame % 6 < 3) {
+            drawCircle(Color(0xFFFBBF24), 2f * s, Offset((hx + 7) * s, (hy - 4) * s))
+        }
     }
 }
 
@@ -449,8 +582,15 @@ private fun DrawScope.drawGame(gs: StrandturmState, s: Float) {
     for (l in LADDERS) drawLadder(l, s)
     // Goal
     drawGoal(s)
-    // Möwe
-    drawMoeve(gs.totalFrame, s)
+    // Hammer pickups
+    for (hi in HAMMER_DEFS.indices) {
+        if (!gs.hammerPickups[hi]) {
+            val h = HAMMER_DEFS[hi]
+            drawHammerPickup(h.x, PLATS[h.platIdx].y, s)
+        }
+    }
+    // Seelöwe
+    drawSeeloewe(gs.totalFrame, s)
     // Coconuts
     for (c in gs.cocos) drawCoco(c, s)
     // Player
@@ -704,39 +844,51 @@ fun StrandturmGameScreen(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                val btnSize = 54.dp
-                val btnMod  = Modifier.size(btnSize)
+                val sideW  = 84.dp   // left / right buttons: wide for easy thumb reach
+                val sideH  = 62.dp
+                val midW   = 62.dp   // up / down buttons
+                val midH   = 58.dp
+                val gap    = 5.dp
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(gap),
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Spacer(Modifier.size(btnSize))
-                        HoldButton("▲", btnMod,
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(gap),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Spacer(Modifier.width(sideW).height(midH))
+                        HoldButton("▲", Modifier.width(midW).height(midH),
                             onPress   = { gs.upHeld = true; gs.jumpPressed = true },
                             onRelease = { gs.upHeld = false },
                         )
-                        Spacer(Modifier.size(btnSize))
+                        Spacer(Modifier.width(sideW).height(midH))
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        HoldButton("◄", btnMod,
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(gap),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        HoldButton("◄", Modifier.width(sideW).height(sideH),
                             onPress   = { gs.leftHeld = true },
                             onRelease = { gs.leftHeld = false },
                         )
-                        Spacer(Modifier.size(btnSize))
-                        HoldButton("►", btnMod,
+                        Spacer(Modifier.width(midW).height(sideH))
+                        HoldButton("►", Modifier.width(sideW).height(sideH),
                             onPress   = { gs.rightHeld = true },
                             onRelease = { gs.rightHeld = false },
                         )
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Spacer(Modifier.size(btnSize))
-                        HoldButton("▼", btnMod,
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(gap),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Spacer(Modifier.width(sideW).height(midH))
+                        HoldButton("▼", Modifier.width(midW).height(midH),
                             onPress   = { gs.downHeld = true },
                             onRelease = { gs.downHeld = false },
                         )
-                        Spacer(Modifier.size(btnSize))
+                        Spacer(Modifier.width(sideW).height(midH))
                     }
                 }
             }
@@ -774,21 +926,18 @@ private fun HoldButton(
             .background(SurfaceDark, RoundedCornerShape(10.dp))
             .border(1.dp, BorderColor, RoundedCornerShape(10.dp))
             .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        event.changes.forEach { change ->
-                            when {
-                                change.pressed && !change.previousPressed  -> onPress()
-                                !change.pressed && change.previousPressed  -> onRelease()
-                            }
-                            change.consume()
-                        }
+                while (true) {
+                    val down: PointerInputChange = awaitPointerEventScope {
+                        awaitFirstDown(requireUnconsumed = false)
                     }
+                    down.consume()
+                    onPress()
+                    awaitPointerEventScope { waitForUpOrCancellation() }
+                    onRelease()
                 }
             },
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, fontSize = 22.sp, color = TextPrimary)
+        Text(label, fontSize = 24.sp, color = TextPrimary)
     }
 }

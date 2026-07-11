@@ -126,9 +126,9 @@ fun StrandturmLobbyScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("🗼", fontSize = 56.sp)
-                    Text("Rette das Surfbrett!", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Text("Hol Euch den Rettungsring!", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
                     Text(
-                        "Mega-Möwe 🐦 wirft Kokosnüsse 🥥 vom Pier.\nKlettere nach oben — ohne getroffen zu werden!",
+                        "Böser Seelöwe 🦭 wirft Kokosnüsse 🥥 vom Pier.\nKlettere nach oben — ohne getroffen zu werden!",
                         fontSize = 13.sp, color = TextMuted, lineHeight = 20.sp,
                         textAlign = TextAlign.Center,
                     )
@@ -148,6 +148,7 @@ fun StrandturmLobbyScreen(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("So geht's", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                     Text("🪜 Leitern hochklettern · 🥥 Kokosnüssen ausweichen", fontSize = 13.sp, color = TextMuted)
+                    Text("🔨 Hammer finden · Kokosnüsse zerschmettern!", fontSize = 13.sp, color = TextMuted)
                     Text("❤️ 3 Leben · ⏱ Bonuszeit läuft ab", fontSize = 13.sp, color = TextMuted)
                     Spacer(Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {

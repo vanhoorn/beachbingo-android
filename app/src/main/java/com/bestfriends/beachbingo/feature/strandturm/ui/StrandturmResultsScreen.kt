@@ -37,12 +37,23 @@ fun StrandturmResultsScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Text("🗼", fontSize = 64.sp)
+        val isKillScreen = level >= 22
+
+        Text(if (isKillScreen) "💀" else "🗼", fontSize = 64.sp)
 
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("SPIEL BEENDET", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
+            Text(
+                if (isKillScreen) "Kill Screen erreicht!" else "SPIEL BEENDET",
+                fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp,
+            )
             Text("Strandturm", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-            Text("Küsten-Klara vs. Mega-Möwe 🐦", fontSize = 14.sp, color = TextMuted)
+            if (isKillScreen) {
+                Text(
+                    "Level 22 – der berüchtigte Kill Screen 💀\nTimer-Überlauf macht das Spiel unvollendbar.",
+                    fontSize = 12.sp, color = TextMuted, lineHeight = 18.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
         }
 
         if (newHighScore || newBestLevel) {
