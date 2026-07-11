@@ -1,6 +1,7 @@
 package com.bestfriends.beachbingo.feature.auth.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,6 +24,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
@@ -88,6 +90,8 @@ fun ProfileScreen(
     var selectedAvatar by remember(currentUser) {
         mutableStateOf(currentUser?.avatarUrl?.ifEmpty { BEACH_AVATARS.first() } ?: BEACH_AVATARS.first())
     }
+    var soundEnabled by remember(currentUser) { mutableStateOf(currentUser?.soundEnabled ?: true) }
+    var musicEnabled by remember(currentUser) { mutableStateOf(currentUser?.musicEnabled ?: true) }
     var activeTab by remember(selectedAvatar) {
         val idx = AVATAR_CATEGORIES.indexOfFirst { selectedAvatar in it.avatars }.takeIf { it >= 0 } ?: 0
         mutableIntStateOf(idx)
@@ -122,7 +126,10 @@ fun ProfileScreen(
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                     ) { Text("Abmelden") }
                     TextButton(
-                        onClick = { viewModel.updateProfile(displayName, selectedAvatar) },
+                        onClick = {
+                            viewModel.updateProfile(displayName, selectedAvatar)
+                            viewModel.updateAudioPreferences(soundEnabled, musicEnabled)
+                        },
                         enabled = !uiState.isLoading && displayName.isNotBlank(),
                     ) {
                         if (uiState.isLoading) {
@@ -209,6 +216,36 @@ fun ProfileScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             )
+
+            HorizontalDivider()
+
+            Text("🔊 Audio (alle Spiele)", style = MaterialTheme.typography.titleMedium)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column {
+                    Text("🎵 Hintergrundmusik", style = MaterialTheme.typography.bodyMedium)
+                    Text("Für alle Spiele", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(checked = musicEnabled, onCheckedChange = { musicEnabled = it })
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column {
+                    Text("🔔 Soundeffekte", style = MaterialTheme.typography.bodyMedium)
+                    Text("Für alle Spiele", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(checked = soundEnabled, onCheckedChange = { soundEnabled = it })
+            }
 
             Spacer(Modifier.height(8.dp))
         }

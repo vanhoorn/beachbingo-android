@@ -33,7 +33,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -71,8 +70,6 @@ fun SettingsScreen(
     var eliminationInterval by remember(currentUser) {
         mutableStateOf(currentUser?.bossLevelEliminationInterval ?: 5)
     }
-    var soundEnabled by remember(currentUser) { mutableStateOf(currentUser?.soundEnabled ?: true) }
-    var musicEnabled by remember(currentUser) { mutableStateOf(currentUser?.musicEnabled ?: true) }
     var newEmail by remember { mutableStateOf("") }
     var emailPassword by remember { mutableStateOf("") }
 
@@ -105,7 +102,6 @@ fun SettingsScreen(
                     TextButton(
                         onClick = {
                             viewModel.updateGamePreferences(selectedGameMode, selectedDrawStyle, eliminationInterval)
-                            viewModel.updateAudioPreferences(soundEnabled, musicEnabled)
                         },
                         enabled = !uiState.isLoading
                     ) {
@@ -230,35 +226,6 @@ fun SettingsScreen(
                 title = "🥁 Lostrommel",
                 description = "3-Sekunden-Animation auf allen Geräten baut Spannung auf."
             )
-
-            Spacer(Modifier.height(4.dp))
-            HorizontalDivider()
-
-            Text("🔊 Audio (alle Spiele)", style = MaterialTheme.typography.titleMedium)
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column {
-                    Text("🎵 Hintergrundmusik", style = MaterialTheme.typography.bodyMedium)
-                    Text("Für alle Spiele", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Switch(checked = musicEnabled, onCheckedChange = { musicEnabled = it })
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column {
-                    Text("🔔 Soundeffekte", style = MaterialTheme.typography.bodyMedium)
-                    Text("Für alle Spiele", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Switch(checked = soundEnabled, onCheckedChange = { soundEnabled = it })
-            }
 
             HorizontalDivider()
 

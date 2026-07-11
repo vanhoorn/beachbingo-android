@@ -75,6 +75,7 @@ sealed interface Screen {
         val newBestLevel: Boolean,
     ) : Screen
     @Serializable data class Category(val playerCount: String) : Screen
+    @Serializable object AllGames : Screen
     @Serializable data class PiratesResults(
         val score: Int,
         val wave: Int,

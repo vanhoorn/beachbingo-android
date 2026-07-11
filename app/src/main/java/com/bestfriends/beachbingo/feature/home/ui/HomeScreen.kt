@@ -12,9 +12,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -30,7 +30,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +46,7 @@ import com.bestfriends.beachbingo.core.model.PlayerCount
 import com.bestfriends.beachbingo.feature.auth.viewmodel.AuthViewModel
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.BorderColor
+import com.bestfriends.beachbingo.ui.theme.OceanBlue
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
 import com.bestfriends.beachbingo.ui.theme.TextMuted
@@ -54,7 +54,6 @@ import com.bestfriends.beachbingo.ui.theme.TextPrimary
 import com.bestfriends.beachbingo.ui.theme.TextSub
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 private data class PlayerCountEntry(
@@ -81,13 +80,12 @@ fun HomeScreen(
     onNavigateToProfile: () -> Unit,
     onNavigateToJoin: () -> Unit,
     onNavigateToCategory: (String) -> Unit,
+    onNavigateToAllGames: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel(),
 ) {
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
-    val scope = rememberCoroutineScope()
 
     var favoriteIds by remember { mutableStateOf<List<String>>(emptyList()) }
-    var recentIds by remember { mutableStateOf<List<String>>(emptyList()) }
 
     val auth = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
@@ -99,30 +97,12 @@ fun HomeScreen(
             val snap = firestore.collection("users").document(uid).get().await()
             @Suppress("UNCHECKED_CAST")
             favoriteIds = (snap.get("favoriteGames") as? List<String>) ?: emptyList()
-            @Suppress("UNCHECKED_CAST")
-            recentIds = (snap.get("recentGames") as? List<String>) ?: emptyList()
         } catch (_: Exception) {}
-    }
-
-    fun handleGameClick(gameId: String, navigate: () -> Unit) {
-        if (uid != null) {
-            val updated = (listOf(gameId) + recentIds.filter { it != gameId }).take(10)
-            recentIds = updated
-            scope.launch {
-                try {
-                    firestore.collection("users").document(uid).update("recentGames", updated)
-                } catch (_: Exception) {}
-            }
-        }
-        navigate()
     }
 
     val favoriteGames = ALL_GAMES
         .filter { it.id in favoriteIds }
         .sortedBy { it.title }
-
-    val recentGames = recentIds.take(3)
-        .mapNotNull { id -> ALL_GAMES.find { it.id == id } }
 
     Column(
         modifier = Modifier
@@ -199,7 +179,10 @@ fun HomeScreen(
 
         // ── Favoriten ─────────────────────────────────────────────────────────────
         if (favoriteGames.isNotEmpty()) {
-            SectionHeader(title = "FAVORITEN", emoji = "★", modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp))
+            SectionHeader(
+                title = "FAVORITEN", emoji = "★",
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp)
+            )
             Row(
                 modifier = Modifier
                     .horizontalScroll(rememberScrollState())
@@ -208,39 +191,13 @@ fun HomeScreen(
             ) {
                 favoriteGames.forEach { game ->
                     MiniGameCard(game = game, onClick = {
-                        handleGameClick(game.id) {
-                            when (game.id) {
-                                "bingo"       -> onNavigateToBingoLobby()
-                                "pong"        -> onNavigateToPongLobby()
-                                "vier"        -> onNavigateToVierLobby()
-                                "pirates"     -> onNavigateToPiratesLobby()
-                                "worm"        -> onNavigateToWormLobby()
-                                "strandturm"  -> onNavigateToStrandturmLobby()
-                            }
-                        }
-                    })
-                }
-            }
-        }
-
-        // ── Zuletzt gespielt ──────────────────────────────────────────────────────
-        if (recentGames.isNotEmpty()) {
-            SectionHeader(title = "ZULETZT GESPIELT", emoji = "🕐", modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp))
-            Row(
-                modifier = Modifier.padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                recentGames.forEach { game ->
-                    MiniGameCard(game = game, onClick = {
-                        handleGameClick(game.id) {
-                            when (game.id) {
-                                "bingo"       -> onNavigateToBingoLobby()
-                                "pong"        -> onNavigateToPongLobby()
-                                "vier"        -> onNavigateToVierLobby()
-                                "pirates"     -> onNavigateToPiratesLobby()
-                                "worm"        -> onNavigateToWormLobby()
-                                "strandturm"  -> onNavigateToStrandturmLobby()
-                            }
+                        when (game.id) {
+                            "bingo"      -> onNavigateToBingoLobby()
+                            "pong"       -> onNavigateToPongLobby()
+                            "vier"       -> onNavigateToVierLobby()
+                            "pirates"    -> onNavigateToPiratesLobby()
+                            "worm"       -> onNavigateToWormLobby()
+                            "strandturm" -> onNavigateToStrandturmLobby()
                         }
                     })
                 }
@@ -248,9 +205,10 @@ fun HomeScreen(
         }
 
         // ── Spieleranzahl ─────────────────────────────────────────────────────────
-        SectionHeader(title = "SPIELERANZAHL", emoji = "🎮", modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp))
-
-        // 3-column grid — first 3 in a row, last one below
+        SectionHeader(
+            title = "SPIELERANZAHL", emoji = "👥",
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp)
+        )
         Column(
             modifier = Modifier.padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -275,9 +233,42 @@ fun HomeScreen(
                     modifier = Modifier.weight(1f),
                     onClick = { onNavigateToCategory(entry.key.name) }
                 )
-                // Empty spacers to keep tile same width as grid columns
                 Spacer(Modifier.weight(1f))
                 Spacer(Modifier.weight(1f))
+            }
+        }
+
+        // ── Alle Spiele ───────────────────────────────────────────────────────────
+        SectionHeader(
+            title = "ALLE SPIELE", emoji = "🎮",
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp)
+        )
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = SurfaceDark,
+            modifier = Modifier
+                .padding(horizontal = 20.dp)
+                .fillMaxWidth()
+                .border(1.5.dp, OceanBlue.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                .clickable { onNavigateToAllGames() }
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(text = "🎮", fontSize = 28.sp)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Alle Spiele",
+                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
+                    )
+                    Text(
+                        text = "${ALL_GAMES.size} Spiele · alphabetisch sortiert",
+                        fontSize = 12.sp, color = TextMuted,
+                    )
+                }
+                Text(text = "›", fontSize = 22.sp, color = OceanBlue)
             }
         }
 

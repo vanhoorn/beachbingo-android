@@ -23,6 +23,7 @@ import com.bestfriends.beachbingo.feature.bingo.ui.GameScreen
 import com.bestfriends.beachbingo.feature.bingo.ui.JoinGameScreen
 import com.bestfriends.beachbingo.feature.bingo.ui.LobbyScreen
 import com.bestfriends.beachbingo.feature.bingo.ui.ResultsScreen
+import com.bestfriends.beachbingo.feature.home.ui.AllGamesScreen
 import com.bestfriends.beachbingo.feature.home.ui.CategoryScreen
 import com.bestfriends.beachbingo.feature.home.ui.HomeScreen
 import com.bestfriends.beachbingo.feature.pong.ui.PongGameScreen
@@ -113,6 +114,7 @@ fun AppNavigation() {
                 onNavigateToProfile = { navController.navigate(Screen.Profile) },
                 onNavigateToJoin = { navController.navigate(Screen.JoinGame) },
                 onNavigateToCategory = { playerCount -> navController.navigate(Screen.Category(playerCount)) },
+                onNavigateToAllGames = { navController.navigate(Screen.AllGames) },
                 viewModel = authViewModel
             )
         }
@@ -121,6 +123,18 @@ fun AppNavigation() {
             val route: Screen.Category = backStack.toRoute()
             CategoryScreen(
                 playerCountName = route.playerCount,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToBingoLobby = { navController.navigate(Screen.Lobby) },
+                onNavigateToPongLobby = { navController.navigate(Screen.PongLobby) },
+                onNavigateToVierLobby = { navController.navigate(Screen.VierLobby) },
+                onNavigateToPiratesLobby = { navController.navigate(Screen.PiratesLobby) },
+                onNavigateToWormLobby = { navController.navigate(Screen.WormLobby) },
+                onNavigateToStrandturmLobby = { navController.navigate(Screen.StrandturmLobby) },
+            )
+        }
+
+        composable<Screen.AllGames> {
+            AllGamesScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToBingoLobby = { navController.navigate(Screen.Lobby) },
                 onNavigateToPongLobby = { navController.navigate(Screen.PongLobby) },
