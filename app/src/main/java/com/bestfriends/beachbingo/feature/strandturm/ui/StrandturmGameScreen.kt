@@ -34,8 +34,10 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.tasks.await
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sin
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -56,6 +58,8 @@ private const val GOAL_X   = 340f
 private const val MOEVE_X  = 55f
 private const val LADD_W   = 18f
 private const val PLAT_H   = 11f
+private const val HAMMER_FLOAT     = 30f  // px above platform – requires a jump
+private const val EXPLOSION_FRAMES = 18
 
 private val StrandturmRed = Color(0xFFDC2626)
 private val BgCanvas      = Color(0xFF0A1628)
@@ -85,6 +89,25 @@ private val LADDERS = listOf(
 )
 private val ROLL_DIR = floatArrayOf(-1f, 1f, -1f, 1f, -1f, 1f)
 
+private fun getLevelType(lvl: Int) = ((lvl - 1) % 4) + 1
+private val LEVEL_NAMES = mapOf(
+    1 to "🏗️ Die Baustelle",
+    2 to "🏭 Die Zementfabrik",
+    3 to "🛗 Die Aufzüge",
+    4 to "🔩 Die Nieten",
+)
+private const val BELT_SPEED = 1.2f
+private data class ConveyorBelt(val platIdx: Int, val x: Float, val w: Float, val vx: Float)
+private fun getConveyorBelts(lvl: Int): List<ConveyorBelt> {
+    if (getLevelType(lvl) != 2) return emptyList()
+    return listOf(
+        ConveyorBelt(1, 150f, 200f,  BELT_SPEED),
+        ConveyorBelt(2,  20f, 200f, -BELT_SPEED),
+        ConveyorBelt(3, 150f, 200f,  BELT_SPEED),
+        ConveyorBelt(4,  20f, 200f, -BELT_SPEED),
+    )
+}
+
 private data class HammerDef(val x: Float, val platIdx: Int)
 private val HAMMER_DEFS = listOf(
     HammerDef(190f, 1),
@@ -98,6 +121,7 @@ private fun cocoSpeed(lvl: Int)      = 1.0f + min(4, lvl - 1) * 0.15f
 // ── Game state ────────────────────────────────────────────────────────────────
 
 private class Coco(var id: Int, var x: Float, var y: Float, var vx: Float, var vy: Float, var platIdx: Int)
+private data class Explosion(val id: Int, val x: Float, val y: Float, var frame: Int = 0)
 
 private class StrandturmState {
     // Player
@@ -137,6 +161,13 @@ private class StrandturmState {
     // Jump-over bonus tracking
     val jumpedCocoIds = mutableSetOf<Int>()
 
+    // Explosion effects
+    val explosions    = mutableListOf<Explosion>()
+    var explosionIdCtr = 0
+
+    // Conveyor belts active this level (empty for non-L2 level types)
+    val conveyorBelts = mutableListOf<ConveyorBelt>()
+
     // Internal
     var bonusTickAcc = 0
     var phaseTimer   = 0
@@ -155,6 +186,7 @@ private class StrandturmState {
         hasHammer = false; hammerTimer = 0
         hammerPickups.fill(false)
         jumpedCocoIds.clear()
+        explosions.clear()
         phase      = "PLAYING"
     }
 
@@ -168,6 +200,7 @@ private class StrandturmState {
         hasHammer = false; hammerTimer = 0
         hammerPickups.fill(false)
         jumpedCocoIds.clear()
+        conveyorBelts.clear(); conveyorBelts.addAll(getConveyorBelts(newLevel))
     }
 
     fun loseLife() {
@@ -207,8 +240,8 @@ private class StrandturmState {
             for (hi in HAMMER_DEFS.indices) {
                 if (hammerPickups[hi]) continue
                 val h = HAMMER_DEFS[hi]
-                val hy = PLATS[h.platIdx].y
-                if (abs(px - h.x) < 14f && abs(py - hy) < 6f) {
+                val hy = PLATS[h.platIdx].y - HAMMER_FLOAT // floated above platform
+                if (abs(px - h.x) < 20f && abs(py - hy) < 18f) {
                     hasHammer = true
                     hammerTimer = HAMMER_DURATION
                     hammerPickups[hi] = true
@@ -292,6 +325,17 @@ private class StrandturmState {
             }
         }
 
+        // ── Conveyor belt effect (Level 2 mechanic) ───────────────────────
+        if (ponGround && !ponLadder && conveyorBelts.isNotEmpty()) {
+            for (belt in conveyorBelts) {
+                if (abs(py - PLATS[belt.platIdx].y) < 2f
+                    && px >= belt.x && px <= belt.x + belt.w) {
+                    px = (px + belt.vx).coerceIn(PW / 2, VIRT_W - PW / 2)
+                    break
+                }
+            }
+        }
+
         // ── Ladder exit ────────────────────────────────────────────────────
         if (ponLadder && pladderIdx >= 0) {
             val l = LADDERS[pladderIdx]
@@ -316,6 +360,9 @@ private class StrandturmState {
 
         // ── Invincibility countdown ────────────────────────────────────────
         if (pinvTimer > 0) pinvTimer--
+
+        // ── Explosion update ───────────────────────────────────────────────
+        explosions.removeAll { e -> e.frame++; e.frame >= EXPLOSION_FRAMES }
 
         // ── Coconut physics ────────────────────────────────────────────────
         val spd = cocoSpeed(level)
@@ -363,6 +410,7 @@ private class StrandturmState {
                     if (hasHammer) {
                         toRemove.add(ci)
                         score += 300
+                        explosions.add(Explosion(explosionIdCtr++, c.x, c.y))
                     } else {
                         loseLife(); return
                     }
@@ -484,6 +532,26 @@ private fun DrawScope.drawSeeloewe(frame: Int, s: Float) {
     }
 }
 
+private fun DrawScope.drawExplosion(e: Explosion, s: Float) {
+    val t = e.frame.toFloat() / EXPLOSION_FRAMES
+    val r = (4f + t * 20f) * s
+    val a = 1f - t
+    // Bright core
+    drawCircle(Color(1f, 1f, 0.78f, a * 0.95f), r * 0.35f, Offset(e.x * s, e.y * s))
+    // Orange fill
+    drawCircle(Color(0.98f, 0.57f, 0.24f, a * 0.75f), r * 0.7f, Offset(e.x * s, e.y * s))
+    // Red expanding ring
+    drawCircle(Color(0.94f, 0.27f, 0.27f, a), r, Offset(e.x * s, e.y * s), style = Stroke(2f * s))
+    // 8 flying sparks
+    val unitR = r / s
+    for (i in 0..7) {
+        val ang = (i.toDouble() * Math.PI * 2 / 8).toFloat()
+        val sx = e.x + cos(ang) * unitR * 1.4f
+        val sy = e.y + sin(ang) * unitR * 1.4f
+        drawCircle(Color(0.98f, 0.75f, 0.14f, a), 2.5f * (1 - t * 0.7f) * s, Offset(sx * s, sy * s))
+    }
+}
+
 private fun DrawScope.drawHammerPickup(x: Float, y: Float, s: Float) {
     // Handle
     drawRect(Color(0xFF92400E), Offset((x - 2) * s, (y - 17) * s), Size(3f * s, 13f * s))
@@ -553,6 +621,70 @@ private fun DrawScope.drawCoco(c: Coco, s: Float) {
     drawCircle(hiColor,   COCO_R * 0.38f * s, Offset((c.x - 2) * s, (c.y - 3) * s))
 }
 
+private fun DrawScope.drawConveyorBelt(belt: ConveyorBelt, frame: Int, s: Float) {
+    val py = PLATS[belt.platIdx].y
+    val period = 18f
+    val rawOff = (frame * 0.5f) % period
+    val scrollX = if (belt.vx > 0) rawOff else period - rawOff
+    // Belt surface – industrial steel-gray, 5px overlaying the platform top edge
+    drawRect(Color(0xE0334155.toInt()), Offset(belt.x * s, py * s), Size(belt.w * s, 5f * s))
+    // Animated diagonal stripes via native canvas clip
+    drawIntoCanvas { canvas ->
+        val nc = canvas.nativeCanvas
+        nc.save()
+        nc.clipRect(belt.x * s, py * s, (belt.x + belt.w) * s, (py + 5f) * s)
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0x6B94A3B8.toInt()
+            style = android.graphics.Paint.Style.FILL
+        }
+        var sx = belt.x - period * 2 + scrollX
+        while (sx < belt.x + belt.w + period) {
+            val np = android.graphics.Path().apply {
+                moveTo(sx * s,                     py * s)
+                lineTo((sx + period * 0.55f) * s,  (py + 5f) * s)
+                lineTo((sx + period) * s,           (py + 5f) * s)
+                lineTo((sx + period * 0.45f) * s,   py * s)
+                close()
+            }
+            nc.drawPath(np, paint)
+            sx += period
+        }
+        nc.restore()
+    }
+    // Direction edge highlight (amber = right, blue = left)
+    val edgeColor = if (belt.vx > 0) Color(0xD9FBBF24.toInt()) else Color(0xD960A5FA.toInt())
+    drawLine(edgeColor, Offset(belt.x * s, py * s), Offset((belt.x + belt.w) * s, py * s), 1.5f * s)
+}
+
+private fun DrawScope.drawWanne(c: Coco, s: Float) {
+    val r = COCO_R
+    val bodyPath = Path().apply {
+        moveTo((c.x - r + 1) * s,    (c.y - r * 0.55f) * s)
+        lineTo((c.x + r - 1) * s,    (c.y - r * 0.55f) * s)
+        lineTo((c.x + r - 3) * s,    (c.y + r * 0.6f) * s)
+        lineTo((c.x - r + 3) * s,    (c.y + r * 0.6f) * s)
+        close()
+    }
+    drawPath(bodyPath, Color(0xFF78716C.toInt()))
+    val cementPath = Path().apply {
+        moveTo((c.x - r + 2) * s,    (c.y - r * 0.55f) * s)
+        lineTo((c.x + r - 2) * s,    (c.y - r * 0.55f) * s)
+        lineTo((c.x + r - 3.5f) * s, (c.y - r * 0.05f) * s)
+        lineTo((c.x - r + 3.5f) * s, (c.y - r * 0.05f) * s)
+        close()
+    }
+    drawPath(cementPath, Color(0xFFA8A29E.toInt()))
+    val handlePath = Path().apply {
+        moveTo((c.x - r + 2) * s,    (c.y - r * 0.55f) * s)
+        lineTo((c.x - r) * s,        (c.y - r * 1.15f) * s)
+        lineTo((c.x + r) * s,        (c.y - r * 1.15f) * s)
+        lineTo((c.x + r - 2) * s,    (c.y - r * 0.55f) * s)
+    }
+    drawPath(handlePath, Color(0xFF57534E.toInt()), style = Stroke(2f * s))
+    drawRect(Color(0xFF44403C.toInt()), Offset((c.x - r + 3) * s, (c.y + r * 0.25f) * s),
+        Size((r - 3) * 2 * s, r * 0.35f * s))
+}
+
 private fun DrawScope.drawGoal(s: Float) {
     val goalX = GOAL_X
     val goalY = PLATS[5].y
@@ -578,21 +710,26 @@ private fun DrawScope.drawGame(gs: StrandturmState, s: Float) {
 
     // Platforms
     for (p in PLATS) drawPlatform(p, s)
+    // Conveyor belts (overlaid on platform surface, under ladders – Level 2 mechanic)
+    for (belt in gs.conveyorBelts) drawConveyorBelt(belt, gs.totalFrame, s)
     // Ladders
     for (l in LADDERS) drawLadder(l, s)
     // Goal
     drawGoal(s)
-    // Hammer pickups
+    // Hammer pickups (floated above platform – jump to reach)
     for (hi in HAMMER_DEFS.indices) {
         if (!gs.hammerPickups[hi]) {
             val h = HAMMER_DEFS[hi]
-            drawHammerPickup(h.x, PLATS[h.platIdx].y, s)
+            drawHammerPickup(h.x, PLATS[h.platIdx].y - HAMMER_FLOAT, s)
         }
     }
     // Seelöwe
     drawSeeloewe(gs.totalFrame, s)
-    // Coconuts
-    for (c in gs.cocos) drawCoco(c, s)
+    // Obstacles (coconuts in L1, cement troughs in L2)
+    val levelType = getLevelType(gs.level)
+    for (c in gs.cocos) if (levelType == 2) drawWanne(c, s) else drawCoco(c, s)
+    // Explosions (above coconuts, below player)
+    for (e in gs.explosions) drawExplosion(e, s)
     // Player
     drawPlayer(gs, s)
 }
@@ -792,6 +929,9 @@ fun StrandturmGameScreen(
                             Text("Geschafft!", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = SandGold)
                             Text("+${gs.bonusTimer} Bonus", fontSize = 14.sp, color = TextMuted)
                             Text("Level ${gs.level + 1} startet …", fontSize = 12.sp, color = TextSub)
+                            LEVEL_NAMES[getLevelType(gs.level + 1)]?.let { name ->
+                                Text(name, fontSize = 13.sp, color = SandGold)
+                            }
                         }
                     }
                 }
@@ -838,69 +978,67 @@ fun StrandturmGameScreen(
             }
         }
 
-        // D-Pad (BUTTONS mode)
-        if (controlMode == "BUTTONS") {
-            Box(
+        // Controls
+        when (controlMode) {
+            "BUTTONS" -> Box(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                val sideW  = 84.dp   // left / right buttons: wide for easy thumb reach
-                val sideH  = 62.dp
-                val midW   = 62.dp   // up / down buttons
-                val midH   = 58.dp
-                val gap    = 5.dp
-
+                val sideW = 84.dp
+                val sideH = 62.dp
+                val midW  = 62.dp
+                val midH  = 58.dp
+                val gap   = 5.dp
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(gap),
                 ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(gap),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.CenterVertically) {
                         Spacer(Modifier.width(sideW).height(midH))
                         HoldButton("▲", Modifier.width(midW).height(midH),
-                            onPress   = { gs.upHeld = true; gs.jumpPressed = true },
-                            onRelease = { gs.upHeld = false },
-                        )
+                            onPress = { gs.upHeld = true; gs.jumpPressed = true }, onRelease = { gs.upHeld = false })
                         Spacer(Modifier.width(sideW).height(midH))
                     }
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(gap),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.CenterVertically) {
                         HoldButton("◄", Modifier.width(sideW).height(sideH),
-                            onPress   = { gs.leftHeld = true },
-                            onRelease = { gs.leftHeld = false },
-                        )
+                            onPress = { gs.leftHeld = true }, onRelease = { gs.leftHeld = false })
                         Spacer(Modifier.width(midW).height(sideH))
                         HoldButton("►", Modifier.width(sideW).height(sideH),
-                            onPress   = { gs.rightHeld = true },
-                            onRelease = { gs.rightHeld = false },
-                        )
+                            onPress = { gs.rightHeld = true }, onRelease = { gs.rightHeld = false })
                     }
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(gap),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.CenterVertically) {
                         Spacer(Modifier.width(sideW).height(midH))
                         HoldButton("▼", Modifier.width(midW).height(midH),
-                            onPress   = { gs.downHeld = true },
-                            onRelease = { gs.downHeld = false },
-                        )
+                            onPress = { gs.downHeld = true }, onRelease = { gs.downHeld = false })
                         Spacer(Modifier.width(sideW).height(midH))
                     }
                 }
             }
-        } else {
-            Box(
+            "SPLIT" -> Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                // Left thumb: ◄ ►
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    HoldButton("◄", Modifier.size(78.dp, 62.dp),
+                        onPress = { gs.leftHeld = true }, onRelease = { gs.leftHeld = false })
+                    HoldButton("►", Modifier.size(78.dp, 62.dp),
+                        onPress = { gs.rightHeld = true }, onRelease = { gs.rightHeld = false })
+                }
+                // Right thumb: ▲ ▼
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    HoldButton("▲", Modifier.size(72.dp, 62.dp),
+                        onPress = { gs.upHeld = true; gs.jumpPressed = true }, onRelease = { gs.upHeld = false })
+                    HoldButton("▼", Modifier.size(72.dp, 62.dp),
+                        onPress = { gs.downHeld = true }, onRelease = { gs.downHeld = false })
+                }
+            }
+            else -> Box(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    "Links / Rechts tippen  ·  Oben tippen = Springen / Klettern",
-                    fontSize = 11.sp, color = TextMuted,
-                )
+                Text("Links / Rechts tippen  ·  Oben tippen = Springen / Klettern",
+                    fontSize = 11.sp, color = TextMuted)
             }
         }
     }

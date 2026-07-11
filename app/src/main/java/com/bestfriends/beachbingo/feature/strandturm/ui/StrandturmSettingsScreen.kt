@@ -30,8 +30,9 @@ private val StrandturmRed = Color(0xFFDC2626)
 private data class OptionItem(val id: String, val title: String, val desc: String)
 
 private val CONTROL_OPTIONS = listOf(
-    OptionItem("BUTTONS", "🔲 Buttons", "Pfeil-Buttons links/rechts und Klettern/Springen"),
-    OptionItem("TOUCH",   "👆 Touch",   "Bildschirm antippen zum Lenken und Springen"),
+    OptionItem("BUTTONS", "🔲 Klassisch",    "D-Pad mittig unter dem Spielfeld – ◄ ▲ ► und ▼"),
+    OptionItem("SPLIT",   "✌️ Zwei-Händig", "◄ ► links · ▲ ▼ rechts – ideal für zwei Daumen"),
+    OptionItem("TOUCH",   "👆 Touch",        "Bildschirm antippen zum Lenken und Springen"),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)

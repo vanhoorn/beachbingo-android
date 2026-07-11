@@ -153,7 +153,7 @@ fun StrandturmLobbyScreen(
                     Spacer(Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            "Steuerung: ${if (controlMode == "BUTTONS") "🔲 Buttons" else "👆 Touch"}",
+                            "Steuerung: ${when (controlMode) { "BUTTONS" -> "🔲 Klassisch"; "SPLIT" -> "✌️ Zwei-Händig"; else -> "👆 Touch" }}",
                             fontSize = 12.sp, color = TextSub,
                         )
                         Spacer(Modifier.width(6.dp))
