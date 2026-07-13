@@ -440,9 +440,13 @@ private class StrandturmState(startLevel: Int = 1) {
         // ── Platform collision ─────────────────────────────────────────────
         if (!ponLadder) {
             ponGround = false
-            for (p in activePlats) {
+            for ((i, p) in activePlats.withIndex()) {
                 if (px + PW / 2 > p.x && px - PW / 2 < p.x + p.w) {
-                    if (pvy >= 0 && prevPY <= p.y + 1 && py >= p.y) {
+                    // Level 4: fall through niete gaps
+                    val overGap = getLevelType(level) == 4 && nieten.any { n ->
+                        n.collected && n.platIdx == i && abs(px - n.x) < NIETE_GAP
+                    }
+                    if (!overGap && pvy >= 0 && prevPY <= p.y + 1 && py >= p.y) {
                         py = p.y; pvy = 0f; ponGround = true; break
                     }
                 }
