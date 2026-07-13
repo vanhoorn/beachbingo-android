@@ -433,8 +433,8 @@ fun AppNavigation() {
         // ── Strandturm ─────────────────────────────────────────────────────────
         composable<Screen.StrandturmLobby> {
             StrandturmLobbyScreen(
-                onNavigateToGame = { controlMode ->
-                    navController.navigate(Screen.StrandturmGame(controlMode)) {
+                onNavigateToGame = { controlMode, startLevel ->
+                    navController.navigate(Screen.StrandturmGame(controlMode, startLevel)) {
                         popUpTo(Screen.StrandturmLobby)
                     }
                 },
@@ -456,6 +456,7 @@ fun AppNavigation() {
             val route: Screen.StrandturmGame = backStack.toRoute()
             StrandturmGameScreen(
                 controlMode = route.controlMode,
+                startLevel  = route.startLevel,
                 onNavigateToResults = { score, level, highScore, bestLevel, newHighScore, newBestLevel ->
                     navController.navigate(
                         Screen.StrandturmResults(score, level, highScore, bestLevel, newHighScore, newBestLevel)

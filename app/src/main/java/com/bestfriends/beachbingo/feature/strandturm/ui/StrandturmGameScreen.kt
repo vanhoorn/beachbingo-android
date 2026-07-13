@@ -108,6 +108,29 @@ private fun getConveyorBelts(lvl: Int): List<ConveyorBelt> {
     )
 }
 
+private const val ELEV_SPEED = 1.2f
+private const val ELEV_H = 11f // same thickness as PLAT_H
+private const val WEIGHT_BOUNCE_FACTOR = 0.72f
+private const val WEIGHT_MAX_BOUNCES = 10
+
+private data class Elevator(
+    val x: Float, val w: Float,
+    var y: Float,       // current surface y (top)
+    val y1: Float,      // upper travel limit
+    val y2: Float,      // lower travel limit
+    var vy: Float,      // current velocity (positive = moving down)
+)
+
+private fun getElevators(lvl: Int): List<Elevator> {
+    if (getLevelType(lvl) != 3) return emptyList()
+    return listOf(
+        Elevator(175f, 50f, 480f, 420f, 505f, -ELEV_SPEED), // P0→P1
+        Elevator(175f, 50f, 400f, 335f, 420f,  ELEV_SPEED), // P1→P2
+        Elevator(175f, 50f, 310f, 250f, 335f, -ELEV_SPEED), // P2→P3
+        Elevator(175f, 50f, 232f, 165f, 250f,  ELEV_SPEED), // P3→P4
+    )
+}
+
 private data class HammerDef(val x: Float, val platIdx: Int)
 private val HAMMER_DEFS = listOf(
     HammerDef(190f, 1),
@@ -120,10 +143,10 @@ private fun cocoSpeed(lvl: Int)      = 1.0f + min(4, lvl - 1) * 0.15f
 
 // ── Game state ────────────────────────────────────────────────────────────────
 
-private class Coco(var id: Int, var x: Float, var y: Float, var vx: Float, var vy: Float, var platIdx: Int)
+private class Coco(var id: Int, var x: Float, var y: Float, var vx: Float, var vy: Float, var platIdx: Int, var bounces: Int = 0)
 private data class Explosion(val id: Int, val x: Float, val y: Float, var frame: Int = 0)
 
-private class StrandturmState {
+private class StrandturmState(startLevel: Int = 1) {
     // Player
     var px = 50f;  var py = 505f
     var pvx = 0f;  var pvy = 0f
@@ -149,8 +172,8 @@ private class StrandturmState {
     // Compose-observable values (read by Canvas via renderTick + by HUD composables)
     var score      by mutableIntStateOf(0)
     var lives      by mutableIntStateOf(3)
-    var level      by mutableIntStateOf(1)
-    var bonusTimer by mutableIntStateOf(bonusForLevel(1))
+    var level      by mutableIntStateOf(startLevel)
+    var bonusTimer by mutableIntStateOf(bonusForLevel(startLevel))
     var phase      by mutableStateOf("PLAYING")   // PLAYING | LIFE_LOST | LEVEL_COMPLETE | GAME_OVER
 
     // Hammer power-up
@@ -167,6 +190,16 @@ private class StrandturmState {
 
     // Conveyor belts active this level (empty for non-L2 level types)
     val conveyorBelts = mutableListOf<ConveyorBelt>()
+
+    // Elevators active this level (empty for non-L3 level types)
+    val elevators   = mutableListOf<Elevator>()
+    var ponElevator = false
+    var pElevatorIdx = -1
+
+    init {
+        conveyorBelts.addAll(getConveyorBelts(startLevel))
+        elevators.addAll(getElevators(startLevel))
+    }
 
     // Internal
     var bonusTickAcc = 0
@@ -187,6 +220,7 @@ private class StrandturmState {
         hammerPickups.fill(false)
         jumpedCocoIds.clear()
         explosions.clear()
+        ponElevator = false; pElevatorIdx = -1
         phase      = "PLAYING"
     }
 
@@ -201,6 +235,8 @@ private class StrandturmState {
         hammerPickups.fill(false)
         jumpedCocoIds.clear()
         conveyorBelts.clear(); conveyorBelts.addAll(getConveyorBelts(newLevel))
+        elevators.clear(); elevators.addAll(getElevators(newLevel))
+        ponElevator = false; pElevatorIdx = -1
     }
 
     fun loseLife() {
@@ -226,6 +262,13 @@ private class StrandturmState {
         }
 
         totalFrame++
+
+        // ── Elevator movement (Level 3 mechanic) ──────────────────────────
+        for (el in elevators) {
+            el.y += el.vy
+            if (el.y <= el.y1) { el.y = el.y1; el.vy =  abs(el.vy) }
+            if (el.y >= el.y2) { el.y = el.y2; el.vy = -abs(el.vy) }
+        }
 
         // ── Bonus timer ────────────────────────────────────────────────────
         bonusTickAcc++
@@ -253,11 +296,21 @@ private class StrandturmState {
             if (hammerTimer <= 0) { hasHammer = false; hammerTimer = 0 }
         }
 
-        // ── Spawn coconut ──────────────────────────────────────────────────
+        // ── Spawn obstacle ─────────────────────────────────────────────────
         cocoSpawnAcc++
         if (cocoSpawnAcc >= spawnInterval(level)) {
             cocoSpawnAcc = 0
-            cocos.add(Coco(cocoIdCtr++, MOEVE_X + 35f, PLATS[5].y - COCO_R, cocoSpeed(level), 0f, 5))
+            if (getLevelType(level) == 3) {
+                // Spawn 2 weights at staggered x positions across the level width
+                val x1 = 40f + kotlin.random.Random.nextFloat() * 150f
+                val x2 = 210f + kotlin.random.Random.nextFloat() * 150f
+                val vx1 = (kotlin.random.Random.nextFloat() - 0.5f) * 2f
+                val vx2 = (kotlin.random.Random.nextFloat() - 0.5f) * 2f
+                cocos.add(Coco(cocoIdCtr++, x1, -8f, vx1, 2.5f, -1, 0))
+                cocos.add(Coco(cocoIdCtr++, x2, -8f, vx2, 2.5f, -1, 0))
+            } else {
+                cocos.add(Coco(cocoIdCtr++, MOEVE_X + 35f, PLATS[5].y - COCO_R, cocoSpeed(level), 0f, 5, 0))
+            }
         }
 
         // ── Player physics ─────────────────────────────────────────────────
@@ -325,6 +378,21 @@ private class StrandturmState {
             }
         }
 
+        // ── Elevator snap (Level 3 mechanic) ──────────────────────────────
+        ponElevator = false; pElevatorIdx = -1
+        if (!ponGround && !ponLadder && elevators.isNotEmpty() && pvy >= 0f) {
+            val tol = ELEV_SPEED + 3f
+            for ((ei, el) in elevators.withIndex()) {
+                if (px > el.x && px < el.x + el.w) {
+                    if (py >= el.y - 2f && py <= el.y + tol) {
+                        py = el.y; pvy = 0f; ponGround = true
+                        ponElevator = true; pElevatorIdx = ei
+                        break
+                    }
+                }
+            }
+        }
+
         // ── Conveyor belt effect (Level 2 mechanic) ───────────────────────
         if (ponGround && !ponLadder && conveyorBelts.isNotEmpty()) {
             for (belt in conveyorBelts) {
@@ -364,49 +432,77 @@ private class StrandturmState {
         // ── Explosion update ───────────────────────────────────────────────
         explosions.removeAll { e -> e.frame++; e.frame >= EXPLOSION_FRAMES }
 
-        // ── Coconut physics ────────────────────────────────────────────────
+        // ── Obstacle physics (coconuts L1, cement troughs L2, iron weights L3) ──
         val spd = cocoSpeed(level)
+        val levelType = getLevelType(level)
         val toRemove = mutableListOf<Int>()
 
         for (ci in cocos.indices) {
             val c = cocos[ci]
-            if (c.platIdx >= 0) {
-                val p = PLATS[c.platIdx]
-                c.vx = ROLL_DIR[c.platIdx] * spd
-                c.x += c.vx
-                c.y  = p.y - COCO_R
-                if (c.x < p.x - COCO_R || c.x > p.x + p.w + COCO_R) {
-                    val nextPIdx = c.platIdx - 1
-                    if (nextPIdx >= 0) {
-                        val np = PLATS[nextPIdx]
-                        c.x = c.x.coerceIn(np.x + COCO_R, np.x + np.w - COCO_R)
-                    }
-                    c.y = p.y + PLAT_H + 1f
-                    c.platIdx = -1; c.vy = 1f; c.vx = 0f
-                }
-            } else {
+
+            if (levelType == 3) {
+                // ── Level 3: Falling weight — passes through platforms, bounces off elevators ──
                 c.vy = min(c.vy + 0.6f, 14f)
+                c.x += c.vx
                 c.y += c.vy
-                for (pi in PLATS.indices) {
-                    val p = PLATS[pi]
-                    if (c.x > p.x && c.x < p.x + p.w && c.y + COCO_R >= p.y && c.y + COCO_R <= p.y + COCO_R + 8 && c.vy > 0) {
-                        c.y = p.y - COCO_R; c.vy = 0f; c.vx = ROLL_DIR[pi] * spd; c.platIdx = pi; break
+                // No wall clamping — weights fall freely off-screen
+
+                for (el in elevators) {
+                    if (c.x > el.x && c.x < el.x + el.w &&
+                        c.y + 8f >= el.y && c.y + 8f <= el.y + 16f && c.vy > 0) {
+                        c.y = el.y - 8f
+                        c.vy = -abs(c.vy) * WEIGHT_BOUNCE_FACTOR
+                        c.vx += (kotlin.random.Random.nextFloat() - 0.5f) * 4f
+                        c.bounces++
+                        if (c.bounces >= WEIGHT_MAX_BOUNCES) toRemove.add(ci)
+                        break
                     }
                 }
-                if (c.y > VIRT_H + 30) toRemove.add(ci)
+                if (c.y > VIRT_H + 30 || c.x < -40f || c.x > VIRT_W + 40f) toRemove.add(ci)
+
+            } else {
+                // ── Level 1/2: Rolling coconut / cement-trough physics ────
+                if (c.platIdx >= 0) {
+                    val p = PLATS[c.platIdx]
+                    c.vx = ROLL_DIR[c.platIdx] * spd
+                    c.x += c.vx
+                    c.y  = p.y - COCO_R
+                    if (c.x < p.x - COCO_R || c.x > p.x + p.w + COCO_R) {
+                        val nextPIdx = c.platIdx - 1
+                        if (nextPIdx >= 0) {
+                            val np = PLATS[nextPIdx]
+                            c.x = c.x.coerceIn(np.x + COCO_R, np.x + np.w - COCO_R)
+                        }
+                        c.y = p.y + PLAT_H + 1f
+                        c.platIdx = -1; c.vy = 1f; c.vx = 0f
+                    }
+                } else {
+                    c.vy = min(c.vy + 0.6f, 14f)
+                    c.y += c.vy
+                    for (pi in PLATS.indices) {
+                        val p = PLATS[pi]
+                        if (c.x > p.x && c.x < p.x + p.w &&
+                            c.y + COCO_R >= p.y && c.y + COCO_R <= p.y + COCO_R + 8 && c.vy > 0) {
+                            c.y = p.y - COCO_R; c.vy = 0f; c.vx = ROLL_DIR[pi] * spd; c.platIdx = pi; break
+                        }
+                    }
+                    if (c.y > VIRT_H + 30) toRemove.add(ci)
+                }
+
+                // Jump-over bonus (rolling obstacles only)
+                if (c.platIdx >= 0 && !ponGround && !ponLadder && !jumpedCocoIds.contains(c.id)
+                    && abs(c.x - px) < PW / 2 + COCO_R + 4 && py < c.y - COCO_R) {
+                    jumpedCocoIds.add(c.id)
+                    score += 100
+                }
             }
 
-            // Jump-over bonus
-            if (c.platIdx >= 0 && !ponGround && !ponLadder && !jumpedCocoIds.contains(c.id)
-                && abs(c.x - px) < PW / 2 + COCO_R + 4 && py < c.y - COCO_R) {
-                jumpedCocoIds.add(c.id)
-                score += 100
-            }
-
+            // Player collision (shared for all level types)
             if (pinvTimer == 0) {
+                val r = if (levelType == 3) 8f else COCO_R
                 val dx = abs(c.x - px)
                 val dy = abs(c.y - (py - PH / 2))
-                if (dx < PW / 2 + COCO_R - 2 && dy < PH / 2 + COCO_R - 2) {
+                if (dx < PW / 2 + r - 2 && dy < PH / 2 + r - 2) {
                     if (hasHammer) {
                         toRemove.add(ci)
                         score += 300
@@ -656,6 +752,82 @@ private fun DrawScope.drawConveyorBelt(belt: ConveyorBelt, frame: Int, s: Float)
     drawLine(edgeColor, Offset(belt.x * s, py * s), Offset((belt.x + belt.w) * s, py * s), 1.5f * s)
 }
 
+private fun DrawScope.drawElevatorTrack(el: Elevator, s: Float) {
+    val trackColor = Color(0x33_3B82F6.toInt()) // semi-transparent blue
+    // Dashed left rail
+    val lx = (el.x + 5) * s
+    val rx = (el.x + el.w - 5) * s
+    val top = el.y1 * s
+    val bot = (el.y2 + ELEV_H) * s
+    var ty = top
+    while (ty < bot) {
+        val segEnd = minOf(ty + 5f * s, bot)
+        drawLine(trackColor, Offset(lx, ty), Offset(lx, segEnd), strokeWidth = 2f * s)
+        drawLine(trackColor, Offset(rx, ty), Offset(rx, segEnd), strokeWidth = 2f * s)
+        ty += 10f * s
+    }
+}
+
+private fun DrawScope.drawElevator(el: Elevator, s: Float) {
+    val x = el.x; val y = el.y; val w = el.w
+    // Shadow
+    drawRect(Color(0x4D000000.toInt()), Offset((x + 2) * s, (y + 3) * s), Size(w * s, ELEV_H * s))
+    // Main body
+    drawRect(Color(0xFF1D4ED8.toInt()), Offset(x * s, y * s), Size(w * s, ELEV_H * s))
+    // Top highlight
+    drawRect(Color(0xFF3B82F6.toInt()), Offset(x * s, y * s), Size(w * s, 3f * s))
+    // Bottom shadow
+    drawRect(Color(0xFF1E3A8A.toInt()), Offset(x * s, (y + ELEV_H - 2) * s), Size(w * s, 2f * s))
+    // Side bolts
+    drawCircle(Color(0xFF93C5FD.toInt()), 2f * s, Offset((x + 7) * s, (y + ELEV_H / 2 + 1) * s))
+    drawCircle(Color(0xFF93C5FD.toInt()), 2f * s, Offset((x + w - 7) * s, (y + ELEV_H / 2 + 1) * s))
+    // Direction arrow text
+    drawIntoCanvas { canvas ->
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            textAlign = android.graphics.Paint.Align.CENTER
+            textSize  = 7f * s
+            color = 0xF2BFD8FE.toInt()
+        }
+        val arrow = if (el.vy > 0) "▼" else "▲"
+        canvas.nativeCanvas.drawText(arrow, (x + w / 2) * s, (y + ELEV_H / 2 + 3) * s, paint)
+    }
+}
+
+private fun DrawScope.drawWeight(c: Coco, s: Float) {
+    val r = 8f
+    val x = c.x; val y = c.y
+    // Outer border
+    drawRect(Color(0xFF111827.toInt()), Offset((x - r - 1) * s, (y - r - 1) * s), Size((r * 2 + 2) * s, (r * 2 + 2) * s))
+    // Main body
+    drawRect(Color(0xFF374151.toInt()), Offset((x - r) * s, (y - r) * s), Size(r * 2 * s, r * 2 * s))
+    // Top highlight
+    drawRect(Color(0xFF4B5563.toInt()), Offset((x - r) * s, (y - r) * s), Size(r * 2 * s, 3f * s))
+    // Left edge
+    drawRect(Color(0xFF4B5563.toInt()), Offset((x - r) * s, (y - r) * s), Size(2f * s, r * 2 * s))
+    // Bottom shadow
+    drawRect(Color(0xFF1F2937.toInt()), Offset((x - r + 2) * s, (y + r - 3) * s), Size((r * 2 - 2) * s, 3f * s))
+    // "KG" label + hook
+    drawIntoCanvas { canvas ->
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            textAlign = android.graphics.Paint.Align.CENTER
+            textSize  = 6f * s
+            color     = 0xFF9CA3AF.toInt()
+            typeface  = android.graphics.Typeface.MONOSPACE
+            isFakeBoldText = true
+        }
+        canvas.nativeCanvas.drawText("KG", x * s, (y + 3) * s, paint)
+        val hookPaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = 1.5f * s
+            color = 0xFF6B7280.toInt()
+        }
+        val hookOval = android.graphics.RectF(
+            (x - 3) * s, (y - r - 6) * s, (x + 3) * s, (y - r) * s
+        )
+        canvas.nativeCanvas.drawArc(hookOval, 180f, 180f, false, hookPaint)
+    }
+}
+
 private fun DrawScope.drawWanne(c: Coco, s: Float) {
     val r = COCO_R
     val bodyPath = Path().apply {
@@ -712,6 +884,9 @@ private fun DrawScope.drawGame(gs: StrandturmState, s: Float) {
     for (p in PLATS) drawPlatform(p, s)
     // Conveyor belts (overlaid on platform surface, under ladders – Level 2 mechanic)
     for (belt in gs.conveyorBelts) drawConveyorBelt(belt, gs.totalFrame, s)
+    // Elevator shafts + moving platforms (Level 3 mechanic)
+    for (el in gs.elevators) drawElevatorTrack(el, s)
+    for (el in gs.elevators) drawElevator(el, s)
     // Ladders
     for (l in LADDERS) drawLadder(l, s)
     // Goal
@@ -725,10 +900,14 @@ private fun DrawScope.drawGame(gs: StrandturmState, s: Float) {
     }
     // Seelöwe
     drawSeeloewe(gs.totalFrame, s)
-    // Obstacles (coconuts in L1, cement troughs in L2)
+    // Obstacles (coconuts in L1, cement troughs in L2, iron weights in L3)
     val levelType = getLevelType(gs.level)
-    for (c in gs.cocos) if (levelType == 2) drawWanne(c, s) else drawCoco(c, s)
-    // Explosions (above coconuts, below player)
+    for (c in gs.cocos) when (levelType) {
+        2    -> drawWanne(c, s)
+        3    -> drawWeight(c, s)
+        else -> drawCoco(c, s)
+    }
+    // Explosions (above obstacles, below player)
     for (e in gs.explosions) drawExplosion(e, s)
     // Player
     drawPlayer(gs, s)
@@ -739,6 +918,7 @@ private fun DrawScope.drawGame(gs: StrandturmState, s: Float) {
 @Composable
 fun StrandturmGameScreen(
     controlMode: String,
+    startLevel: Int = 1,
     onNavigateToResults: (score: Int, level: Int, highScore: Int, bestLevel: Int, newHighScore: Boolean, newBestLevel: Boolean) -> Unit,
     onNavigateToLobby: () -> Unit,
 ) {
@@ -746,7 +926,7 @@ fun StrandturmGameScreen(
     val firestore = FirebaseFirestore.getInstance()
     val uid       = auth.currentUser?.uid
 
-    val gs = remember { StrandturmState() }
+    val gs = remember { StrandturmState(startLevel) }
 
     var renderTick     by remember { mutableLongStateOf(0L) }
     var paused         by remember { mutableStateOf(false) }

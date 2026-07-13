@@ -33,7 +33,7 @@ private val StrandturmRed = Color(0xFFDC2626)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StrandturmLobbyScreen(
-    onNavigateToGame: (controlMode: String) -> Unit,
+    onNavigateToGame: (controlMode: String, startLevel: Int) -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToHighscore: () -> Unit,
     onNavigateToHome: () -> Unit,
@@ -45,6 +45,7 @@ fun StrandturmLobbyScreen(
     var controlMode  by remember { mutableStateOf("BUTTONS") }
     var highScore    by remember { mutableIntStateOf(0) }
     var bestLevel    by remember { mutableIntStateOf(0) }
+    var startLevel   by remember { mutableIntStateOf(1) }
     var isFavorite   by remember { mutableStateOf(false) }
     var loading      by remember { mutableStateOf(true) }
 
@@ -54,6 +55,7 @@ fun StrandturmLobbyScreen(
         controlMode = snap.getString("preferredStrandturmControlMode") ?: "BUTTONS"
         highScore   = (snap.getLong("strandturmHighScore") ?: 0L).toInt()
         bestLevel   = (snap.getLong("strandturmBestLevel") ?: 0L).toInt()
+        startLevel  = (snap.getLong("strandturmStartLevel") ?: 1L).toInt()
         @Suppress("UNCHECKED_CAST")
         isFavorite = (snap.get("favoriteGames") as? List<String>)?.contains("strandturm") == true
         loading = false
@@ -168,7 +170,7 @@ fun StrandturmLobbyScreen(
 
             // Play button
             Button(
-                onClick = { onNavigateToGame(controlMode) },
+                onClick = { onNavigateToGame(controlMode, startLevel) },
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = StrandturmRed),
                 shape = RoundedCornerShape(14.dp),
