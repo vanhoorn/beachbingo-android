@@ -624,17 +624,31 @@ private class StrandturmState(startLevel: Int = 1) {
 
 // ── Draw helpers ──────────────────────────────────────────────────────────────
 
-private fun DrawScope.drawPlatform(p: Plat, s: Float) {
-    val brown      = Color(0xFF7C3F1A)
-    val highlight  = Color(0xFFA05A2C)
-    val shadow     = Color(0xFF4A2409)
-    val grain      = Color(0xFF6B3416)
-    drawRect(brown,     Offset(p.x * s, p.y * s), Size(p.w * s, PLAT_H * s))
-    drawRect(highlight, Offset(p.x * s, p.y * s), Size(p.w * s, 2f * s))
-    drawRect(shadow,    Offset(p.x * s, (p.y + PLAT_H - 2) * s), Size(p.w * s, 2f * s))
+private fun DrawScope.drawPlatform(p: Plat, s: Float, gaps: List<Float> = emptyList()) {
+    val brown     = Color(0xFF7C3F1A)
+    val highlight = Color(0xFFA05A2C)
+    val shadow    = Color(0xFF4A2409)
+    val grain     = Color(0xFF6B3416)
+    val GAP_HALF  = 7f
+    val sorted    = gaps.sorted()
+    // Build segments around gaps
+    val segs = mutableListOf<Pair<Float, Float>>() // x, w
+    var left = p.x
+    for (g in sorted) {
+        val gl = g - GAP_HALF; val gr = g + GAP_HALF
+        if (gl > left) segs.add(left to gl - left)
+        left = maxOf(left, gr)
+    }
+    if (left < p.x + p.w) segs.add(left to p.x + p.w - left)
+    for ((sx, sw) in segs) {
+        drawRect(brown,     Offset(sx * s, p.y * s), Size(sw * s, PLAT_H * s))
+        drawRect(highlight, Offset(sx * s, p.y * s), Size(sw * s, 2f * s))
+        drawRect(shadow,    Offset(sx * s, (p.y + PLAT_H - 2) * s), Size(sw * s, 2f * s))
+    }
     var gx = p.x + 8f
     while (gx < p.x + p.w - 4f) {
-        drawLine(grain, Offset(gx * s, (p.y + 2) * s), Offset(gx * s, (p.y + PLAT_H - 2) * s), strokeWidth = 0.5f * s)
+        if (sorted.none { g -> gx >= g - GAP_HALF && gx <= g + GAP_HALF })
+            drawLine(grain, Offset(gx * s, (p.y + 2) * s), Offset(gx * s, (p.y + PLAT_H - 2) * s), strokeWidth = 0.5f * s)
         gx += 16f
     }
 }
@@ -1027,7 +1041,12 @@ private fun DrawScope.drawGame(gs: StrandturmState, s: Float) {
 
     val topY = gs.activePlats.last().y
     // Platforms
-    for (p in gs.activePlats) drawPlatform(p, s)
+    gs.activePlats.forEachIndexed { pi, p ->
+        val gaps = if (getLevelType(gs.level) == 4)
+            gs.nieten.filter { n -> n.collected && n.platIdx == pi }.map { n -> n.x }
+        else emptyList()
+        drawPlatform(p, s, gaps)
+    }
     // Conveyor belts (overlaid on platform surface, under ladders – Level 2 mechanic)
     for (belt in gs.conveyorBelts) drawConveyorBelt(belt, gs.totalFrame, s)
     // Elevator shafts + moving platforms (Level 3 mechanic)
