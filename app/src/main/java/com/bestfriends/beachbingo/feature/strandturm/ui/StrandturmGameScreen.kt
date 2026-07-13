@@ -312,16 +312,18 @@ private class StrandturmState(startLevel: Int = 1) {
         spawnNieten(newLevel)
     }
 
-    fun loseLife() {
+    fun loseLife(audio: StrandturmAudioManager? = null) {
         lives--
         if (lives <= 0) {
             phase = "GAME_OVER"; phaseTimer = 9999
+            audio?.playSound("game_over")
         } else {
             phase = "LIFE_LOST"; phaseTimer = 90
+            audio?.playSound("life_lost")
         }
     }
 
-    fun step() {
+    fun step(audio: StrandturmAudioManager? = null) {
         // Phase countdown
         if (phase != "PLAYING") {
             phaseTimer--
@@ -348,7 +350,8 @@ private class StrandturmState(startLevel: Int = 1) {
         if (bonusTickAcc >= BONUS_DEC_FRAMES) {
             bonusTickAcc = 0
             bonusTimer = max(0, bonusTimer - 10)
-            if (bonusTimer == 0) { loseLife(); return }
+            if (bonusTimer in 1..4999 && bonusTimer % 100 == 0) audio?.playSound("timer_tick")
+            if (bonusTimer == 0) { loseLife(audio); return }
         }
 
         // ── Hammer pickup ─────────────────────────────────────────────────
@@ -362,6 +365,7 @@ private class StrandturmState(startLevel: Int = 1) {
                     hammerTimer = HAMMER_DURATION
                     hammerPickups[hi] = true
                     score += 500
+                    audio?.playSound("bonus")
                 }
             }
         } else {
@@ -390,7 +394,10 @@ private class StrandturmState(startLevel: Int = 1) {
         if (!ponLadder) {
             pvy = if (!wasOnGround) min(pvy + GRAVITY, MAX_FALL) else 0f
 
-            if (jumpPressed && wasOnGround) { pvy = JUMP_VY; ponGround = false }
+            if (jumpPressed && wasOnGround) {
+                pvy = JUMP_VY; ponGround = false
+                audio?.playSound("jump")
+            }
             jumpPressed = false
 
             when {
@@ -450,7 +457,9 @@ private class StrandturmState(startLevel: Int = 1) {
                         n.collected && n.graceTick == 0 && n.platIdx == i && abs(px - n.x) < NIETE_GAP
                     }
                     if (!overGap && pvy >= 0 && prevPY <= p.y + 1 && py >= p.y) {
-                        py = p.y; pvy = 0f; ponGround = true; break
+                        py = p.y; pvy = 0f; ponGround = true
+                        if (!wasOnGround) audio?.playSound("land")
+                        break
                     }
                 }
             }
@@ -465,6 +474,7 @@ private class StrandturmState(startLevel: Int = 1) {
                     if (py >= el.y - 2f && py <= el.y + tol) {
                         py = el.y; pvy = 0f; ponGround = true
                         ponElevator = true; pElevatorIdx = ei
+                        if (!wasOnGround) audio?.playSound("land")
                         break
                     }
                 }
@@ -492,10 +502,13 @@ private class StrandturmState(startLevel: Int = 1) {
         }
 
         // ── Animation tick ─────────────────────────────────────────────────
-        if ((pvx != 0f || (ponLadder && pvy != 0f)) && totalFrame % 8 == 0) panimTick++
+        if ((pvx != 0f || (ponLadder && pvy != 0f)) && totalFrame % 8 == 0) {
+            panimTick++
+            if (ponLadder && pvy != 0f) audio?.playSound("climb")
+        }
 
         // ── Fall off bottom ────────────────────────────────────────────────
-        if (py > VIRT_H + 40) { loseLife(); return }
+        if (py > VIRT_H + 40) { loseLife(audio); return }
 
         // ── Nieten collection (Level 4) ────────────────────────────────────
         if (getLevelType(level) == 4) {
@@ -507,6 +520,7 @@ private class StrandturmState(startLevel: Int = 1) {
                     n.graceTick = 20 // stay solid for ~0.33s after collection
                     nietenCollected++
                     score += 100
+                    audio?.playSound("bonus")
                 }
             }
         }
@@ -516,6 +530,7 @@ private class StrandturmState(startLevel: Int = 1) {
         if (nietenGate && py <= activePlats.last().y + 2 && px >= GOAL_X) {
             score += 300 + bonusTimer
             phase = "LEVEL_COMPLETE"; phaseTimer = 150
+            audio?.playSound("level_complete")
             return
         }
 
@@ -550,7 +565,8 @@ private class StrandturmState(startLevel: Int = 1) {
                         if (hasHammer) {
                             oktoRemove.add(oi); score += 300
                             explosions.add(Explosion(explosionIdCtr++, o.x, o.y))
-                        } else { loseLife(); return }
+                            audio?.playSound("hit")
+                        } else { loseLife(audio); return }
                     }
                 }
             }
@@ -608,7 +624,9 @@ private class StrandturmState(startLevel: Int = 1) {
                         val p = activePlats[pi]
                         if (c.x > p.x && c.x < p.x + p.w &&
                             c.y + COCO_R >= p.y && c.y + COCO_R <= p.y + COCO_R + 8 && c.vy > 0) {
-                            c.y = p.y - COCO_R; c.vy = 0f; c.vx = ROLL_DIR[pi] * spd; c.platIdx = pi; break
+                            c.y = p.y - COCO_R; c.vy = 0f; c.vx = ROLL_DIR[pi] * spd; c.platIdx = pi
+                            audio?.playSound("coconut_bounce")
+                            break
                         }
                     }
                     if (c.y > VIRT_H + 30) toRemove.add(ci)
@@ -619,6 +637,7 @@ private class StrandturmState(startLevel: Int = 1) {
                     && abs(c.x - px) < PW / 2 + COCO_R + 4 && py < c.y - COCO_R) {
                     jumpedCocoIds.add(c.id)
                     score += 100
+                    audio?.playSound("bonus")
                 }
             }
 
@@ -632,8 +651,9 @@ private class StrandturmState(startLevel: Int = 1) {
                         toRemove.add(ci)
                         score += 300
                         explosions.add(Explosion(explosionIdCtr++, c.x, c.y))
+                        audio?.playSound("hit")
                     } else {
-                        loseLife(); return
+                        loseLife(audio); return
                     }
                 }
             }
@@ -1118,7 +1138,8 @@ fun StrandturmGameScreen(
     val firestore = FirebaseFirestore.getInstance()
     val uid       = auth.currentUser?.uid
 
-    val gs = remember { StrandturmState(startLevel) }
+    val gs    = remember { StrandturmState(startLevel) }
+    val audio = remember { StrandturmAudioManager() }
 
     var renderTick     by remember { mutableLongStateOf(0L) }
     var paused         by remember { mutableStateOf(false) }
@@ -1129,11 +1150,46 @@ fun StrandturmGameScreen(
     var isNewHighScore by remember { mutableStateOf(false) }
     var isNewBestLevel by remember { mutableStateOf(false) }
 
+    // true once prefs are loaded and music has been started for the first time
+    var musicStarted by remember { mutableStateOf(false) }
+
+    // Load audio preferences and start music
+    LaunchedEffect(Unit) {
+        if (uid != null) {
+            try {
+                val snap = firestore.collection("users").document(uid).get().await()
+                audio.soundEnabled = snap.getBoolean("soundEnabled") ?: true
+                audio.musicEnabled = snap.getBoolean("musicEnabled") ?: true
+            } catch (_: Exception) {}
+        }
+        audio.startMusic()
+        musicStarted = true
+    }
+
+    // Release audio on leave
+    DisposableEffect(Unit) { onDispose { audio.release() } }
+
+    // Pause / resume music with game pause
+    LaunchedEffect(paused) {
+        if (!musicStarted) return@LaunchedEffect
+        if (paused) audio.stopMusic()
+        else if (gs.phase == "PLAYING") audio.startMusic()
+    }
+
+    // Stop music on non-playing phases; restart when returning to PLAYING (e.g. new level)
+    LaunchedEffect(gs.phase) {
+        if (!musicStarted) return@LaunchedEffect
+        when (gs.phase) {
+            "GAME_OVER", "LEVEL_COMPLETE", "LIFE_LOST" -> audio.stopMusic()
+            "PLAYING" -> if (!paused) audio.startMusic()
+        }
+    }
+
     // Game loop at 60fps
     LaunchedEffect(Unit) {
         while (isActive) {
             withFrameNanos { _ ->
-                if (!paused && gs.phase != "GAME_OVER") gs.step()
+                if (!paused && gs.phase != "GAME_OVER") gs.step(audio)
                 renderTick++
             }
 
