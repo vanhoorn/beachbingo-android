@@ -162,7 +162,7 @@ private fun cocoSpeed(lvl: Int)      = 1.0f + min(4, lvl - 1) * 0.15f
 private class Coco(var id: Int, var x: Float, var y: Float, var vx: Float, var vy: Float, var platIdx: Int, var bounces: Int = 0)
 private data class Explosion(val id: Int, val x: Float, val y: Float, var frame: Int = 0)
 private class Okto(val id: Int, var x: Float, val y: Float, var vx: Float, val platIdx: Int)
-private class Niete(val id: Int, val x: Float, val platIdx: Int, var collected: Boolean = false)
+private class Niete(val id: Int, val x: Float, val platIdx: Int, var collected: Boolean = false, var graceTick: Int = 0)
 private const val OKTO_R    = 7f
 private const val OKTO_SPD  = 0.8f
 private const val NIETE_GAP = 7f // half-width of platform gap left by collected niete
@@ -437,14 +437,17 @@ private class StrandturmState(startLevel: Int = 1) {
         py += pvy
         px = px.coerceIn(PW / 2, VIRT_W - PW / 2)
 
+        // ── Niete grace tick countdown ─────────────────────────────────────
+        for (n in nieten) { if (n.graceTick > 0) n.graceTick-- }
+
         // ── Platform collision ─────────────────────────────────────────────
         if (!ponLadder) {
             ponGround = false
             for ((i, p) in activePlats.withIndex()) {
                 if (px + PW / 2 > p.x && px - PW / 2 < p.x + p.w) {
-                    // Level 4: fall through niete gaps
+                    // Level 4: fall through niete gaps (only once grace period expired)
                     val overGap = getLevelType(level) == 4 && nieten.any { n ->
-                        n.collected && n.platIdx == i && abs(px - n.x) < NIETE_GAP
+                        n.collected && n.graceTick == 0 && n.platIdx == i && abs(px - n.x) < NIETE_GAP
                     }
                     if (!overGap && pvy >= 0 && prevPY <= p.y + 1 && py >= p.y) {
                         py = p.y; pvy = 0f; ponGround = true; break
@@ -501,6 +504,7 @@ private class StrandturmState(startLevel: Int = 1) {
                 val platY = activePlats[n.platIdx].y
                 if (abs(px - n.x) < 14f && abs(py - platY) < 4f) {
                     n.collected = true
+                    n.graceTick = 20 // stay solid for ~0.33s after collection
                     nietenCollected++
                     score += 100
                 }
