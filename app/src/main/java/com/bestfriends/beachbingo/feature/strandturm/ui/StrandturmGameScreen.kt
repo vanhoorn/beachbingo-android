@@ -516,15 +516,15 @@ private class StrandturmState(startLevel: Int = 1) {
         // ── Explosion update ───────────────────────────────────────────────
         explosions.removeAll { e -> e.frame++; e.frame >= EXPLOSION_FRAMES }
 
-        // ── Okto movement (Level 3) ───────────────────────────────────────
-        if (getLevelType(level) == 3 && oktos.isNotEmpty()) {
+        // ── Okto movement (Level 3 + Level 4) ────────────────────────────
+        if (oktos.isNotEmpty()) {
             val oktoRemove = mutableListOf<Int>()
             for (oi in oktos.indices) {
                 val o = oktos[oi]
                 val p = activePlats[o.platIdx]
                 o.x += o.vx
-                if (o.x < p.x + OKTO_R) { o.x = p.x + OKTO_R; o.vx = OKTO_SPD }
-                if (o.x > p.x + p.w - OKTO_R) { o.x = p.x + p.w - OKTO_R; o.vx = -OKTO_SPD }
+                if (o.x < p.x + OKTO_R) { o.x = p.x + OKTO_R; o.vx = abs(o.vx) }
+                if (o.x > p.x + p.w - OKTO_R) { o.x = p.x + p.w - OKTO_R; o.vx = -abs(o.vx) }
                 if (pinvTimer == 0) {
                     if (abs(o.x - px) < PW / 2 + OKTO_R - 2 && abs(o.y - (py - PH / 2)) < PH / 2 + OKTO_R - 2) {
                         if (hasHammer) {
@@ -983,7 +983,7 @@ private fun DrawScope.drawWanne(c: Coco, s: Float) {
 
 private fun DrawScope.drawNiete(n: Niete, platY: Float, s: Float) {
     if (n.collected) return
-    val x = n.x; val y = platY - 9f
+    val x = n.x; val y = platY + PLAT_H / 2f
     // Glow
     drawCircle(Color(0x38FBB124.toInt()), 9f * s, Offset(x * s, y * s))
     // Hexagonal bolt head
