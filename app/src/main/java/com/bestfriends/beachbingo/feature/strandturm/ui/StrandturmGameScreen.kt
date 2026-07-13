@@ -162,8 +162,17 @@ private fun cocoSpeed(lvl: Int)      = 1.0f + min(4, lvl - 1) * 0.15f
 private class Coco(var id: Int, var x: Float, var y: Float, var vx: Float, var vy: Float, var platIdx: Int, var bounces: Int = 0)
 private data class Explosion(val id: Int, val x: Float, val y: Float, var frame: Int = 0)
 private class Okto(val id: Int, var x: Float, val y: Float, var vx: Float, val platIdx: Int)
+private class Niete(val id: Int, val x: Float, val platIdx: Int, var collected: Boolean = false)
 private const val OKTO_R   = 7f
 private const val OKTO_SPD = 0.8f
+
+private data class NieteDef(val x: Float, val platIdx: Int)
+private val NIETEN_DEFS = listOf(
+    NieteDef(90f,  1), NieteDef(280f, 1),
+    NieteDef(80f,  2), NieteDef(270f, 2),
+    NieteDef(100f, 3), NieteDef(260f, 3),
+    NieteDef(95f,  4), NieteDef(255f, 4),
+)
 
 private class StrandturmState(startLevel: Int = 1) {
     // Player
@@ -220,22 +229,41 @@ private class StrandturmState(startLevel: Int = 1) {
     var activeLadders   : List<Ladd>      = getActiveLadders(startLevel)
     var activeHammerDefs: List<HammerDef> = getHammerDefs(startLevel)
 
-    // Level 3: wandernde Oktopus-Feinde
+    // Level 3 + Level 4: wandernde Oktopus-Feinde
     val oktos     = mutableListOf<Okto>()
     var oktoIdCtr = 0
+
+    // Level 4: Nieten (Bolzen)
+    val nieten = mutableListOf<Niete>()
+    var nietenCollected by mutableIntStateOf(0)
 
     init {
         conveyorBelts.addAll(getConveyorBelts(startLevel))
         elevators.addAll(getElevators(startLevel))
         spawnOktos(startLevel)
+        spawnNieten(startLevel)
     }
 
     private fun spawnOktos(lvl: Int) {
         oktos.clear()
-        if (getLevelType(lvl) != 3) return
-        listOf(1, 4, 5, 8).forEach { pi ->
-            val p = LEVEL3_PLATS[pi]
-            oktos.add(Okto(oktoIdCtr++, p.x + p.w / 2f, p.y, if (pi % 2 == 0) OKTO_SPD else -OKTO_SPD, pi))
+        when (getLevelType(lvl)) {
+            3 -> listOf(1, 4, 5, 8).forEach { pi ->
+                val p = LEVEL3_PLATS[pi]
+                oktos.add(Okto(oktoIdCtr++, p.x + p.w / 2f, p.y, if (pi % 2 == 0) OKTO_SPD else -OKTO_SPD, pi))
+            }
+            4 -> listOf(1, 2, 3, 4).forEachIndexed { i, pi ->
+                val p = PLATS[pi]
+                oktos.add(Okto(oktoIdCtr++, p.x + p.w / 2f, p.y, if (i % 2 == 0) OKTO_SPD * 1.3f else -OKTO_SPD * 1.3f, pi))
+            }
+        }
+    }
+
+    private fun spawnNieten(lvl: Int) {
+        nieten.clear()
+        nietenCollected = 0
+        if (getLevelType(lvl) != 4) return
+        NIETEN_DEFS.forEachIndexed { i, def ->
+            nieten.add(Niete(i, def.x, def.platIdx))
         }
     }
 
@@ -280,6 +308,7 @@ private class StrandturmState(startLevel: Int = 1) {
         elevators.clear(); elevators.addAll(getElevators(newLevel))
         ponElevator = false; pElevatorIdx = -1
         spawnOktos(newLevel)
+        spawnNieten(newLevel)
     }
 
     fun loseLife() {
@@ -340,8 +369,8 @@ private class StrandturmState(startLevel: Int = 1) {
         }
 
         // ── Spawn obstacle ─────────────────────────────────────────────────
-        cocoSpawnAcc++
-        if (cocoSpawnAcc >= spawnInterval(level)) {
+        if (getLevelType(level) != 4) cocoSpawnAcc++
+        if (getLevelType(level) != 4 && cocoSpawnAcc >= spawnInterval(level)) {
             cocoSpawnAcc = 0
             if (getLevelType(level) == 3) {
                 // Einzelnes Gewicht – nur rechts (wie im Original)
@@ -460,8 +489,22 @@ private class StrandturmState(startLevel: Int = 1) {
         // ── Fall off bottom ────────────────────────────────────────────────
         if (py > VIRT_H + 40) { loseLife(); return }
 
+        // ── Nieten collection (Level 4) ────────────────────────────────────
+        if (getLevelType(level) == 4) {
+            for (n in nieten) {
+                if (n.collected) continue
+                val platY = activePlats[n.platIdx].y
+                if (abs(px - n.x) < 14f && abs(py - platY) < 4f) {
+                    n.collected = true
+                    nietenCollected++
+                    score += 100
+                }
+            }
+        }
+
         // ── Goal reached ───────────────────────────────────────────────────
-        if (py <= activePlats.last().y + 2 && px >= GOAL_X) {
+        val nietenGate = getLevelType(level) != 4 || nietenCollected >= 8
+        if (nietenGate && py <= activePlats.last().y + 2 && px >= GOAL_X) {
             score += 300 + bonusTimer
             phase = "LEVEL_COMPLETE"; phaseTimer = 150
             return
@@ -938,7 +981,28 @@ private fun DrawScope.drawWanne(c: Coco, s: Float) {
         Size((r - 3) * 2 * s, r * 0.35f * s))
 }
 
-private fun DrawScope.drawGoal(topPlatY: Float, s: Float) {
+private fun DrawScope.drawNiete(n: Niete, platY: Float, s: Float) {
+    if (n.collected) return
+    val x = n.x; val y = platY - 9f
+    // Glow
+    drawCircle(Color(0x38FBB124.toInt()), 9f * s, Offset(x * s, y * s))
+    // Hexagonal bolt head
+    val hexPath = Path().apply {
+        for (i in 0..5) {
+            val a = (i.toFloat() / 6f * Math.PI.toFloat() * 2f - Math.PI.toFloat() / 6f)
+            val hx = x + kotlin.math.cos(a.toDouble()).toFloat() * 5.5f
+            val hy = y + kotlin.math.sin(a.toDouble()).toFloat() * 5.5f
+            if (i == 0) moveTo(hx * s, hy * s) else lineTo(hx * s, hy * s)
+        }
+        close()
+    }
+    drawPath(hexPath, Color(0xFFFBBF24.toInt()))
+    drawPath(hexPath, Color(0xFFF59E0B.toInt()), style = Stroke(1f * s))
+    // Dark center hole
+    drawCircle(Color(0xFF78350F.toInt()), 2f * s, Offset(x * s, y * s))
+}
+
+private fun DrawScope.drawGoal(topPlatY: Float, s: Float, locked: Boolean = false) {
     val goalX = GOAL_X
     val goalY = topPlatY
     drawIntoCanvas { canvas ->
@@ -946,7 +1010,7 @@ private fun DrawScope.drawGoal(topPlatY: Float, s: Float) {
             textAlign = android.graphics.Paint.Align.CENTER
             textSize  = 22f * s
         }
-        canvas.nativeCanvas.drawText("🛟", (goalX + 15) * s, (goalY - 16) * s + paint.textSize * 0.4f, paint)
+        canvas.nativeCanvas.drawText(if (locked) "🔒" else "🛟", (goalX + 15) * s, (goalY - 16) * s + paint.textSize * 0.4f, paint)
     }
 }
 
@@ -971,8 +1035,13 @@ private fun DrawScope.drawGame(gs: StrandturmState, s: Float) {
     for (el in gs.elevators) drawElevator(el, s)
     // Ladders
     for (l in gs.activeLadders) drawLadder(l, s)
+    // Nieten (Level 4 Bolzen – unter dem Spieler gezeichnet)
+    if (getLevelType(gs.level) == 4) {
+        for (n in gs.nieten) drawNiete(n, gs.activePlats[n.platIdx].y, s)
+    }
     // Goal
-    drawGoal(topY, s)
+    val goalLocked = getLevelType(gs.level) == 4 && gs.nietenCollected < 8
+    drawGoal(topY, s, goalLocked)
     // Hammer pickups (floated above platform – jump to reach)
     for (hi in gs.activeHammerDefs.indices) {
         if (!gs.hammerPickups[hi]) {
@@ -989,7 +1058,7 @@ private fun DrawScope.drawGame(gs: StrandturmState, s: Float) {
         3    -> drawWeight(c, s)
         else -> drawCoco(c, s)
     }
-    // Okto-Feinde (Level 3)
+    // Okto-Feinde (Level 3 + Level 4)
     for (o in gs.oktos) drawOkto(o, s)
     // Explosions (above obstacles, below player)
     for (e in gs.explosions) drawExplosion(e, s)
@@ -1089,6 +1158,14 @@ fun StrandturmGameScreen(
                 fontSize = 12.sp,
                 color = if (gs.bonusTimer < 1000) StrandturmRed else TextMuted,
             )
+            if (getLevelType(gs.level) == 4) {
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "🔩 ${gs.nietenCollected}/8",
+                    fontSize = 12.sp,
+                    color = if (gs.nietenCollected >= 8) Color(0xFF22C55E) else SandGold,
+                )
+            }
         }
 
         // Canvas area
