@@ -89,6 +89,28 @@ private val LADDERS = listOf(
 )
 private val ROLL_DIR = floatArrayOf(-1f, 1f, -1f, 1f, -1f, 1f)
 
+// ── Level 3 – Aufzüge layout ──────────────────────────────────────────────────
+private val LEVEL3_PLATS = listOf(
+    Plat(10f,  505f, 380f),  // P0 full bottom (start)
+    Plat(50f,  420f, 140f),  // P1a links  x=50..190
+    Plat(230f, 420f, 70f),   // P1b links  x=230..300
+    Plat(100f, 335f, 80f),   // P2a rechts x=100..180
+    Plat(220f, 335f, 135f),  // P2b rechts x=220..355
+    Plat(50f,  250f, 140f),  // P3a links  x=50..190
+    Plat(230f, 250f, 70f),   // P3b links  x=230..300
+    Plat(100f, 165f, 80f),   // P4a rechts x=100..180
+    Plat(220f, 165f, 135f),  // P4b rechts x=220..355
+    Plat(10f,   80f, 380f),  // P5 full top (goal)
+)
+private val LEVEL3_LADDERS = emptyList<Ladd>()
+
+private fun getActivePlats(lvl: Int)   = if (getLevelType(lvl) == 3) LEVEL3_PLATS   else PLATS
+private fun getActiveLadders(lvl: Int) = if (getLevelType(lvl) == 3) LEVEL3_LADDERS else LADDERS
+private fun getHammerDefs(lvl: Int) = when (getLevelType(lvl)) {
+    3    -> listOf(HammerDef(120f, 1), HammerDef(120f, 5))  // P1a, P3a
+    else -> listOf(HammerDef(190f, 1), HammerDef(190f, 3))
+}
+
 private fun getLevelType(lvl: Int) = ((lvl - 1) % 4) + 1
 private val LEVEL_NAMES = mapOf(
     1 to "🏗️ Die Baustelle",
@@ -124,18 +146,12 @@ private data class Elevator(
 private fun getElevators(lvl: Int): List<Elevator> {
     if (getLevelType(lvl) != 3) return emptyList()
     return listOf(
-        Elevator(175f, 50f, 480f, 420f, 505f, -ELEV_SPEED), // P0→P1
-        Elevator(175f, 50f, 400f, 335f, 420f,  ELEV_SPEED), // P1→P2
-        Elevator(175f, 50f, 310f, 250f, 335f, -ELEV_SPEED), // P2→P3
-        Elevator(175f, 50f, 232f, 165f, 250f,  ELEV_SPEED), // P3→P4
+        Elevator(5f,   40f, 380f, 80f, 490f, -ELEV_SPEED), // Links,  fährt hoch
+        Elevator(355f, 40f, 210f, 80f, 490f,  ELEV_SPEED), // Rechts, fährt runter
     )
 }
 
 private data class HammerDef(val x: Float, val platIdx: Int)
-private val HAMMER_DEFS = listOf(
-    HammerDef(190f, 1),
-    HammerDef(190f, 3),
-)
 
 private fun bonusForLevel(lvl: Int)  = max(400, BONUS_START - (lvl - 1) * 200)
 private fun spawnInterval(lvl: Int)  = max(80,  240          - (lvl - 1) * 20)
@@ -145,6 +161,9 @@ private fun cocoSpeed(lvl: Int)      = 1.0f + min(4, lvl - 1) * 0.15f
 
 private class Coco(var id: Int, var x: Float, var y: Float, var vx: Float, var vy: Float, var platIdx: Int, var bounces: Int = 0)
 private data class Explosion(val id: Int, val x: Float, val y: Float, var frame: Int = 0)
+private class Okto(val id: Int, var x: Float, val y: Float, var vx: Float, val platIdx: Int)
+private const val OKTO_R   = 7f
+private const val OKTO_SPD = 0.8f
 
 private class StrandturmState(startLevel: Int = 1) {
     // Player
@@ -179,7 +198,7 @@ private class StrandturmState(startLevel: Int = 1) {
     // Hammer power-up
     var hasHammer    = false
     var hammerTimer  = 0
-    val hammerPickups = MutableList(HAMMER_DEFS.size) { false }
+    val hammerPickups = mutableListOf(false, false)
 
     // Jump-over bonus tracking
     val jumpedCocoIds = mutableSetOf<Int>()
@@ -196,9 +215,28 @@ private class StrandturmState(startLevel: Int = 1) {
     var ponElevator = false
     var pElevatorIdx = -1
 
+    // Aktives Level-Layout (wird bei Level 3 gegen neue Strukturen getauscht)
+    var activePlats     : List<Plat>      = getActivePlats(startLevel)
+    var activeLadders   : List<Ladd>      = getActiveLadders(startLevel)
+    var activeHammerDefs: List<HammerDef> = getHammerDefs(startLevel)
+
+    // Level 3: wandernde Oktopus-Feinde
+    val oktos     = mutableListOf<Okto>()
+    var oktoIdCtr = 0
+
     init {
         conveyorBelts.addAll(getConveyorBelts(startLevel))
         elevators.addAll(getElevators(startLevel))
+        spawnOktos(startLevel)
+    }
+
+    private fun spawnOktos(lvl: Int) {
+        oktos.clear()
+        if (getLevelType(lvl) != 3) return
+        listOf(1, 4, 5, 8).forEach { pi ->
+            val p = LEVEL3_PLATS[pi]
+            oktos.add(Okto(oktoIdCtr++, p.x + p.w / 2f, p.y, if (pi % 2 == 0) OKTO_SPD else -OKTO_SPD, pi))
+        }
     }
 
     // Internal
@@ -221,6 +259,7 @@ private class StrandturmState(startLevel: Int = 1) {
         jumpedCocoIds.clear()
         explosions.clear()
         ponElevator = false; pElevatorIdx = -1
+        spawnOktos(level)
         phase      = "PLAYING"
     }
 
@@ -234,9 +273,13 @@ private class StrandturmState(startLevel: Int = 1) {
         hasHammer = false; hammerTimer = 0
         hammerPickups.fill(false)
         jumpedCocoIds.clear()
+        activePlats      = getActivePlats(newLevel)
+        activeLadders    = getActiveLadders(newLevel)
+        activeHammerDefs = getHammerDefs(newLevel)
         conveyorBelts.clear(); conveyorBelts.addAll(getConveyorBelts(newLevel))
         elevators.clear(); elevators.addAll(getElevators(newLevel))
         ponElevator = false; pElevatorIdx = -1
+        spawnOktos(newLevel)
     }
 
     fun loseLife() {
@@ -280,10 +323,10 @@ private class StrandturmState(startLevel: Int = 1) {
 
         // ── Hammer pickup ─────────────────────────────────────────────────
         if (!hasHammer) {
-            for (hi in HAMMER_DEFS.indices) {
+            for (hi in activeHammerDefs.indices) {
                 if (hammerPickups[hi]) continue
-                val h = HAMMER_DEFS[hi]
-                val hy = PLATS[h.platIdx].y - HAMMER_FLOAT // floated above platform
+                val h = activeHammerDefs[hi]
+                val hy = activePlats[h.platIdx].y - HAMMER_FLOAT // floated above platform
                 if (abs(px - h.x) < 20f && abs(py - hy) < 18f) {
                     hasHammer = true
                     hammerTimer = HAMMER_DURATION
@@ -301,15 +344,13 @@ private class StrandturmState(startLevel: Int = 1) {
         if (cocoSpawnAcc >= spawnInterval(level)) {
             cocoSpawnAcc = 0
             if (getLevelType(level) == 3) {
-                // Spawn 2 weights at staggered x positions across the level width
-                val x1 = 40f + kotlin.random.Random.nextFloat() * 150f
-                val x2 = 210f + kotlin.random.Random.nextFloat() * 150f
-                val vx1 = (kotlin.random.Random.nextFloat() - 0.5f) * 2f
-                val vx2 = (kotlin.random.Random.nextFloat() - 0.5f) * 2f
-                cocos.add(Coco(cocoIdCtr++, x1, -8f, vx1, 2.5f, -1, 0))
-                cocos.add(Coco(cocoIdCtr++, x2, -8f, vx2, 2.5f, -1, 0))
+                // Einzelnes Gewicht – nur rechts (wie im Original)
+                val wx  = 300f + kotlin.random.Random.nextFloat() * 80f
+                val wvx = (kotlin.random.Random.nextFloat() - 0.3f) * 1.5f
+                cocos.add(Coco(cocoIdCtr++, wx, -8f, wvx, 2.5f, -1, 0))
             } else {
-                cocos.add(Coco(cocoIdCtr++, MOEVE_X + 35f, PLATS[5].y - COCO_R, cocoSpeed(level), 0f, 5, 0))
+                val topIdx = activePlats.size - 1
+                cocos.add(Coco(cocoIdCtr++, MOEVE_X + 35f, activePlats.last().y - COCO_R, cocoSpeed(level), 0f, topIdx, 0))
             }
         }
 
@@ -329,8 +370,8 @@ private class StrandturmState(startLevel: Int = 1) {
             }
 
             if (upHeld && wasOnGround) {
-                for (i in LADDERS.indices) {
-                    val l = LADDERS[i]
+                for (i in activeLadders.indices) {
+                    val l = activeLadders[i]
                     if (abs(px - l.cx) <= LADD_W / 2 + 14 && abs(py - l.y2) <= 12) {
                         ponLadder = true; pladderIdx = i; ponGround = false; pvx = 0f; pvy = 0f
                         py = l.y2 - 2f
@@ -340,8 +381,8 @@ private class StrandturmState(startLevel: Int = 1) {
                 }
             }
             if (downHeld && wasOnGround) {
-                for (i in LADDERS.indices) {
-                    val l = LADDERS[i]
+                for (i in activeLadders.indices) {
+                    val l = activeLadders[i]
                     if (abs(px - l.cx) <= LADD_W / 2 + 14 && abs(py - l.y1) <= 8) {
                         ponLadder = true; pladderIdx = i; ponGround = false; pvx = 0f; pvy = CLIMB_SPD
                         px = l.cx
@@ -369,7 +410,7 @@ private class StrandturmState(startLevel: Int = 1) {
         // ── Platform collision ─────────────────────────────────────────────
         if (!ponLadder) {
             ponGround = false
-            for (p in PLATS) {
+            for (p in activePlats) {
                 if (px + PW / 2 > p.x && px - PW / 2 < p.x + p.w) {
                     if (pvy >= 0 && prevPY <= p.y + 1 && py >= p.y) {
                         py = p.y; pvy = 0f; ponGround = true; break
@@ -406,7 +447,7 @@ private class StrandturmState(startLevel: Int = 1) {
 
         // ── Ladder exit ────────────────────────────────────────────────────
         if (ponLadder && pladderIdx >= 0) {
-            val l = LADDERS[pladderIdx]
+            val l = activeLadders[pladderIdx]
             when {
                 py <= l.y1 -> { py = l.y1; ponLadder = false; pladderIdx = -1; ponGround = true; pvy = 0f }
                 py >= l.y2 -> { py = l.y2; ponLadder = false; pladderIdx = -1; ponGround = true; pvy = 0f }
@@ -420,7 +461,7 @@ private class StrandturmState(startLevel: Int = 1) {
         if (py > VIRT_H + 40) { loseLife(); return }
 
         // ── Goal reached ───────────────────────────────────────────────────
-        if (py <= PLATS[5].y + 2 && px >= GOAL_X) {
+        if (py <= activePlats.last().y + 2 && px >= GOAL_X) {
             score += 300 + bonusTimer
             phase = "LEVEL_COMPLETE"; phaseTimer = 150
             return
@@ -431,6 +472,27 @@ private class StrandturmState(startLevel: Int = 1) {
 
         // ── Explosion update ───────────────────────────────────────────────
         explosions.removeAll { e -> e.frame++; e.frame >= EXPLOSION_FRAMES }
+
+        // ── Okto movement (Level 3) ───────────────────────────────────────
+        if (getLevelType(level) == 3 && oktos.isNotEmpty()) {
+            val oktoRemove = mutableListOf<Int>()
+            for (oi in oktos.indices) {
+                val o = oktos[oi]
+                val p = activePlats[o.platIdx]
+                o.x += o.vx
+                if (o.x < p.x + OKTO_R) { o.x = p.x + OKTO_R; o.vx = OKTO_SPD }
+                if (o.x > p.x + p.w - OKTO_R) { o.x = p.x + p.w - OKTO_R; o.vx = -OKTO_SPD }
+                if (pinvTimer == 0) {
+                    if (abs(o.x - px) < PW / 2 + OKTO_R - 2 && abs(o.y - (py - PH / 2)) < PH / 2 + OKTO_R - 2) {
+                        if (hasHammer) {
+                            oktoRemove.add(oi); score += 300
+                            explosions.add(Explosion(explosionIdCtr++, o.x, o.y))
+                        } else { loseLife(); return }
+                    }
+                }
+            }
+            for (i in oktoRemove.reversed()) oktos.removeAt(i)
+        }
 
         // ── Obstacle physics (coconuts L1, cement troughs L2, iron weights L3) ──
         val spd = cocoSpeed(level)
@@ -463,14 +525,14 @@ private class StrandturmState(startLevel: Int = 1) {
             } else {
                 // ── Level 1/2: Rolling coconut / cement-trough physics ────
                 if (c.platIdx >= 0) {
-                    val p = PLATS[c.platIdx]
+                    val p = activePlats[c.platIdx]
                     c.vx = ROLL_DIR[c.platIdx] * spd
                     c.x += c.vx
                     c.y  = p.y - COCO_R
                     if (c.x < p.x - COCO_R || c.x > p.x + p.w + COCO_R) {
                         val nextPIdx = c.platIdx - 1
                         if (nextPIdx >= 0) {
-                            val np = PLATS[nextPIdx]
+                            val np = activePlats[nextPIdx]
                             c.x = c.x.coerceIn(np.x + COCO_R, np.x + np.w - COCO_R)
                         }
                         c.y = p.y + PLAT_H + 1f
@@ -479,8 +541,8 @@ private class StrandturmState(startLevel: Int = 1) {
                 } else {
                     c.vy = min(c.vy + 0.6f, 14f)
                     c.y += c.vy
-                    for (pi in PLATS.indices) {
-                        val p = PLATS[pi]
+                    for (pi in activePlats.indices) {
+                        val p = activePlats[pi]
                         if (c.x > p.x && c.x < p.x + p.w &&
                             c.y + COCO_R >= p.y && c.y + COCO_R <= p.y + COCO_R + 8 && c.vy > 0) {
                             c.y = p.y - COCO_R; c.vy = 0f; c.vx = ROLL_DIR[pi] * spd; c.platIdx = pi; break
@@ -547,9 +609,28 @@ private fun DrawScope.drawLadder(l: Ladd, s: Float) {
     }
 }
 
-private fun DrawScope.drawSeeloewe(frame: Int, s: Float) {
+private fun DrawScope.drawOkto(o: Okto, s: Float) {
+    val cx = o.x; val cy = o.y - OKTO_R
+    // Körper
+    drawCircle(Color(0xFF38BDF8), OKTO_R * s, Offset(cx * s, cy * s))
+    // Augen
+    drawCircle(Color.White, 2.5f * s, Offset((cx - 2.5f) * s, (cy - 2f) * s))
+    drawCircle(Color.White, 2.5f * s, Offset((cx + 2.5f) * s, (cy - 2f) * s))
+    drawCircle(Color.Black, 1.2f * s, Offset((cx - 2f) * s,   (cy - 2f) * s))
+    drawCircle(Color.Black, 1.2f * s, Offset((cx + 3f) * s,   (cy - 2f) * s))
+    // Tentakel
+    val tentCol = Color(0xFF0EA5E9)
+    for (i in -2..2) {
+        val tx  = cx + i * 2.5f
+        val ty1 = cy + OKTO_R * 0.7f
+        val ty2 = cy + OKTO_R * 1.5f + (if (i % 2 == 0) 2f else 0f)
+        drawLine(tentCol, Offset(tx * s, ty1 * s), Offset(tx * s, ty2 * s), strokeWidth = 1.5f * s)
+    }
+}
+
+private fun DrawScope.drawSeeloewe(frame: Int, topPlatY: Float, s: Float) {
     val mx = MOEVE_X
-    val gy = PLATS[5].y
+    val gy = topPlatY
     val flipRaise = kotlin.math.sin(frame * 0.1).toFloat() * 5f
 
     drawIntoCanvas { canvas ->
@@ -857,9 +938,9 @@ private fun DrawScope.drawWanne(c: Coco, s: Float) {
         Size((r - 3) * 2 * s, r * 0.35f * s))
 }
 
-private fun DrawScope.drawGoal(s: Float) {
+private fun DrawScope.drawGoal(topPlatY: Float, s: Float) {
     val goalX = GOAL_X
-    val goalY = PLATS[5].y
+    val goalY = topPlatY
     drawIntoCanvas { canvas ->
         val paint = android.graphics.Paint().apply {
             textAlign = android.graphics.Paint.Align.CENTER
@@ -880,26 +961,27 @@ private fun DrawScope.drawGame(gs: StrandturmState, s: Float) {
         Size(VIRT_W * s, 60f * s),
     )
 
+    val topY = gs.activePlats.last().y
     // Platforms
-    for (p in PLATS) drawPlatform(p, s)
+    for (p in gs.activePlats) drawPlatform(p, s)
     // Conveyor belts (overlaid on platform surface, under ladders – Level 2 mechanic)
     for (belt in gs.conveyorBelts) drawConveyorBelt(belt, gs.totalFrame, s)
     // Elevator shafts + moving platforms (Level 3 mechanic)
     for (el in gs.elevators) drawElevatorTrack(el, s)
     for (el in gs.elevators) drawElevator(el, s)
     // Ladders
-    for (l in LADDERS) drawLadder(l, s)
+    for (l in gs.activeLadders) drawLadder(l, s)
     // Goal
-    drawGoal(s)
+    drawGoal(topY, s)
     // Hammer pickups (floated above platform – jump to reach)
-    for (hi in HAMMER_DEFS.indices) {
+    for (hi in gs.activeHammerDefs.indices) {
         if (!gs.hammerPickups[hi]) {
-            val h = HAMMER_DEFS[hi]
-            drawHammerPickup(h.x, PLATS[h.platIdx].y - HAMMER_FLOAT, s)
+            val h = gs.activeHammerDefs[hi]
+            drawHammerPickup(h.x, gs.activePlats[h.platIdx].y - HAMMER_FLOAT, s)
         }
     }
     // Seelöwe
-    drawSeeloewe(gs.totalFrame, s)
+    drawSeeloewe(gs.totalFrame, topY, s)
     // Obstacles (coconuts in L1, cement troughs in L2, iron weights in L3)
     val levelType = getLevelType(gs.level)
     for (c in gs.cocos) when (levelType) {
@@ -907,6 +989,8 @@ private fun DrawScope.drawGame(gs: StrandturmState, s: Float) {
         3    -> drawWeight(c, s)
         else -> drawCoco(c, s)
     }
+    // Okto-Feinde (Level 3)
+    for (o in gs.oktos) drawOkto(o, s)
     // Explosions (above obstacles, below player)
     for (e in gs.explosions) drawExplosion(e, s)
     // Player
@@ -1195,21 +1279,21 @@ fun StrandturmGameScreen(
                 }
             }
             "SPLIT" -> Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 14.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp, horizontal = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 // Left thumb: ◄ ►
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    HoldButton("◄", Modifier.size(78.dp, 62.dp),
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    HoldButton("◄", Modifier.size(90.dp, 92.dp),
                         onPress = { gs.leftHeld = true }, onRelease = { gs.leftHeld = false })
-                    HoldButton("►", Modifier.size(78.dp, 62.dp),
+                    HoldButton("►", Modifier.size(90.dp, 92.dp),
                         onPress = { gs.rightHeld = true }, onRelease = { gs.rightHeld = false })
                 }
                 // Right thumb: ▲ ▼
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    HoldButton("▲", Modifier.size(72.dp, 62.dp),
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    HoldButton("▲", Modifier.size(82.dp, 92.dp),
                         onPress = { gs.upHeld = true; gs.jumpPressed = true }, onRelease = { gs.upHeld = false })
-                    HoldButton("▼", Modifier.size(72.dp, 62.dp),
+                    HoldButton("▼", Modifier.size(82.dp, 92.dp),
                         onPress = { gs.downHeld = true }, onRelease = { gs.downHeld = false })
                 }
             }

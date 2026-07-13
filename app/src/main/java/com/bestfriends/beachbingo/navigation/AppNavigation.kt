@@ -471,7 +471,10 @@ fun AppNavigation() {
         }
 
         composable<Screen.StrandturmSettings> {
-            StrandturmSettingsScreen(onNavigateBack = { navController.popBackStack() })
+            StrandturmSettingsScreen(
+                onNavigateBack      = { navController.popBackStack() },
+                onNavigateToProfile = { navController.navigate(Screen.Profile) },
+            )
         }
 
         composable<Screen.StrandturmResults> { backStack ->

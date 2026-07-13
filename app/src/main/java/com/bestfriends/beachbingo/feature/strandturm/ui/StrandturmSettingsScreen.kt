@@ -39,7 +39,7 @@ private val CONTROL_OPTIONS = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StrandturmSettingsScreen(onNavigateBack: () -> Unit) {
+fun StrandturmSettingsScreen(onNavigateBack: () -> Unit, onNavigateToProfile: () -> Unit) {
     val auth      = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
     val uid       = auth.currentUser?.uid
@@ -112,6 +112,53 @@ fun StrandturmSettingsScreen(onNavigateBack: () -> Unit) {
             Text("🕹️ Steuerung", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextMuted, modifier = Modifier.padding(start = 4.dp))
             CONTROL_OPTIONS.forEach { opt ->
                 RadioRow(opt = opt, selected = controlMode == opt.id, accentColor = StrandturmRed) { controlMode = opt.id }
+            }
+
+            // Steuerung im Detail
+            Surface(
+                color = SurfaceDark,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth().border(1.dp, BorderColor, RoundedCornerShape(14.dp)),
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Steuerung im Detail", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary, modifier = Modifier.padding(bottom = 4.dp))
+                    listOf(
+                        "Laufen" to "◄ / ► drücken",
+                        "Springen" to "▲ drücken (auf dem Boden)",
+                        "Leiter hoch" to "▲ an der Leiter halten",
+                        "Leiter runter" to "▼ auf der Plattform über Leiter",
+                    ).forEach { (label, detail) ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("$label:", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                            Text(detail, fontSize = 13.sp, color = TextMuted)
+                        }
+                    }
+                }
+            }
+
+            // Musik & Soundeffekte
+            Surface(
+                color = SurfaceDark,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth().border(1.dp, BorderColor, RoundedCornerShape(14.dp)),
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        "💡 Musik & Soundeffekte findest du in Profil & Abmelden.",
+                        fontSize = 13.sp, color = TextMuted,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Öffnen →",
+                        fontSize = 13.sp, color = StrandturmRed, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.clickable { onNavigateToProfile() },
+                    )
+                }
             }
 
             if (isAdmin) {
