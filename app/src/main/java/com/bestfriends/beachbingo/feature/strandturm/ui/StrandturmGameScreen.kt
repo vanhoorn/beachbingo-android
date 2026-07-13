@@ -163,8 +163,9 @@ private class Coco(var id: Int, var x: Float, var y: Float, var vx: Float, var v
 private data class Explosion(val id: Int, val x: Float, val y: Float, var frame: Int = 0)
 private class Okto(val id: Int, var x: Float, val y: Float, var vx: Float, val platIdx: Int)
 private class Niete(val id: Int, val x: Float, val platIdx: Int, var collected: Boolean = false)
-private const val OKTO_R   = 7f
-private const val OKTO_SPD = 0.8f
+private const val OKTO_R    = 7f
+private const val OKTO_SPD  = 0.8f
+private const val NIETE_GAP = 7f // half-width of platform gap left by collected niete
 
 private data class NieteDef(val x: Float, val platIdx: Int)
 private val NIETEN_DEFS = listOf(
@@ -525,6 +526,17 @@ private class StrandturmState(startLevel: Int = 1) {
                 o.x += o.vx
                 if (o.x < p.x + OKTO_R) { o.x = p.x + OKTO_R; o.vx = abs(o.vx) }
                 if (o.x > p.x + p.w - OKTO_R) { o.x = p.x + p.w - OKTO_R; o.vx = -abs(o.vx) }
+                // Level 4: bounce at niete gaps
+                if (getLevelType(level) == 4) {
+                    for (n in nieten) {
+                        if (!n.collected || n.platIdx != o.platIdx) continue
+                        if (o.vx > 0 && o.x + OKTO_R >= n.x - NIETE_GAP) {
+                            o.x = n.x - NIETE_GAP - OKTO_R; o.vx = -abs(o.vx); break
+                        } else if (o.vx < 0 && o.x - OKTO_R <= n.x + NIETE_GAP) {
+                            o.x = n.x + NIETE_GAP + OKTO_R; o.vx = abs(o.vx); break
+                        }
+                    }
+                }
                 if (pinvTimer == 0) {
                     if (abs(o.x - px) < PW / 2 + OKTO_R - 2 && abs(o.y - (py - PH / 2)) < PH / 2 + OKTO_R - 2) {
                         if (hasHammer) {
@@ -629,7 +641,7 @@ private fun DrawScope.drawPlatform(p: Plat, s: Float, gaps: List<Float> = emptyL
     val highlight = Color(0xFFA05A2C)
     val shadow    = Color(0xFF4A2409)
     val grain     = Color(0xFF6B3416)
-    val GAP_HALF  = 7f
+    val GAP_HALF  = NIETE_GAP
     val sorted    = gaps.sorted()
     // Build segments around gaps
     val segs = mutableListOf<Pair<Float, Float>>() // x, w
