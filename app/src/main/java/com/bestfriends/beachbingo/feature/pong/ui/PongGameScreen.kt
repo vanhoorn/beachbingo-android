@@ -4,13 +4,14 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -245,20 +246,22 @@ fun PongGameScreen(
             }
 
             // ── Canvas ────────────────────────────────────────────────────────
-            Box(
+            BoxWithConstraints(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
+                // Explicit sizing avoids aspect-ratio issues with tight constraints on tablets
                 val canvasModifier = if (is2P) {
-                    Modifier
-                        .fillMaxSize()
-                        .aspectRatio(cw / ch)
+                    if (maxWidth.value * ch / cw <= maxHeight.value) {
+                        Modifier.size(maxWidth, (maxWidth.value * ch / cw).dp)
+                    } else {
+                        Modifier.size((maxHeight.value * cw / ch).dp, maxHeight)
+                    }
                 } else {
-                    Modifier
-                        .fillMaxSize()
-                        .aspectRatio(1f)
+                    val sq = minOf(maxWidth, maxHeight)
+                    Modifier.size(sq, sq)
                 }
 
                 // Countdown overlay (composable text, since DrawScope can't easily draw text)
@@ -480,6 +483,12 @@ private fun DrawScope.drawBackground(sx: Float, sy: Float) {
 
 private fun DrawScope.draw2PField(g: PongGS, sx: Float, sy: Float) {
     drawBackground(sx, sy)
+
+    // Top and bottom walls — sand planks (ball bounces off these, MARGIN units thick)
+    val wallH = MARGIN * sy
+    val wallColor = Color(0xCC8B6530)
+    drawRect(wallColor, Offset(0f, 0f), Size(size.width, wallH))
+    drawRect(wallColor, Offset(0f, size.height - wallH), Size(size.width, wallH))
 
     // Net bar + horizontal stripes
     val nx = size.width / 2f

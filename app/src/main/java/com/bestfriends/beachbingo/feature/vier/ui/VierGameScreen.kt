@@ -82,7 +82,7 @@ private val EmptyCellBg = Color(0xFF091525)
 private val BeerOrange = Color(0xFFC2410C)
 
 private val CELL_DP_MIN = 36.dp
-private val CELL_DP_MAX = 80.dp
+private val CELL_DP_MAX = 120.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -234,11 +234,14 @@ fun VierGameScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            // Column padding is 12.dp each side (24dp total), board padding 10.dp each side (20dp),
-            // gaps between COLS cells: (COLS-1)*4.dp = 24.dp
+            // Cell size from width: col padding 24dp, board padding 20dp, gaps (COLS-1)*4dp
             val totalGaps = ((COLS - 1) * 4).dp
-            val cellDp = ((maxWidth - 24.dp - 20.dp - totalGaps) / COLS)
-                .coerceIn(CELL_DP_MIN, CELL_DP_MAX)
+            val cellFromWidth = (maxWidth - 24.dp - 20.dp - totalGaps) / COLS
+            // Cell size from height: ~130dp for UI chrome (player bars, status, spacers),
+            // board overhead 68dp (padding 20dp + arrow row 40dp + gap 8dp), row gaps (ROWS-1)*4dp
+            val rowGaps = ((ROWS - 1) * 4).dp
+            val cellFromHeight = (maxHeight - 130.dp - 68.dp - rowGaps) / ROWS
+            val cellDp = minOf(cellFromWidth, cellFromHeight).coerceIn(CELL_DP_MIN, CELL_DP_MAX)
             val pieceDp = (cellDp.value * 0.82f).dp
 
         Column(
