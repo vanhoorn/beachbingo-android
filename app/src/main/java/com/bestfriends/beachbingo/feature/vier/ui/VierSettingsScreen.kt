@@ -11,12 +11,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.ui.text.font.FontWeight
+import com.bestfriends.beachbingo.ui.theme.BorderColor
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -66,6 +69,7 @@ private val DIFFICULTIES = listOf(
 @Composable
 fun VierSettingsScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToProfile: () -> Unit = {},
 ) {
     val auth = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
@@ -231,6 +235,32 @@ fun VierSettingsScreen(
                             Spacer(modifier = Modifier.weight(1f))
                         }
                     }
+                }
+            }
+
+            // Musik & Soundeffekte
+            Surface(
+                color = SurfaceDark,
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth().border(1.dp, BorderColor, RoundedCornerShape(8.dp)),
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        "💡 Musik & Soundeffekte findest du in Profil & Abmelden.",
+                        style = MaterialTheme.typography.bodySmall, color = TextMuted,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Öffnen →",
+                        style = MaterialTheme.typography.bodySmall, color = Color(0xFFC2410C),
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.clickable { onNavigateToProfile() },
+                    )
                 }
             }
 

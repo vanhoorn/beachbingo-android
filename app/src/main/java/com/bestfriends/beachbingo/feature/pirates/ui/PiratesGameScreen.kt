@@ -164,13 +164,31 @@ fun PiratesGameScreen(
     val firestore = FirebaseFirestore.getInstance()
     val uid       = auth.currentUser?.uid
 
-    val gs = remember { GameState(difficulty, fireRate) }
+    val gs    = remember { GameState(difficulty, fireRate) }
+    val audio = remember { PiratesAudioManager() }
 
-    // renderTick: only used to force Canvas redraws; HUD uses mutableStateOf fields directly
-    var renderTick    by remember { mutableLongStateOf(0L) }
-    var paused        by remember { mutableStateOf(false) }
+    var renderTick     by remember { mutableLongStateOf(0L) }
+    var paused         by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
     var resultHandled  by remember { mutableStateOf(false) }
+    var musicStarted   by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        if (uid != null) {
+            try {
+                val snap = firestore.collection("users").document(uid).get().await()
+                audio.soundEnabled = snap.getBoolean("soundEnabled") ?: true
+                audio.musicEnabled = snap.getBoolean("musicEnabled") ?: true
+            } catch (_: Exception) {}
+        }
+        audio.startMusic()
+        musicStarted = true
+    }
+    DisposableEffect(Unit) { onDispose { audio.release() } }
+    LaunchedEffect(paused) {
+        if (!musicStarted) return@LaunchedEffect
+        if (paused) audio.stopMusic() else if (gs.phase == Phase.PLAYING) audio.startMusic()
+    }
 
     // Game loop — delta-time aware
     LaunchedEffect(Unit) {
@@ -180,7 +198,7 @@ fun PiratesGameScreen(
                 val deltaMs = if (lastNanos == 0L) 16f
                               else ((frameNanos - lastNanos) / 1_000_000f).coerceIn(1f, 50f)
                 lastNanos = frameNanos
-                if (!paused) updateGame(gs, deltaMs)
+                if (!paused) updateGame(gs, deltaMs, audio)
                 renderTick++
             }
             // Check game-over after frame
@@ -309,12 +327,12 @@ fun PiratesGameScreen(
 
 // ── Update (delta-time based) ─────────────────────────────────────────────────
 
-private fun updateGame(gs: GameState, deltaMs: Float) {
+private fun updateGame(gs: GameState, deltaMs: Float, audio: PiratesAudioManager? = null) {
     when (gs.phase) {
         Phase.HIT -> {
             gs.phaseTimer++
             if (gs.phaseTimer >= 90) {
-                if (gs.lives <= 0) { gs.phase = Phase.GAME_OVER; gs.phaseTimer = 0 }
+                if (gs.lives <= 0) { gs.phase = Phase.GAME_OVER; gs.phaseTimer = 0; audio?.playSound("game_over") }
                 else {
                     gs.phase = Phase.PLAYING; gs.phaseTimer = 0
                     gs.playerX = CW / 2f
@@ -346,6 +364,7 @@ private fun updateGame(gs: GameState, deltaMs: Float) {
         if (gs.playerBullets.size < MAX_PLAYER_BULLETS) {
             gs.playerBullets.add(Bullet(gs.playerX, PLAYER_Y - 26f, -PLAYER_BULLET_SPD))
             gs.fireCooldown = 0
+            audio?.playSound("shoot")
         } else {
             gs.fireCooldown = maxCd  // clamp — don't accumulate past max
         }
@@ -375,6 +394,7 @@ private fun updateGame(gs: GameState, deltaMs: Float) {
                     inv.x - INVADER_W/2, inv.y - INVADER_H/2, INVADER_W, INVADER_H)) {
                 inv.alive = false
                 gs.score += when (inv.row) { 0 -> 40; 1 -> 30; 2 -> 20; else -> 10 }
+                audio?.playSound("enemy_hit")
                 pbIter.remove(); continue@outer
             }
         }
@@ -382,7 +402,7 @@ private fun updateGame(gs: GameState, deltaMs: Float) {
 
     // ── Invader movement (delta-time) ─────────────────────────────────────
     val alive = gs.aliveCount()
-    if (alive == 0) { gs.phase = Phase.WAVE_CLEAR; gs.phaseTimer = 0; return }
+    if (alive == 0) { gs.phase = Phase.WAVE_CLEAR; gs.phaseTimer = 0; audio?.playSound("wave_complete"); return }
 
     val speedFactor  = alive.toFloat() / (INVADER_COLS * INVADER_ROWS).toFloat()
     val intervalMs   = gs.baseMoveIntervalMs() * speedFactor
@@ -405,7 +425,7 @@ private fun updateGame(gs: GameState, deltaMs: Float) {
         }
         for (inv in gs.invaders) {
             if (inv.alive && inv.y + INVADER_H/2 >= PLAYER_Y) {
-                gs.lives = 0; gs.phase = Phase.HIT; gs.phaseTimer = 0; return
+                gs.lives = 0; gs.phase = Phase.HIT; gs.phaseTimer = 0; audio?.playSound("player_hit"); return
             }
         }
     }
@@ -436,6 +456,7 @@ private fun updateGame(gs: GameState, deltaMs: Float) {
         if (rectsOverlap(b.x - BULLET_W/2, b.y, BULLET_W, BULLET_H,
                 gs.playerX - PLAYER_W/2, PLAYER_Y - PLAYER_W/2, PLAYER_W, PLAYER_W)) {
             gs.lives--; gs.phase = Phase.HIT; gs.phaseTimer = 0
+            audio?.playSound("player_hit")
             ebIter.remove()
         }
     }

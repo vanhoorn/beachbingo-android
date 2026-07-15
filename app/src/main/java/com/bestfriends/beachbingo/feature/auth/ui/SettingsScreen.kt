@@ -55,6 +55,7 @@ import com.bestfriends.beachbingo.feature.auth.viewmodel.AuthViewModel
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToProfile: () -> Unit = {},
     viewModel: AuthViewModel
 ) {
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
@@ -226,6 +227,34 @@ fun SettingsScreen(
                 title = "🥁 Lostrommel",
                 description = "3-Sekunden-Animation auf allen Geräten baut Spannung auf."
             )
+
+            HorizontalDivider()
+
+            // Musik & Soundeffekte
+            Card(
+                modifier = Modifier.fillMaxWidth().clickable { onNavigateToProfile() },
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        "💡 Musik & Soundeffekte findest du in Profil & Abmelden.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Öffnen →",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
 
             HorizontalDivider()
 

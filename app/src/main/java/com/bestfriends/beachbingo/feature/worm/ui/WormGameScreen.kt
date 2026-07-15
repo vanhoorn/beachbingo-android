@@ -211,7 +211,8 @@ fun WormGameScreen(
     val firestore = FirebaseFirestore.getInstance()
     val uid       = auth.currentUser?.uid
 
-    val gs = remember { WormState(difficulty) }
+    val gs    = remember { WormState(difficulty) }
+    val audio = remember { WormAudioManager() }
 
     var renderTick     by remember { mutableLongStateOf(0L) }
     var paused         by remember { mutableStateOf(false) }
@@ -220,6 +221,20 @@ fun WormGameScreen(
     var showGameOver   by remember { mutableStateOf(false) }
     var savedHighScore by remember { mutableIntStateOf(0) }
     var isNewRecord    by remember { mutableStateOf(false) }
+
+    // Load audio prefs and start music
+    LaunchedEffect(Unit) {
+        if (uid != null) {
+            try {
+                val snap = firestore.collection("users").document(uid).get().await()
+                audio.soundEnabled = snap.getBoolean("soundEnabled") ?: true
+                audio.musicEnabled = snap.getBoolean("musicEnabled") ?: true
+            } catch (_: Exception) {}
+        }
+        audio.startMusic()
+    }
+    DisposableEffect(Unit) { onDispose { audio.release() } }
+    LaunchedEffect(paused) { if (paused) audio.stopMusic() else audio.startMusic() }
 
     // Game loop
     LaunchedEffect(Unit) {
@@ -233,14 +248,21 @@ fun WormGameScreen(
                 if (!paused && !gs.dead) {
                     gs.accumMs += deltaMs
                     if (gs.accumMs >= gs.stepMs) {
+                        val prevLen = gs.length
+                        val prevPts = gs.food.points
                         gs.step()
                         gs.accumMs = 0L
+                        if (gs.length > prevLen) {
+                            audio.playSound(if (prevPts >= 20) "eat_rare" else "eat")
+                        }
                     }
                 }
                 renderTick++
             }
 
             if (gs.dead && !resultHandled) {
+                audio.stopMusic()
+                audio.playSound("die")
                 resultHandled = true
                 val finalScore = gs.score
                 val prev = if (uid != null) try {

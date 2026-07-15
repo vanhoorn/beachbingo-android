@@ -41,7 +41,10 @@ private val CONTROL_OPTIONS = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WormSettingsScreen(onNavigateBack: () -> Unit) {
+fun WormSettingsScreen(
+    onNavigateBack: () -> Unit,
+    onNavigateToProfile: () -> Unit = {},
+) {
     val auth      = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
     val uid       = auth.currentUser?.uid
@@ -123,6 +126,29 @@ fun WormSettingsScreen(onNavigateBack: () -> Unit) {
             Text("🕹️ Steuerung", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextMuted, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
             CONTROL_OPTIONS.forEach { opt ->
                 SettingsRadioRow(opt = opt, selected = controlMode == opt.id, accentColor = WormGreen) { controlMode = opt.id }
+            }
+
+            // Musik & Soundeffekte
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(SurfaceDark)
+                    .border(1.5.dp, BorderColor, RoundedCornerShape(14.dp))
+                    .padding(14.dp),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    "💡 Musik & Soundeffekte findest du in Profil & Abmelden.",
+                    fontSize = 13.sp, color = TextMuted,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    "Öffnen →",
+                    fontSize = 13.sp, color = WormGreen, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable(onClick = onNavigateToProfile),
+                )
             }
 
             if (saved) {

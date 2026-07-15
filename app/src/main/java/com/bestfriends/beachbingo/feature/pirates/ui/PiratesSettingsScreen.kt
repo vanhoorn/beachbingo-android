@@ -41,7 +41,10 @@ private val Purple = Color(0xFFA855F7)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PiratesSettingsScreen(onNavigateBack: () -> Unit) {
+fun PiratesSettingsScreen(
+    onNavigateBack: () -> Unit,
+    onNavigateToProfile: () -> Unit = {},
+) {
     val auth = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid
@@ -192,6 +195,29 @@ fun PiratesSettingsScreen(onNavigateBack: () -> Unit) {
                                 style = MaterialTheme.typography.bodyMedium)
                         }
                     }
+                }
+            }
+
+            // Musik & Soundeffekte
+            Surface(color = SurfaceDark, shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth().border(1.dp, BorderColor, RoundedCornerShape(8.dp))) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        "💡 Musik & Soundeffekte findest du in Profil & Abmelden.",
+                        style = MaterialTheme.typography.bodySmall, color = TextMuted,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Öffnen →",
+                        style = MaterialTheme.typography.bodySmall, color = Purple,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        modifier = Modifier.clickable { onNavigateToProfile() },
+                    )
                 }
             }
 

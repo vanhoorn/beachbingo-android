@@ -25,12 +25,14 @@ import com.bestfriends.beachbingo.ui.components.GameHudBar
 import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
 import kotlinx.coroutines.tasks.await
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -111,6 +113,55 @@ fun PongGameScreen(
     val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
     val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid
+
+    val audio = remember { PongAudioManager() }
+    var musicStarted by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        if (uid != null) {
+            try {
+                val doc = firestore.collection("users").document(uid).get().await()
+                audio.soundEnabled = doc.getBoolean("soundEnabled") ?: true
+                audio.musicEnabled = doc.getBoolean("musicEnabled") ?: true
+            } catch (_: Exception) {}
+        }
+        audio.startMusic()
+        musicStarted = true
+    }
+    DisposableEffect(Unit) {
+        onDispose { audio.release() }
+    }
+    LaunchedEffect(manualPaused) {
+        if (!musicStarted) return@LaunchedEffect
+        if (manualPaused) audio.stopMusic() else audio.startMusic()
+    }
+    LaunchedEffect(loserSide) {
+        if (!musicStarted || loserSide == null) return@LaunchedEffect
+        audio.stopMusic()
+        audio.playSound("win")
+    }
+    // Detect ball hits and score events by observing gs velocity/score changes
+    LaunchedEffect(audio) {
+        var prevBvx = 0.0
+        var prevBvy = 0.0
+        var prevTotal = 0
+        snapshotFlow { gs }.collect { cur ->
+            val curBvx = cur.bvx
+            val curBvy = cur.bvy
+            val curTotal = PongGameViewModel.sidesForPaddles(totalPaddles, cur.wallSide)
+                .sumOf { PongGameViewModel.scoreOf(cur, it) }
+            when {
+                curTotal > prevTotal -> audio.playSound("score")
+                prevBvx != 0.0 && curBvx != 0.0 && prevBvx * curBvx < 0.0 ->
+                    audio.playSound("ball_hit")
+                prevBvy != 0.0 && curBvy != 0.0 && prevBvy * curBvy < 0.0 ->
+                    audio.playSound("wall_hit")
+            }
+            prevBvx = curBvx
+            prevBvy = curBvy
+            prevTotal = curTotal
+        }
+    }
 
     // Game loop — runs on physics owner, or applies remote state for guests
     LaunchedEffect(loserSide, isPhysicsOwner) {

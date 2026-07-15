@@ -210,6 +210,7 @@ fun AppNavigation() {
         composable<Screen.Settings> {
             SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
+                onNavigateToProfile = { navController.navigate(Screen.Profile) },
                 viewModel = authViewModel
             )
         }
@@ -251,7 +252,10 @@ fun AppNavigation() {
         }
 
         composable<Screen.PongSettings> {
-            PongSettingsScreen(onNavigateBack = { navController.popBackStack() })
+            PongSettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToProfile = { navController.navigate(Screen.Profile) },
+            )
         }
 
         composable<Screen.PongResults> {
@@ -292,7 +296,10 @@ fun AppNavigation() {
         }
 
         composable<Screen.VierSettings> {
-            VierSettingsScreen(onNavigateBack = { navController.popBackStack() })
+            VierSettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToProfile = { navController.navigate(Screen.Profile) },
+            )
         }
 
         composable<Screen.VierResults> {
@@ -341,7 +348,10 @@ fun AppNavigation() {
         }
 
         composable<Screen.PiratesSettings> {
-            PiratesSettingsScreen(onNavigateBack = { navController.popBackStack() })
+            PiratesSettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToProfile = { navController.navigate(Screen.Profile) },
+            )
         }
 
         composable<Screen.PiratesResults> { backStack ->
@@ -406,7 +416,10 @@ fun AppNavigation() {
         }
 
         composable<Screen.WormSettings> {
-            WormSettingsScreen(onNavigateBack = { navController.popBackStack() })
+            WormSettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToProfile = { navController.navigate(Screen.Profile) },
+            )
         }
 
         composable<Screen.WormResults> { backStack ->

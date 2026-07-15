@@ -46,6 +46,7 @@ import com.bestfriends.beachbingo.ui.components.GameHudBar
 import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
 import kotlinx.coroutines.tasks.await
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -148,6 +149,38 @@ fun VierGameScreen(
     val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
     val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
     val vierUid = auth.currentUser?.uid
+
+    val audio = remember { VierAudioManager() }
+    var musicStarted by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        if (vierUid != null) {
+            try {
+                val doc = firestore.collection("users").document(vierUid).get().await()
+                audio.soundEnabled = doc.getBoolean("soundEnabled") ?: true
+                audio.musicEnabled = doc.getBoolean("musicEnabled") ?: true
+            } catch (_: Exception) {}
+        }
+        audio.startMusic()
+        musicStarted = true
+    }
+    DisposableEffect(Unit) {
+        onDispose { audio.release() }
+    }
+    LaunchedEffect(manualPaused) {
+        if (!musicStarted) return@LaunchedEffect
+        if (manualPaused) audio.stopMusic() else audio.startMusic()
+    }
+    LaunchedEffect(gameOver) {
+        if (!musicStarted || !gameOver) return@LaunchedEffect
+        audio.stopMusic()
+        if (draw) audio.playSound("draw") else audio.playSound("win")
+    }
+    // Play piece_drop for every drop (human AND AI) by watching dropAnimKey.
+    LaunchedEffect(uiState.dropAnimKey) {
+        if (!musicStarted || uiState.dropAnimKey == 0) return@LaunchedEffect
+        audio.playSound("piece_drop")
+    }
 
     fun handleDrop(col: Int) {
         if (gameOver) return

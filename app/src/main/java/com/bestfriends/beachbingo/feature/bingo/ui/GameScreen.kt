@@ -71,6 +71,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -145,6 +146,44 @@ fun GameScreen(
     val myPlayer = currentUser?.uid?.let { game.players[it] }
     val player2 = player2User?.uid?.let { game.players[it] }
     val winner = game.players.values.firstOrNull { it.hasBingo }
+
+    val audio = remember { BingoAudioManager() }
+    var musicStarted by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        if (bingoUid != null) {
+            try {
+                val doc = bingoFirestore.collection("users").document(bingoUid).get().await()
+                audio.soundEnabled = doc.getBoolean("soundEnabled") ?: true
+                audio.musicEnabled = doc.getBoolean("musicEnabled") ?: true
+            } catch (_: Exception) {}
+        }
+        audio.startMusic()
+        musicStarted = true
+    }
+    DisposableEffect(Unit) {
+        onDispose { audio.release() }
+    }
+    LaunchedEffect(game.status) {
+        if (!musicStarted) return@LaunchedEffect
+        if (game.status == GameStatus.FINISHED) audio.stopMusic()
+    }
+    LaunchedEffect(game.drawnNumbers.size) {
+        if (!musicStarted) return@LaunchedEffect
+        if (game.drawnNumbers.isNotEmpty()) audio.playSound("number_drawn")
+    }
+    LaunchedEffect(game.drawAnimationActive) {
+        if (!musicStarted) return@LaunchedEffect
+        if (game.drawAnimationActive) audio.playSound("drum_roll")
+    }
+    LaunchedEffect(uiState.showBingoAnimation) {
+        if (!musicStarted) return@LaunchedEffect
+        if (uiState.showBingoAnimation) { audio.stopMusic(); audio.playSound("bingo") }
+    }
+    LaunchedEffect(game.eliminationAnimationActive) {
+        if (!musicStarted) return@LaunchedEffect
+        if (game.eliminationAnimationActive) audio.playSound("elimination")
+    }
 
     LaunchedEffect(uiState.error) {
         uiState.error?.let {

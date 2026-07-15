@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -68,6 +69,7 @@ import kotlinx.coroutines.tasks.await
 @Composable
 fun PongSettingsScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToProfile: () -> Unit = {},
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val currentUser by authViewModel.currentUser.collectAsStateWithLifecycle()
@@ -215,6 +217,50 @@ fun PongSettingsScreen(
                         color = TextPrimary
                     )
                     SettingsStepButton("+") { scoreLimit = (scoreLimit + 1).coerceAtMost(21) }
+                }
+            }
+
+            // Musik & Soundeffekte
+            Column {
+                Text(
+                    "AUDIO",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextMuted,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.4.sp
+                )
+                Spacer(Modifier.height(10.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(SurfaceDark)
+                        .border(1.5.dp, BorderColor, RoundedCornerShape(8.dp))
+                        .padding(14.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "💡 Musik & Soundeffekte findest du in Profil & Abmelden.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextMuted,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "Öffnen →",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = OceanBlue,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { onNavigateToProfile() }
+                        )
+                    }
                 }
             }
 

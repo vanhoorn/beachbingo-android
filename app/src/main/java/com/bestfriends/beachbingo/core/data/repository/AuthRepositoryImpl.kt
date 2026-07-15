@@ -88,16 +88,43 @@ class AuthRepositoryImpl @Inject constructor(
         val resolvedEmail = if (email.contains("@")) {
             email
         } else {
-            val query = firestore.collection("users")
-                .whereEqualTo("displayName", email)
-                .get().await()
-            query.documents.firstOrNull()?.getString("email")
-                ?: error("Kein Benutzer mit diesem Anzeigenamen gefunden")
+            // Try the public-readable displaynames lookup first (direct document read).
+            // Requires Firestore rule: match /usernames/{n} { allow read: if true; }
+            val nameDoc = try {
+                firestore.collection("usernames")
+                    .document(email.trim().lowercase())
+                    .get().await()
+            } catch (_: Exception) { null }
+
+            if (nameDoc != null && nameDoc.exists()) {
+                nameDoc.getString("email")
+                    ?: error("Kein Benutzer mit diesem Anzeigenamen gefunden")
+            } else {
+                // Fallback: direct collection query (works only if Firestore rules allow it)
+                val query = try {
+                    firestore.collection("users")
+                        .whereEqualTo("displayName", email.trim())
+                        .get().await()
+                } catch (_: Exception) { null }
+                query?.documents?.firstOrNull()?.getString("email")
+                    ?: error("Anzeigename nicht gefunden. Bitte E-Mail-Adresse verwenden.")
+            }
         }
         val result = auth.signInWithEmailAndPassword(resolvedEmail, password).await()
         val uid = result.user!!.uid
         val doc = firestore.collection("users").document(uid).get().await()
-        doc.toObject(User::class.java) ?: User(uid = uid, email = resolvedEmail)
+        val user = doc.toObject(User::class.java) ?: User(uid = uid, email = resolvedEmail)
+
+        // Bootstrap the displaynames lookup so future logins by display name work.
+        if (user.displayName.isNotBlank()) {
+            try {
+                firestore.collection("usernames")
+                    .document(user.displayName.trim().lowercase())
+                    .set(mapOf("email" to resolvedEmail), SetOptions.merge())
+                    .await()
+            } catch (_: Exception) {}
+        }
+        user
     }
 
     override suspend fun register(
@@ -115,6 +142,14 @@ class AuthRepositoryImpl @Inject constructor(
 
         val user = User(uid = fbUser.uid, email = email, displayName = displayName, avatarUrl = avatar)
         firestore.collection("users").document(fbUser.uid).set(user).await()
+
+        // Write the displaynames lookup so the user can log in with display name later.
+        try {
+            firestore.collection("usernames")
+                .document(displayName.trim().lowercase())
+                .set(mapOf("email" to email))
+                .await()
+        } catch (_: Exception) {}
         user
     }
 
