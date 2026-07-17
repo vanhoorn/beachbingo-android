@@ -81,6 +81,8 @@ private class Shield(val originX: Float) {
 
 private enum class Phase { PLAYING, HIT, WAVE_CLEAR, GAME_OVER }
 
+private data class Explosion(val x: Float, val y: Float, var t: Int = 0)
+
 // State-backed fields (score/lives/wave/phase) trigger HUD recomposition automatically.
 private class GameState(diffStr: String, val fireRateArg: Int) {
     val baseDiff = diffStr
@@ -94,6 +96,7 @@ private class GameState(diffStr: String, val fireRateArg: Int) {
     var groupDir    = 1
     var moveAccumMs = 0f       // delta-time accumulator for invader steps
     var fireCooldown = 0       // frames since last player shot
+    val explosions  = mutableListOf<Explosion>()
 
     // Compose-observed state — Composables reading these recompose on change
     var score  by mutableIntStateOf(0)
@@ -328,6 +331,9 @@ fun PiratesGameScreen(
 // ── Update (delta-time based) ─────────────────────────────────────────────────
 
 private fun updateGame(gs: GameState, deltaMs: Float, audio: PiratesAudioManager? = null) {
+    val expIter = gs.explosions.iterator()
+    while (expIter.hasNext()) { val e = expIter.next(); e.t++; if (e.t >= 20) expIter.remove() }
+
     when (gs.phase) {
         Phase.HIT -> {
             gs.phaseTimer++
@@ -394,6 +400,7 @@ private fun updateGame(gs: GameState, deltaMs: Float, audio: PiratesAudioManager
                     inv.x - INVADER_W/2, inv.y - INVADER_H/2, INVADER_W, INVADER_H)) {
                 inv.alive = false
                 gs.score += when (inv.row) { 0 -> 40; 1 -> 30; 2 -> 20; else -> 10 }
+                gs.explosions.add(Explosion(inv.x, inv.y))
                 audio?.playSound("enemy_hit")
                 pbIter.remove(); continue@outer
             }
@@ -531,6 +538,17 @@ private fun drawGame(scope: DrawScope, gs: GameState, tick: Long, paused: Boolea
                 paint.textSize = 22f
                 c.nativeCanvas.drawText(EMOJIS[inv.row], inv.x, inv.y + 9f, paint)
             }
+            val expPaint = android.graphics.Paint().apply {
+                textAlign = android.graphics.Paint.Align.CENTER
+                isAntiAlias = true
+            }
+            for (ex in gs.explosions) {
+                val p = ex.t / 20f
+                expPaint.alpha = ((1f - p * 0.85f) * 255).toInt()
+                expPaint.textSize = 14f + p * 20f
+                c.nativeCanvas.drawText("💥", ex.x, ex.y + expPaint.textSize / 2f, expPaint)
+            }
+
             val showPlayer = gs.phase != Phase.HIT || (tick / 6) % 2 == 0L
             if (showPlayer) {
                 paint.textSize = 38f
