@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,6 +45,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -92,6 +95,8 @@ fun ProfileScreen(
     }
     var soundEnabled by remember(currentUser) { mutableStateOf(currentUser?.soundEnabled ?: true) }
     var musicEnabled by remember(currentUser) { mutableStateOf(currentUser?.musicEnabled ?: true) }
+    var newEmail by remember { mutableStateOf("") }
+    var emailPassword by remember { mutableStateOf("") }
     var activeTab by remember(selectedAvatar) {
         val idx = AVATAR_CATEGORIES.indexOfFirst { selectedAvatar in it.avatars }.takeIf { it >= 0 } ?: 0
         mutableIntStateOf(idx)
@@ -106,7 +111,9 @@ fun ProfileScreen(
 
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
-            snackbarHostState.showSnackbar("Profil gespeichert ✓")
+            snackbarHostState.showSnackbar("Gespeichert ✓")
+            newEmail = ""
+            emailPassword = ""
             viewModel.clearState()
         }
     }
@@ -246,6 +253,54 @@ fun ProfileScreen(
                 }
                 Switch(checked = soundEnabled, onCheckedChange = { soundEnabled = it })
             }
+
+            HorizontalDivider()
+
+            Text("Konto", style = MaterialTheme.typography.titleMedium)
+
+            Text(
+                "Aktuelle E-Mail: ${currentUser?.email ?: ""}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            OutlinedTextField(
+                value = newEmail,
+                onValueChange = { newEmail = it },
+                label = { Text("Neue E-Mail-Adresse") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            OutlinedTextField(
+                value = emailPassword,
+                onValueChange = { emailPassword = it },
+                label = { Text("Aktuelles Passwort bestätigen") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            Button(
+                onClick = { viewModel.updateEmail(newEmail, emailPassword) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(14.dp),
+                enabled = !uiState.isLoading && newEmail.isNotBlank() && emailPassword.isNotBlank()
+            ) {
+                Text("E-Mail ändern", style = MaterialTheme.typography.labelLarge)
+            }
+
+            Text(
+                "Nach der Änderung erhältst du eine Bestätigungs-E-Mail.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             Spacer(Modifier.height(8.dp))
         }

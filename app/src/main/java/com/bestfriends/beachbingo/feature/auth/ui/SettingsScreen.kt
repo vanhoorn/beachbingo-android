@@ -17,7 +17,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.CardDefaults
@@ -27,7 +26,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -43,8 +41,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestfriends.beachbingo.core.model.DrawStyle
@@ -71,14 +67,9 @@ fun SettingsScreen(
     var eliminationInterval by remember(currentUser) {
         mutableStateOf(currentUser?.bossLevelEliminationInterval ?: 5)
     }
-    var newEmail by remember { mutableStateOf("") }
-    var emailPassword by remember { mutableStateOf("") }
-
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
             snackbarHostState.showSnackbar("Gespeichert ✓")
-            newEmail = ""
-            emailPassword = ""
             viewModel.clearState()
         }
     }
@@ -242,7 +233,7 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        "💡 Musik & Soundeffekte findest du in Profil & Abmelden.",
+                        "💡 Musik, Soundeffekte & Konto-Einstellungen findest du im Profil.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f),
@@ -255,54 +246,6 @@ fun SettingsScreen(
                     )
                 }
             }
-
-            HorizontalDivider()
-
-            Text("Konto", style = MaterialTheme.typography.titleMedium)
-
-            Text(
-                "Aktuelle E-Mail: ${currentUser?.email ?: ""}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            OutlinedTextField(
-                value = newEmail,
-                onValueChange = { newEmail = it },
-                label = { Text("Neue E-Mail-Adresse") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            OutlinedTextField(
-                value = emailPassword,
-                onValueChange = { emailPassword = it },
-                label = { Text("Aktuelles Passwort bestätigen") },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            Button(
-                onClick = { viewModel.updateEmail(newEmail, emailPassword) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(14.dp),
-                enabled = !uiState.isLoading && newEmail.isNotBlank() && emailPassword.isNotBlank()
-            ) {
-                Text("E-Mail ändern", style = MaterialTheme.typography.labelLarge)
-            }
-
-            Text(
-                "Nach der Änderung erhältst du eine Bestätigungs-E-Mail.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
 
             Spacer(Modifier.height(16.dp))
         }
