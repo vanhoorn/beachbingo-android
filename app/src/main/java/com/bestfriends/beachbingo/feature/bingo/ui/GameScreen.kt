@@ -50,8 +50,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -854,75 +852,42 @@ private const val WEB_APP_BASE_URL = "https://thebeachbingo.netlify.app"
 
 @Composable
 private fun LobbyQrCard(gameId: String, game: BingoGame) {
-    var selectedTab by remember { mutableStateOf(0) }
     val webUrl = "$WEB_APP_BASE_URL/game/$gameId"
 
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            TabRow(selectedTabIndex = selectedTab) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = { Text("🤖 Android") }
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = { Text("🍎 iPhone") }
-                )
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("MITSPIELER EINLADEN", style = MaterialTheme.typography.labelMedium)
+            Spacer(Modifier.height(12.dp))
+            QrCodeImage(content = webUrl, size = 180.dp)
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = gameId,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "QR-Code scannen oder Code in der App eingeben",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(4.dp))
+            val modeLabel = when (game.gameMode) {
+                GameMode.AUTO_MARK    -> "Level: 1. Rookie"
+                GameMode.MANUAL_MARK  -> "Level: 2. Sniper"
+                GameMode.MINI_BOSS_LEVEL -> "Level: 3. Mini Boss Level 🔵"
+                GameMode.BOSS_LEVEL   -> "Level: 4. Boss Level 😈"
             }
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("Spiel beitreten", style = MaterialTheme.typography.labelMedium)
-                Spacer(Modifier.height(12.dp))
-                if (selectedTab == 0) {
-                    QrCodeImage(content = gameId, size = 180.dp)
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = gameId,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "QR-Code scannen oder Code eingeben",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                } else {
-                    QrCodeImage(content = webUrl, size = 180.dp)
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        "QR-Code mit iPhone scannen",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "Öffnet BeachBingo direkt im Browser",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        textAlign = TextAlign.Center
-                    )
-                }
-                Spacer(Modifier.height(4.dp))
-                val modeLabel = when (game.gameMode) {
-                    GameMode.AUTO_MARK    -> "Level: 1. Rookie"
-                    GameMode.MANUAL_MARK  -> "Level: 2. Sniper"
-                    GameMode.MINI_BOSS_LEVEL -> "Level: 3. Mini Boss Level 🔵"
-                    GameMode.BOSS_LEVEL   -> "Level: 4. Boss Level 😈"
-                }
-                Text(
-                    modeLabel,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
+            Text(
+                modeLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }
