@@ -80,4 +80,13 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         playerCounts = listOf(PlayerCount.ONE),
         genres = listOf(GameGenre.ACTION),
     ),
+    GameMetadata(
+        id = "brandung",
+        emoji = "🌊",
+        title = "Brandung",
+        description = "Schwimm nicht unter! Sammle 31 Punkte mit gleicher Farbe.",
+        color = 0xFF0D9488,
+        playerCounts = listOf(PlayerCount.ONE_TWO, PlayerCount.TWO_FOUR, PlayerCount.FOUR_PLUS),
+        genres = listOf(GameGenre.PARTY, GameGenre.LOGICAL),
+    ),
 )

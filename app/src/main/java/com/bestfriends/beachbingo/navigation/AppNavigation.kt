@@ -49,6 +49,10 @@ import com.bestfriends.beachbingo.feature.strandturm.ui.StrandturmGameScreen
 import com.bestfriends.beachbingo.feature.strandturm.ui.StrandturmSettingsScreen
 import com.bestfriends.beachbingo.feature.strandturm.ui.StrandturmHighscoreScreen
 import com.bestfriends.beachbingo.feature.strandturm.ui.StrandturmResultsScreen
+import com.bestfriends.beachbingo.feature.brandung.ui.BrandungLobbyScreen
+import com.bestfriends.beachbingo.feature.brandung.ui.BrandungGameScreen
+import com.bestfriends.beachbingo.feature.brandung.ui.BrandungSettingsScreen
+import com.bestfriends.beachbingo.feature.brandung.ui.BrandungResultsScreen
 
 @Composable
 fun AppNavigation() {
@@ -111,6 +115,7 @@ fun AppNavigation() {
                 onNavigateToPiratesLobby = { navController.navigate(Screen.PiratesLobby) },
                 onNavigateToWormLobby = { navController.navigate(Screen.WormLobby) },
                 onNavigateToStrandturmLobby = { navController.navigate(Screen.StrandturmLobby) },
+                onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
                 onNavigateToProfile = { navController.navigate(Screen.Profile) },
                 onNavigateToJoin = { navController.navigate(Screen.JoinGame) },
                 onNavigateToCategory = { playerCount -> navController.navigate(Screen.Category(playerCount)) },
@@ -130,6 +135,7 @@ fun AppNavigation() {
                 onNavigateToPiratesLobby = { navController.navigate(Screen.PiratesLobby) },
                 onNavigateToWormLobby = { navController.navigate(Screen.WormLobby) },
                 onNavigateToStrandturmLobby = { navController.navigate(Screen.StrandturmLobby) },
+                onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
             )
         }
 
@@ -142,6 +148,7 @@ fun AppNavigation() {
                 onNavigateToPiratesLobby = { navController.navigate(Screen.PiratesLobby) },
                 onNavigateToWormLobby = { navController.navigate(Screen.WormLobby) },
                 onNavigateToStrandturmLobby = { navController.navigate(Screen.StrandturmLobby) },
+                onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
             )
         }
 
@@ -510,6 +517,50 @@ fun AppNavigation() {
                     }
                 },
             )
+        }
+
+        // ── Brandung ───────────────────────────────────────────────────────────
+        composable<Screen.BrandungLobby> {
+            BrandungLobbyScreen(
+                onNavigateBack = {
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Home) { inclusive = false }
+                    }
+                },
+                onNavigateToGame = { mode, gameId, aiCount, difficulty ->
+                    navController.navigate(Screen.BrandungGame(mode, gameId, aiCount, difficulty)) {
+                        popUpTo(Screen.BrandungLobby)
+                    }
+                },
+                onNavigateToResults = { navController.navigate(Screen.BrandungResults) },
+                onNavigateToSettings = { navController.navigate(Screen.BrandungSettings) },
+            )
+        }
+
+        composable<Screen.BrandungGame> { backStack ->
+            val route: Screen.BrandungGame = backStack.toRoute()
+            BrandungGameScreen(
+                mode = route.mode,
+                gameId = route.gameId,
+                aiCount = route.aiCount,
+                difficulty = route.difficulty,
+                onNavigateBack = {
+                    navController.navigate(Screen.BrandungLobby) {
+                        popUpTo(Screen.BrandungLobby) { inclusive = true }
+                    }
+                },
+            )
+        }
+
+        composable<Screen.BrandungSettings> {
+            BrandungSettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToProfile = { navController.navigate(Screen.Profile) },
+            )
+        }
+
+        composable<Screen.BrandungResults> {
+            BrandungResultsScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
 }

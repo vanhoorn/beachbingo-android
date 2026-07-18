@@ -77,6 +77,7 @@ fun HomeScreen(
     onNavigateToPiratesLobby: () -> Unit,
     onNavigateToWormLobby: () -> Unit,
     onNavigateToStrandturmLobby: () -> Unit,
+    onNavigateToBrandungLobby: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToJoin: () -> Unit,
     onNavigateToCategory: (String) -> Unit,
@@ -198,6 +199,7 @@ fun HomeScreen(
                             "pirates"    -> onNavigateToPiratesLobby()
                             "worm"       -> onNavigateToWormLobby()
                             "strandturm" -> onNavigateToStrandturmLobby()
+                            "brandung"   -> onNavigateToBrandungLobby()
                         }
                     })
                 }

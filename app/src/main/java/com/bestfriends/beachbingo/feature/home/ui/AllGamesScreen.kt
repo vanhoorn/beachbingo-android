@@ -51,6 +51,7 @@ fun AllGamesScreen(
     onNavigateToPiratesLobby: () -> Unit,
     onNavigateToWormLobby: () -> Unit,
     onNavigateToStrandturmLobby: () -> Unit,
+    onNavigateToBrandungLobby: () -> Unit,
 ) {
     val games = ALL_GAMES.sortedBy { it.title }
 
@@ -137,6 +138,7 @@ fun AllGamesScreen(
                                 "pirates"    -> onNavigateToPiratesLobby()
                                 "worm"       -> onNavigateToWormLobby()
                                 "strandturm" -> onNavigateToStrandturmLobby()
+                                "brandung"   -> onNavigateToBrandungLobby()
                             }
                         }
                 ) {
