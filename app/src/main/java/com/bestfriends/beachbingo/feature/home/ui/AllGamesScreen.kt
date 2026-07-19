@@ -22,10 +22,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -34,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.core.model.ALL_GAMES
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.BorderColor
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
@@ -54,6 +60,8 @@ fun AllGamesScreen(
     onNavigateToBrandungLobby: () -> Unit,
 ) {
     val games = ALL_GAMES.sortedBy { it.title }
+    var rulesGameId by remember { mutableStateOf<String?>(null) }
+    val activeRule = rulesGameId?.let { ALL_GAME_RULES[it] }
 
     Column(
         modifier = Modifier
@@ -130,20 +138,21 @@ fun AllGamesScreen(
                             color = accentColor.copy(alpha = 0.35f),
                             shape = RoundedCornerShape(16.dp)
                         )
-                        .clickable {
-                            when (game.id) {
-                                "bingo"      -> onNavigateToBingoLobby()
-                                "pong"       -> onNavigateToPongLobby()
-                                "vier"       -> onNavigateToVierLobby()
-                                "pirates"    -> onNavigateToPiratesLobby()
-                                "worm"       -> onNavigateToWormLobby()
-                                "strandturm" -> onNavigateToStrandturmLobby()
-                                "brandung"   -> onNavigateToBrandungLobby()
-                            }
-                        }
                 ) {
                     Row(
-                        modifier = Modifier.padding(20.dp),
+                        modifier = Modifier
+                            .clickable {
+                                when (game.id) {
+                                    "bingo"      -> onNavigateToBingoLobby()
+                                    "pong"       -> onNavigateToPongLobby()
+                                    "vier"       -> onNavigateToVierLobby()
+                                    "pirates"    -> onNavigateToPiratesLobby()
+                                    "worm"       -> onNavigateToWormLobby()
+                                    "strandturm" -> onNavigateToStrandturmLobby()
+                                    "brandung"   -> onNavigateToBrandungLobby()
+                                }
+                            }
+                            .padding(20.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
@@ -175,6 +184,28 @@ fun AllGamesScreen(
                         }
 
                         Spacer(Modifier.width(8.dp))
+
+                        // Info button
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = accentColor.copy(alpha = 0.12f),
+                            modifier = Modifier
+                                .size(34.dp)
+                                .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                                .clickable { rulesGameId = game.id }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = "Anleitung",
+                                    tint = accentColor,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.width(8.dp))
+
                         Icon(
                             imageVector = Icons.Default.ChevronRight,
                             contentDescription = null,
@@ -187,5 +218,12 @@ fun AllGamesScreen(
         }
 
         Spacer(Modifier.height(24.dp))
+    }
+
+    if (activeRule != null) {
+        GameRulesBottomSheet(
+            rule = activeRule,
+            onDismiss = { rulesGameId = null },
+        )
     }
 }
