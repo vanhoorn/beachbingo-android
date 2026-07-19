@@ -1319,6 +1319,7 @@ fun BrandungGameScreen(
     val roundEndState = currentState
     if (roundEndState != null && roundEndState.showRoundEnd) {
         val humanInLosers = uid in roundEndState.roundLosers
+        val humanPlayer = roundEndState.players.find { it.userId == uid }
         val feuerHuman = humanPlayer?.let { isFeuerBlitz(it.hand) } == true
         LaunchedEffect(roundEndState.round, roundEndState.phase) {
             if (feuerHuman) audio.playSound("card_feuer")
