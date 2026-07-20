@@ -115,6 +115,7 @@ data class MMState(
     val difficulty: String,
     val settings: MMSettings,
     val lastSkippedId: String?,
+    val turnId: Int = 0,
 )
 
 // ── Pure game logic ───────────────────────────────────────────────────────────
@@ -267,6 +268,7 @@ private fun doMMPlay(state: MMState, playerIdx: Int, cardId: String, chosenWishS
         lastActionText = action,
         phase = nextPhase,
         lastSkippedId = skippedId,
+        turnId = state.turnId + 1,
     )
     return mmCheckWin(nextState, playerIdx, nextPhase)
 }
@@ -353,6 +355,7 @@ private fun doMMDraw(state: MMState, playerIdx: Int): MMState {
             players = newPlayers, drawPile = draw, discardPile = discard,
             currentPlayerIndex = nextIdx, drawPending = 0, drawnCard = null,
             lastActionText = "${player.displayName} zieht ${count} Karten!",
+            turnId = state.turnId + 1,
         )
     }
 
@@ -581,7 +584,7 @@ fun MeermauGameScreen(
     }
 
     // AI turn
-    LaunchedEffect(localState?.currentPlayerIndex, localState?.phase, localState?.drawnCard) {
+    LaunchedEffect(localState?.currentPlayerIndex, localState?.phase, localState?.drawnCard, localState?.turnId) {
         if (mode == "online") return@LaunchedEffect
         val st = localState ?: return@LaunchedEffect
         if (st.phase != "PLAYING" || st.drawnCard != null) return@LaunchedEffect
