@@ -17,6 +17,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.bestfriends.beachbingo.R
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -311,7 +315,16 @@ private fun MiniGameCard(game: GameMetadata, onClick: () -> Unit) {
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = game.emoji, fontSize = 28.sp)
+            if (game.id == "meermau") {
+                Image(
+                    painter = painterResource(R.drawable.ic_meermau_logo),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(28.dp)
+                )
+            } else {
+                Text(text = game.emoji, fontSize = 28.sp)
+            }
             Spacer(Modifier.height(6.dp))
             Text(
                 text = game.title,
