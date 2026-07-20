@@ -68,6 +68,9 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import androidx.compose.material.icons.outlined.HelpOutline
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 
 private val BrandungTeal = Color(0xFF0D9488)
 
@@ -103,6 +106,7 @@ fun BrandungLobbyScreen(
     var aiCount by remember { mutableIntStateOf(2) }
     var difficulty by remember { mutableStateOf("SNIPER") }
     var isFavorite by remember { mutableStateOf(false) }
+    var showRules by remember { mutableStateOf(false) }
 
     // Online lobby state
     var onlineStep by remember { mutableStateOf("choose") } // choose | waiting
@@ -218,6 +222,9 @@ fun BrandungLobbyScreen(
                             fontSize = 22.sp,
                             color = if (isFavorite) SandGold else TextMuted,
                         )
+                    }
+                    IconButton(onClick = { showRules = true }) {
+                        Icon(Icons.Outlined.HelpOutline, contentDescription = "Spielanleitung", tint = TextSub)
                     }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Einstellungen", tint = TextSub)
@@ -492,6 +499,10 @@ fun BrandungLobbyScreen(
 
             Spacer(Modifier.height(32.dp))
         }
+    }
+
+    if (showRules) {
+        ALL_GAME_RULES["brandung"]?.let { GameRulesBottomSheet(rule = it, onDismiss = { showRules = false }) }
     }
 }
 

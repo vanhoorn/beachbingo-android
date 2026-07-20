@@ -62,6 +62,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestfriends.beachbingo.feature.bingo.ui.components.QrCodeImage
 import com.bestfriends.beachbingo.feature.vier.viewmodel.VierLobbyViewModel
+import androidx.compose.material.icons.outlined.HelpOutline
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -96,6 +99,7 @@ fun VierLobbyScreen(
     var joinCode by remember { mutableStateOf(initialJoinCode ?: "") }
     var joining by remember { mutableStateOf(false) }
     var isFavorite by remember { mutableStateOf(false) }
+    var showRules by remember { mutableStateOf(false) }
 
     val vierAuth = FirebaseAuth.getInstance()
     val vierFirestore = FirebaseFirestore.getInstance()
@@ -154,6 +158,9 @@ fun VierLobbyScreen(
                             fontSize = 22.sp,
                             color = if (isFavorite) SandGold else TextMuted,
                         )
+                    }
+                    IconButton(onClick = { showRules = true }) {
+                        Icon(Icons.Outlined.HelpOutline, contentDescription = "Spielanleitung", tint = TextSub)
                     }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Einstellungen", tint = TextSub)
@@ -472,6 +479,10 @@ fun VierLobbyScreen(
 
             Spacer(Modifier.height(32.dp))
         }
+    }
+
+    if (showRules) {
+        ALL_GAME_RULES["vier"]?.let { GameRulesBottomSheet(rule = it, onDismiss = { showRules = false }) }
     }
 }
 

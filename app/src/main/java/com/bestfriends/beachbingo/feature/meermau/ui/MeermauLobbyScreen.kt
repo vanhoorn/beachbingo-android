@@ -35,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.foundation.Image
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -50,11 +51,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.bestfriends.beachbingo.R
 import com.bestfriends.beachbingo.feature.bingo.ui.components.QrCodeImage
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.SandGold
@@ -68,6 +71,9 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import androidx.compose.material.icons.outlined.HelpOutline
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 
 private val MeermauViolet = Color(0xFF7C3AED)
 
@@ -108,6 +114,7 @@ fun MeermauLobbyScreen(
     var gameDocId by remember { mutableStateOf("") }
     var waitingPlayers by remember { mutableStateOf<List<String>>(emptyList()) }
     var creating by remember { mutableStateOf(false) }
+    var showRules by remember { mutableStateOf(false) }
 
     LaunchedEffect(uid) {
         if (uid == null) return@LaunchedEffect
@@ -143,7 +150,7 @@ fun MeermauLobbyScreen(
                 val displayName = user.getString("displayName") ?: "Spieler"
                 val avatarUrl = user.getString("avatarUrl") ?: "🃏"
                 val code = generateMeermauCode()
-                val ref = db.collection("meermauGames").add(
+                db.collection("meermauGames").document(code).set(
                     mapOf(
                         "gameCode" to code,
                         "status" to "WAITING",
@@ -161,7 +168,7 @@ fun MeermauLobbyScreen(
                         "createdAt" to System.currentTimeMillis(),
                     )
                 ).await()
-                gameDocId = ref.id
+                gameDocId = code
                 gameCode = code
                 onlineStep = "waiting"
             } catch (_: Exception) {
@@ -191,9 +198,16 @@ fun MeermauLobbyScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text("MEERMAU", style = MaterialTheme.typography.labelSmall, color = TextMuted)
-                        Text("🂠 Mau-Mau", style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.ExtraBold)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_meermau_logo),
+                            contentDescription = "MeerMau Logo",
+                            modifier = Modifier.size(42.dp)
+                        )
+                        Column {
+                            Text("MEERMAU", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                            Text("Mau-Mau am Strand", style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.ExtraBold)
+                        }
                     }
                 },
                 navigationIcon = {
@@ -207,6 +221,9 @@ fun MeermauLobbyScreen(
                     }
                     IconButton(onClick = { toggleFavorite() }) {
                         Text(if (isFavorite) "★" else "☆", fontSize = 22.sp, color = if (isFavorite) SandGold else TextMuted)
+                    }
+                    IconButton(onClick = { showRules = true }) {
+                        Icon(Icons.Outlined.HelpOutline, contentDescription = "Spielanleitung", tint = TextSub)
                     }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Einstellungen", tint = TextSub)
@@ -363,6 +380,10 @@ fun MeermauLobbyScreen(
 
             Spacer(Modifier.height(32.dp))
         }
+    }
+
+    if (showRules) {
+        ALL_GAME_RULES["meermau"]?.let { GameRulesBottomSheet(rule = it, onDismiss = { showRules = false }) }
     }
 }
 

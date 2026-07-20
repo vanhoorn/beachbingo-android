@@ -1,5 +1,6 @@
 package com.bestfriends.beachbingo.feature.home.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +26,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.bestfriends.beachbingo.R
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -71,7 +75,16 @@ fun GameRulesBottomSheet(
                     modifier = Modifier.size(56.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text(text = rule.emoji, fontSize = 28.sp)
+                        if (rule.id == "meermau") {
+                            Image(
+                                painter = painterResource(R.drawable.ic_meermau_logo),
+                                contentDescription = null,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.size(38.dp)
+                            )
+                        } else {
+                            Text(text = rule.emoji, fontSize = 28.sp)
+                        }
                     }
                 }
 

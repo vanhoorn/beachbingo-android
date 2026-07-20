@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <!-- Background circle -->
+    <path
+        android:pathData="M60,2 A58,58 0 1,1 59.99,2 Z"
+        android:fillColor="#2e1065"/>
+
+    <!-- Background gradient overlay (lighter violet) -->
+    <path
+        android:pathData="M60,2 A58,58 0 0,1 118,60 L60,60 Z"
+        android:fillColor="#7c3aed"
+        android:fillAlpha="0.55"/>
+
+    <!-- Water / deep zone at bottom -->
+    <path
+        android:pathData="M2,88 Q16,82 30,88 Q44,94 58,88 Q72,82 86,88 Q100,94 118,88 L118,118 L2,118 Z"
+        android:fillColor="#0e7490"
+        android:fillAlpha="0.65"/>
+    <path
+        android:pathData="M2,96 Q22,91 42,96 Q62,101 82,96 Q102,91 118,96 L118,118 L2,118 Z"
+        android:fillColor="#0c4a6e"
+        android:fillAlpha="0.8"/>
+
+    <!-- Wave highlights -->
+    <path
+        android:pathData="M8,88 Q20,84 32,88"
+        android:strokeColor="#67e8f9"
+        android:strokeWidth="1.2"
+        android:strokeAlpha="0.5"
+        android:fillColor="#00000000"/>
+    <path
+        android:pathData="M50,88 Q62,84 74,88"
+        android:strokeColor="#67e8f9"
+        android:strokeWidth="1.2"
+        android:strokeAlpha="0.5"
+        android:fillColor="#00000000"/>
+
+    <!-- Mermaid tail -->
+    <path
+        android:pathData="M47,76 Q44,85 43,92 Q41,98 44,103 Q48,110 56,111 Q62,112 68,111 Q74,109 76,103 Q79,97 77,92 Q76,85 73,76 Q66,72 60,73 Q54,72 47,76 Z"
+        android:fillColor="#7c3aed"/>
+
+    <!-- Tail scale overlay -->
+    <path
+        android:pathData="M53,79 A4.5,3 0 1,0 53.01,79 Z"
+        android:fillColor="#4c1d95"
+        android:fillAlpha="0.45"/>
+    <path
+        android:pathData="M63,79 A4.5,3 0 1,0 63.01,79 Z"
+        android:fillColor="#4c1d95"
+        android:fillAlpha="0.45"/>
+    <path
+        android:pathData="M57,86 A5,3 0 1,0 57.01,86 Z"
+        android:fillColor="#4c1d95"
+        android:fillAlpha="0.4"/>
+    <path
+        android:pathData="M63,86 A5,3 0 1,0 63.01,86 Z"
+        android:fillColor="#4c1d95"
+        android:fillAlpha="0.4"/>
+
+    <!-- Tail fin left -->
+    <path
+        android:pathData="M43,103 Q36,114 32,118 Q38,115 44,111 Q46,108 44,103 Z"
+        android:fillColor="#0891b2"/>
+
+    <!-- Tail fin right -->
+    <path
+        android:pathData="M76,103 Q83,114 88,118 Q82,115 76,111 Q74,108 76,103 Z"
+        android:fillColor="#0891b2"/>
+
+    <!-- Tail highlight -->
+    <path
+        android:pathData="M50,76 Q48,82 47,90"
+        android:strokeColor="#c4b5fd"
+        android:strokeWidth="1.5"
+        android:strokeAlpha="0.4"
+        android:fillColor="#00000000"/>
+
+    <!-- Torso -->
+    <path
+        android:pathData="M49,67 A11,12 0 1,0 49.01,67 Z"
+        android:fillColor="#fcd5a0"/>
+
+    <!-- Seashell top left -->
+    <path
+        android:pathData="M49,65 Q53,59 58,65 Q54,68 49,65 Z"
+        android:fillColor="#c084fc"/>
+    <!-- Seashell top right -->
+    <path
+        android:pathData="M71,65 Q67,59 62,65 Q66,68 71,65 Z"
+        android:fillColor="#c084fc"/>
+
+    <!-- Left arm -->
+    <path
+        android:pathData="M49,68 Q43,70 39,75 Q41,78 44,76 Q47,71 51,70 Z"
+        android:fillColor="#fcd5a0"/>
+
+    <!-- Right arm -->
+    <path
+        android:pathData="M71,68 Q77,70 81,75 Q79,78 76,76 Q73,71 69,70 Z"
+        android:fillColor="#fcd5a0"/>
+
+    <!-- Playing card background -->
+    <path
+        android:pathData="M29,66 A2.5,2.5 0 0,1 31.5,63.5 L43.5,63.5 A2.5,2.5 0 0,1 46,66 L46,84 A2.5,2.5 0 0,1 43.5,86.5 L31.5,86.5 A2.5,2.5 0 0,1 29,84 Z"
+        android:fillColor="#ffffff"/>
+    <!-- Card border -->
+    <path
+        android:pathData="M29,66 A2.5,2.5 0 0,1 31.5,63.5 L43.5,63.5 A2.5,2.5 0 0,1 46,66 L46,84 A2.5,2.5 0 0,1 43.5,86.5 L31.5,86.5 A2.5,2.5 0 0,1 29,84 Z"
+        android:strokeColor="#e2e8f0"
+        android:strokeWidth="0.7"
+        android:fillColor="#00000000"/>
+    <!-- J letter on card -->
+    <path
+        android:pathData="M32,76 L32,70 L36,70"
+        android:strokeColor="#7c3aed"
+        android:strokeWidth="2"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <path
+        android:pathData="M32,76 Q32,79 35,79 Q38,79 38,76 L38,70"
+        android:strokeColor="#7c3aed"
+        android:strokeWidth="2"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <!-- Club symbol below J -->
+    <path
+        android:pathData="M35,82 A2,2 0 1,0 35.01,82 Z"
+        android:fillColor="#7c3aed"/>
+    <path
+        android:pathData="M33,84 A2,2 0 1,0 33.01,84 Z"
+        android:fillColor="#7c3aed"/>
+    <path
+        android:pathData="M37,84 A2,2 0 1,0 37.01,84 Z"
+        android:fillColor="#7c3aed"/>
+    <path
+        android:pathData="M34,86 L36,86"
+        android:strokeColor="#7c3aed"
+        android:strokeWidth="1.5"
+        android:fillColor="#00000000"/>
+
+    <!-- Neck -->
+    <path
+        android:pathData="M57,55 A3,4.5 0 1,0 57.01,55 Z"
+        android:fillColor="#fcd5a0"/>
+
+    <!-- Head -->
+    <path
+        android:pathData="M47,44 A13,14 0 1,0 47.01,44 Z"
+        android:fillColor="#fcd5a0"/>
+
+    <!-- Hair back layers -->
+    <path
+        android:pathData="M47,41 Q38,52 36,64 Q40,62 44,56 Q47,49 49,44 Z"
+        android:fillColor="#7c3aed"/>
+    <path
+        android:pathData="M73,41 Q82,52 84,64 Q80,62 76,56 Q73,49 71,44 Z"
+        android:fillColor="#7c3aed"/>
+
+    <!-- Hair crown -->
+    <path
+        android:pathData="M48,36 Q46,24 50,20 Q54,15 60,14 Q66,15 70,20 Q74,24 72,36 Q69,30 65,28 Q62,26 60,26 Q58,26 55,28 Q51,30 48,36 Z"
+        android:fillColor="#7c3aed"/>
+
+    <!-- Crown gems -->
+    <path
+        android:pathData="M54,24 A2,2 0 1,0 54.01,24 Z"
+        android:fillColor="#fde68a"/>
+    <path
+        android:pathData="M60,22 A2,2 0 1,0 60.01,22 Z"
+        android:fillColor="#fde68a"/>
+    <path
+        android:pathData="M66,24 A2,2 0 1,0 66.01,24 Z"
+        android:fillColor="#fde68a"/>
+
+    <!-- Eye whites left -->
+    <path
+        android:pathData="M51,43 A3.5,4 0 1,0 51.01,43 Z"
+        android:fillColor="#ffffff"/>
+    <!-- Eye whites right -->
+    <path
+        android:pathData="M69,43 A3.5,4 0 1,0 69.01,43 Z"
+        android:fillColor="#ffffff"/>
+    <!-- Iris left -->
+    <path
+        android:pathData="M51.3,43.5 A2.4,2.4 0 1,0 51.31,43.5 Z"
+        android:fillColor="#4c1d95"/>
+    <!-- Iris right -->
+    <path
+        android:pathData="M69.3,43.5 A2.4,2.4 0 1,0 69.31,43.5 Z"
+        android:fillColor="#4c1d95"/>
+    <!-- Pupil highlights -->
+    <path
+        android:pathData="M51.9,42.8 A1,1 0 1,0 51.91,42.8 Z"
+        android:fillColor="#ffffff"/>
+    <path
+        android:pathData="M69.9,42.8 A1,1 0 1,0 69.91,42.8 Z"
+        android:fillColor="#ffffff"/>
+
+    <!-- Eyebrows -->
+    <path
+        android:pathData="M47.5,40 Q51,38 54.5,40"
+        android:strokeColor="#5b21b6"
+        android:strokeWidth="1.1"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+    <path
+        android:pathData="M65.5,40 Q69,38 72.5,40"
+        android:strokeColor="#5b21b6"
+        android:strokeWidth="1.1"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+
+    <!-- Blush left -->
+    <path
+        android:pathData="M46.5,47 A3.5,2 0 1,0 46.51,47 Z"
+        android:fillColor="#fca5a5"
+        android:fillAlpha="0.45"/>
+    <!-- Blush right -->
+    <path
+        android:pathData="M73.5,47 A3.5,2 0 1,0 73.51,47 Z"
+        android:fillColor="#fca5a5"
+        android:fillAlpha="0.45"/>
+
+    <!-- Smile -->
+    <path
+        android:pathData="M55.5,51 Q60,55 64.5,51"
+        android:strokeColor="#c2410c"
+        android:strokeWidth="1.4"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"/>
+
+    <!-- Sparkle top right -->
+    <path
+        android:pathData="M96,23 L97.5,19 L99,23 L103,24.5 L99,26 L97.5,30 L96,26 L92,24.5 Z"
+        android:fillColor="#fde68a"/>
+
+    <!-- Sparkle left -->
+    <path
+        android:pathData="M15,56 L16,53 L17,56 L20,57 L17,58 L16,61 L15,58 L12,57 Z"
+        android:fillColor="#a78bfa"
+        android:fillAlpha="0.7"/>
+
+    <!-- Bubbles -->
+    <path
+        android:pathData="M90,77 A3.5,3.5 0 1,0 90.01,77 Z"
+        android:strokeColor="#a5f3fc"
+        android:strokeWidth="1"
+        android:fillColor="#00000000"
+        android:fillAlpha="0.5"/>
+    <path
+        android:pathData="M84,69 A2.2,2.2 0 1,0 84.01,69 Z"
+        android:strokeColor="#a5f3fc"
+        android:strokeWidth="0.8"
+        android:fillColor="#00000000"
+        android:fillAlpha="0.4"/>
+    <path
+        android:pathData="M26,75 A2.5,2.5 0 1,0 26.01,75 Z"
+        android:strokeColor="#a5f3fc"
+        android:strokeWidth="0.8"
+        android:fillColor="#00000000"
+        android:fillAlpha="0.4"/>
+
+    <!-- Rim -->
+    <path
+        android:pathData="M60,2 A58,58 0 1,1 59.99,2 Z"
+        android:strokeColor="#c4b5fd"
+        android:strokeWidth="1"
+        android:fillColor="#00000000"
+        android:fillAlpha="0.2"/>
+
+</vector>

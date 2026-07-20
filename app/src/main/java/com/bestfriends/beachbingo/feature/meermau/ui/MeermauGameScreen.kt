@@ -204,7 +204,7 @@ private fun doMMPlay(state: MMState, playerIdx: Int, cardId: String, chosenWishS
 
     // Determine next state based on card rank
     var nextDrawPending = state.drawPending
-    var nextWishSuit = state.wishSuit
+    var nextWishSuit: String? = if (card.rank == "7" || card.rank == "8") state.wishSuit else null
     var nextDir = state.direction
     var extraSkip = 0
     var nextPhase = "PLAYING"
@@ -232,9 +232,8 @@ private fun doMMPlay(state: MMState, playerIdx: Int, cardId: String, chosenWishS
                 nextWishSuit = chosenWishSuit ?: bestWishSuitMM(newHand)
                 action = "${player.displayName} spielt Bube → wünscht ${nextWishSuit}!"
             } else {
-                nextPhase = "WISH"
-                val st = state.copy(players = newPlayers, discardPile = newDiscard, drawnCard = null, lastActionText = "${player.displayName} spielt Bube – Farbe wählen!")
-                return mmCheckWin(st, playerIdx, "WISH")
+                val st = state.copy(players = newPlayers, discardPile = newDiscard, drawnCard = null, phase = "WISH", lastActionText = "${player.displayName} spielt Bube – Farbe wählen!")
+                return st
             }
         }
         "10" -> {
@@ -243,9 +242,8 @@ private fun doMMPlay(state: MMState, playerIdx: Int, cardId: String, chosenWishS
                     nextWishSuit = chosenWishSuit ?: bestWishSuitMM(newHand)
                     action = "${player.displayName} spielt 10 → wünscht ${nextWishSuit}!"
                 } else {
-                    nextPhase = "WISH"
-                    val st = state.copy(players = newPlayers, discardPile = newDiscard, drawnCard = null, lastActionText = "${player.displayName} spielt 10 – Farbe wählen!")
-                    return mmCheckWin(st, playerIdx, "WISH")
+                    val st = state.copy(players = newPlayers, discardPile = newDiscard, drawnCard = null, phase = "WISH", lastActionText = "${player.displayName} spielt 10 – Farbe wählen!")
+                    return st
                 }
             }
         }
@@ -805,7 +803,7 @@ fun MeermauGameScreen(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     val drawnCard = st.drawnCard
-                    if (drawnCard != null) {
+                    if (drawnCard != null && isMyTurn) {
                         // Show drawn card prominently
                         val canPlay = topCard != null && canPlayMM(drawnCard, topCard, st.wishSuit, st.drawPending, st.settings)
                         Box {

@@ -26,6 +26,9 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import androidx.compose.material.icons.outlined.HelpOutline
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 
 private val Purple = Color(0xFFA855F7)
 private val PurpleDark = Color(0xFF7C3AED)
@@ -54,6 +57,7 @@ fun PiratesLobbyScreen(
     var controlMode by remember { mutableStateOf("BUTTONS") }
     var loading by remember { mutableStateOf(true) }
     var isFavorite by remember { mutableStateOf(false) }
+    var showRules by remember { mutableStateOf(false) }
 
     LaunchedEffect(uid) {
         if (uid == null) { loading = false; return@LaunchedEffect }
@@ -96,6 +100,9 @@ fun PiratesLobbyScreen(
                             fontSize = 22.sp,
                             color = if (isFavorite) SandGold else TextMuted,
                         )
+                    }
+                    IconButton(onClick = { showRules = true }) {
+                        Icon(Icons.Outlined.HelpOutline, contentDescription = "Spielanleitung", tint = TextSub)
                     }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Einstellungen", tint = TextMuted)
@@ -213,5 +220,9 @@ fun PiratesLobbyScreen(
                 Spacer(Modifier.height(8.dp))
             }
         }
+    }
+
+    if (showRules) {
+        ALL_GAME_RULES["pirates"]?.let { GameRulesBottomSheet(rule = it, onDismiss = { showRules = false }) }
     }
 }

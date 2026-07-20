@@ -71,6 +71,9 @@ import com.bestfriends.beachbingo.core.model.PongDifficulty
 import com.bestfriends.beachbingo.core.model.PongGame
 import com.bestfriends.beachbingo.feature.bingo.ui.components.QrCodeImage
 import com.bestfriends.beachbingo.feature.pong.viewmodel.PongLobbyViewModel
+import androidx.compose.material.icons.outlined.HelpOutline
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.BorderColor
 import com.bestfriends.beachbingo.ui.theme.Coral
@@ -121,6 +124,7 @@ fun PongLobbyScreen(
     var joinCode by rememberSaveable { mutableStateOf("") }
     var deleteGameId by remember { mutableStateOf<String?>(null) }
     var isFavorite by remember { mutableStateOf(false) }
+    var showRules by remember { mutableStateOf(false) }
 
     val pongAuth = FirebaseAuth.getInstance()
     val pongFirestore = FirebaseFirestore.getInstance()
@@ -224,6 +228,9 @@ fun PongLobbyScreen(
                             fontSize = 22.sp,
                             color = if (isFavorite) SandGold else TextMuted,
                         )
+                    }
+                    IconButton(onClick = { showRules = true }) {
+                        Icon(Icons.Outlined.HelpOutline, contentDescription = "Spielanleitung", tint = TextSub)
                     }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Einstellungen", tint = TextSub)
@@ -502,6 +509,10 @@ fun PongLobbyScreen(
 
             item { Spacer(Modifier.height(48.dp)) }
         }
+    }
+
+    if (showRules) {
+        ALL_GAME_RULES["pong"]?.let { GameRulesBottomSheet(rule = it, onDismiss = { showRules = false }) }
     }
 }
 

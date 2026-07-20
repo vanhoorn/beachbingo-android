@@ -63,6 +63,9 @@ import com.bestfriends.beachbingo.core.model.GameMode
 import com.bestfriends.beachbingo.core.model.GameStatus
 import com.bestfriends.beachbingo.core.model.DrawStyle
 import com.bestfriends.beachbingo.feature.bingo.viewmodel.LobbyViewModel
+import androidx.compose.material.icons.outlined.HelpOutline
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,6 +83,7 @@ fun LobbyScreen(
     var gameToDelete by remember { mutableStateOf<String?>(null) }
     var showCreateDialog by remember { mutableStateOf(false) }
     var isFavorite by remember { mutableStateOf(false) }
+    var showRules by remember { mutableStateOf(false) }
 
     val lobbyAuth = FirebaseAuth.getInstance()
     val lobbyFirestore = FirebaseFirestore.getInstance()
@@ -217,6 +221,9 @@ fun LobbyScreen(
                             color = if (isFavorite) SandGold else com.bestfriends.beachbingo.ui.theme.TextMuted,
                         )
                     }
+                    IconButton(onClick = { showRules = true }) {
+                        Icon(Icons.Outlined.HelpOutline, contentDescription = "Spielanleitung", tint = com.bestfriends.beachbingo.ui.theme.TextSub, modifier = Modifier.size(28.dp))
+                    }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Einstellungen", modifier = Modifier.size(28.dp))
                     }
@@ -289,6 +296,10 @@ fun LobbyScreen(
 
             item { Spacer(Modifier.height(80.dp)) }
         }
+    }
+
+    if (showRules) {
+        ALL_GAME_RULES["bingo"]?.let { GameRulesBottomSheet(rule = it, onDismiss = { showRules = false }) }
     }
 }
 

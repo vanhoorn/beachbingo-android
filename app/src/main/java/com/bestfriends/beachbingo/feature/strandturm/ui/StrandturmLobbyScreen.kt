@@ -27,6 +27,9 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import androidx.compose.material.icons.outlined.HelpOutline
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 
 private val StrandturmRed = Color(0xFFDC2626)
 
@@ -47,6 +50,7 @@ fun StrandturmLobbyScreen(
     var bestLevel    by remember { mutableIntStateOf(0) }
     var startLevel   by remember { mutableIntStateOf(1) }
     var isFavorite   by remember { mutableStateOf(false) }
+    var showRules by remember { mutableStateOf(false) }
     var loading      by remember { mutableStateOf(true) }
 
     LaunchedEffect(uid) {
@@ -91,6 +95,9 @@ fun StrandturmLobbyScreen(
                             fontSize = 22.sp,
                             color = if (isFavorite) SandGold else TextMuted,
                         )
+                    }
+                    IconButton(onClick = { showRules = true }) {
+                        Icon(Icons.Outlined.HelpOutline, contentDescription = "Spielanleitung", tint = TextSub)
                     }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Einstellungen", tint = TextPrimary)
@@ -178,6 +185,10 @@ fun StrandturmLobbyScreen(
                 Text("🎮 Spielen", fontSize = 17.sp, fontWeight = FontWeight.Bold)
             }
         }
+    }
+
+    if (showRules) {
+        ALL_GAME_RULES["strandturm"]?.let { GameRulesBottomSheet(rule = it, onDismiss = { showRules = false }) }
     }
 }
 
