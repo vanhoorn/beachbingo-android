@@ -58,6 +58,7 @@ fun AllGamesScreen(
     onNavigateToWormLobby: () -> Unit,
     onNavigateToStrandturmLobby: () -> Unit,
     onNavigateToBrandungLobby: () -> Unit,
+    onNavigateToMeermauLobby: () -> Unit,
 ) {
     val games = ALL_GAMES.sortedBy { it.title }
     var rulesGameId by remember { mutableStateOf<String?>(null) }
@@ -150,6 +151,7 @@ fun AllGamesScreen(
                                     "worm"       -> onNavigateToWormLobby()
                                     "strandturm" -> onNavigateToStrandturmLobby()
                                     "brandung"   -> onNavigateToBrandungLobby()
+                                    "meermau"    -> onNavigateToMeermauLobby()
                                 }
                             }
                             .padding(20.dp),

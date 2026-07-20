@@ -53,6 +53,10 @@ import com.bestfriends.beachbingo.feature.brandung.ui.BrandungLobbyScreen
 import com.bestfriends.beachbingo.feature.brandung.ui.BrandungGameScreen
 import com.bestfriends.beachbingo.feature.brandung.ui.BrandungSettingsScreen
 import com.bestfriends.beachbingo.feature.brandung.ui.BrandungResultsScreen
+import com.bestfriends.beachbingo.feature.meermau.ui.MeermauLobbyScreen
+import com.bestfriends.beachbingo.feature.meermau.ui.MeermauGameScreen
+import com.bestfriends.beachbingo.feature.meermau.ui.MeermauSettingsScreen
+import com.bestfriends.beachbingo.feature.meermau.ui.MeermauResultsScreen
 
 @Composable
 fun AppNavigation() {
@@ -116,6 +120,7 @@ fun AppNavigation() {
                 onNavigateToWormLobby = { navController.navigate(Screen.WormLobby) },
                 onNavigateToStrandturmLobby = { navController.navigate(Screen.StrandturmLobby) },
                 onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
+                onNavigateToMeermauLobby = { navController.navigate(Screen.MeermauLobby) },
                 onNavigateToProfile = { navController.navigate(Screen.Profile) },
                 onNavigateToJoin = { navController.navigate(Screen.JoinGame) },
                 onNavigateToCategory = { playerCount -> navController.navigate(Screen.Category(playerCount)) },
@@ -136,6 +141,7 @@ fun AppNavigation() {
                 onNavigateToWormLobby = { navController.navigate(Screen.WormLobby) },
                 onNavigateToStrandturmLobby = { navController.navigate(Screen.StrandturmLobby) },
                 onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
+                onNavigateToMeermauLobby = { navController.navigate(Screen.MeermauLobby) },
             )
         }
 
@@ -149,6 +155,7 @@ fun AppNavigation() {
                 onNavigateToWormLobby = { navController.navigate(Screen.WormLobby) },
                 onNavigateToStrandturmLobby = { navController.navigate(Screen.StrandturmLobby) },
                 onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
+                onNavigateToMeermauLobby = { navController.navigate(Screen.MeermauLobby) },
             )
         }
 
@@ -561,6 +568,50 @@ fun AppNavigation() {
 
         composable<Screen.BrandungResults> {
             BrandungResultsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        // ── MeerMau ────────────────────────────────────────────────────────────
+        composable<Screen.MeermauLobby> {
+            MeermauLobbyScreen(
+                onNavigateBack = {
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Home) { inclusive = false }
+                    }
+                },
+                onNavigateToGame = { mode, gameId, aiCount, difficulty ->
+                    navController.navigate(Screen.MeermauGame(mode, gameId, aiCount, difficulty)) {
+                        popUpTo(Screen.MeermauLobby)
+                    }
+                },
+                onNavigateToResults = { navController.navigate(Screen.MeermauResults) },
+                onNavigateToSettings = { navController.navigate(Screen.MeermauSettings) },
+            )
+        }
+
+        composable<Screen.MeermauGame> { backStack ->
+            val route: Screen.MeermauGame = backStack.toRoute()
+            MeermauGameScreen(
+                mode = route.mode,
+                gameId = route.gameId,
+                aiCount = route.aiCount,
+                difficulty = route.difficulty,
+                onNavigateBack = {
+                    navController.navigate(Screen.MeermauLobby) {
+                        popUpTo(Screen.MeermauLobby) { inclusive = true }
+                    }
+                },
+            )
+        }
+
+        composable<Screen.MeermauSettings> {
+            MeermauSettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToProfile = { navController.navigate(Screen.Profile) },
+            )
+        }
+
+        composable<Screen.MeermauResults> {
+            MeermauResultsScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
 }

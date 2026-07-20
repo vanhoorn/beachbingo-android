@@ -89,4 +89,13 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         playerCounts = listOf(PlayerCount.ONE_TWO, PlayerCount.TWO_FOUR, PlayerCount.FOUR_PLUS),
         genres = listOf(GameGenre.PARTY, GameGenre.LOGICAL),
     ),
+    GameMetadata(
+        id = "meermau",
+        emoji = "🂠",
+        title = "MeerMau",
+        description = "Werde als Erster alle Karten los! Mau-Mau mit Strand-Feeling.",
+        color = 0xFF7C3AED,
+        playerCounts = listOf(PlayerCount.ONE_TWO, PlayerCount.TWO_FOUR),
+        genres = listOf(GameGenre.PARTY, GameGenre.LOGICAL),
+    ),
 )

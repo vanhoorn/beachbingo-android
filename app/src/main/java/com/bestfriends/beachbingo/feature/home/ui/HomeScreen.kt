@@ -78,6 +78,7 @@ fun HomeScreen(
     onNavigateToWormLobby: () -> Unit,
     onNavigateToStrandturmLobby: () -> Unit,
     onNavigateToBrandungLobby: () -> Unit,
+    onNavigateToMeermauLobby: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToJoin: () -> Unit,
     onNavigateToCategory: (String) -> Unit,
@@ -200,6 +201,7 @@ fun HomeScreen(
                             "worm"       -> onNavigateToWormLobby()
                             "strandturm" -> onNavigateToStrandturmLobby()
                             "brandung"   -> onNavigateToBrandungLobby()
+                            "meermau"    -> onNavigateToMeermauLobby()
                         }
                     })
                 }

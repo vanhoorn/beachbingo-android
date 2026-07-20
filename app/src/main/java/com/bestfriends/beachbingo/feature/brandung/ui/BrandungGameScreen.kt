@@ -1,5 +1,6 @@
 package com.bestfriends.beachbingo.feature.brandung.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,7 +46,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -1439,6 +1449,99 @@ fun BrandungGameScreen(
 // ── Card Composable ────────────────────────────────────────────────────────────
 
 @Composable
+fun CardBackScene(modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+
+        // Daytime sky gradient
+        drawRect(
+            brush = Brush.verticalGradient(
+                listOf(Color(0xFF1A72C8), Color(0xFF5AB8E8)),
+                startY = 0f, endY = h * 0.56f,
+            ),
+            size = Size(w, h * 0.56f),
+        )
+        // Ocean
+        drawRect(
+            brush = Brush.verticalGradient(
+                listOf(Color(0xFF1A8AB8), Color(0xFF0A4A7A)),
+                startY = h * 0.56f, endY = h,
+            ),
+            topLeft = Offset(0f, h * 0.56f),
+            size = Size(w, h * 0.44f),
+        )
+
+        // Sun (upper-right)
+        val sCx = w * 0.78f; val sCy = h * 0.115f
+        drawCircle(Color(0xFFFFE033).copy(alpha = 0.28f), radius = w * 0.165f, center = Offset(sCx, sCy))
+        drawCircle(Color(0xFFFFD700), radius = w * 0.10f, center = Offset(sCx, sCy))
+        drawCircle(Color(0xFFFFED4A), radius = w * 0.060f, center = Offset(sCx - w * 0.012f, sCy - h * 0.008f))
+        val sRi = w * 0.13f; val sRo = w * 0.195f
+        for (i in 0 until 8) {
+            val angle = i * Math.PI / 4.0
+            val ca = cos(angle).toFloat(); val sa = sin(angle).toFloat()
+            drawLine(
+                color = Color(0xFFFFD700).copy(alpha = 0.7f),
+                start = Offset(sCx + ca * sRi, sCy + sa * sRi),
+                end = Offset(sCx + ca * sRo, sCy + sa * sRo),
+                strokeWidth = 2.5f,
+            )
+        }
+
+        // Wave lines
+        listOf(Triple(0.68f, 1.2f, 0.35f), Triple(0.79f, 1.0f, 0.25f), Triple(0.90f, 0.9f, 0.18f))
+            .forEach { (yf, lw, alpha) ->
+                val y = h * yf
+                val p = Path(); p.moveTo(0f, y); var x = 0f
+                while (x < w) {
+                    val dx = w * 0.26f
+                    p.quadraticBezierTo(x + dx * 0.25f, y - h * 0.022f, x + dx * 0.5f, y)
+                    p.quadraticBezierTo(x + dx * 0.75f, y + h * 0.022f, x + dx, y)
+                    x += dx
+                }
+                drawPath(p, color = Color.White.copy(alpha = alpha), style = Stroke(width = lw))
+            }
+
+        // Island
+        drawOval(Color(0xFFC8942A), topLeft = Offset(w * 0.285f, h * 0.815f), size = Size(w * 0.43f, h * 0.105f))
+        drawOval(Color(0xFFE4B44A).copy(alpha = 0.45f), topLeft = Offset(w * 0.32f, h * 0.805f), size = Size(w * 0.21f, h * 0.065f))
+
+        // Palm trunk
+        val trunk = Path()
+        trunk.moveTo(w * 0.50f, h * 0.835f)
+        trunk.quadraticBezierTo(w * 0.464f, h * 0.67f, w * 0.478f, h * 0.545f)
+        trunk.quadraticBezierTo(w * 0.495f, h * 0.465f, w * 0.548f, h * 0.385f)
+        drawPath(trunk, color = Color(0xFF7A5C2E), style = Stroke(width = 4f, cap = StrokeCap.Round))
+
+        val ptx = w * 0.548f; val pty = h * 0.385f
+
+        // Palm fronds — filled leaf shapes (wide in middle, tapers to tip)
+        listOf(
+            Triple(Offset(w * 0.09f, h * 0.585f), 6.5f, Color(0xFF2A7828)),   // left droop
+            Triple(Offset(w * 0.92f, h * 0.585f), 6.5f, Color(0xFF2A7828)),   // right droop
+            Triple(Offset(w * 0.17f, h * 0.185f), 5.5f, Color(0xFF36963A)),   // upper-left
+            Triple(Offset(w * 0.84f, h * 0.185f), 5.5f, Color(0xFF36963A)),   // upper-right
+            Triple(Offset(w * 0.52f, h * 0.095f), 5.0f, Color(0xFF2A7828)),   // top
+        ).forEach { (end, hw, color) ->
+            val dx = end.x - ptx; val dy = end.y - pty
+            val len = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+            val px = -dy / len; val py = dx / len
+            val wx = ptx + dx * 0.42f; val wy = pty + dy * 0.42f
+
+            val frond = Path()
+            frond.moveTo(ptx + px * 1.5f, pty + py * 1.5f)
+            frond.quadraticBezierTo(wx + px * hw, wy + py * hw, end.x, end.y)
+            frond.quadraticBezierTo(wx - px * hw, wy - py * hw, ptx - px * 1.5f, pty - py * 1.5f)
+            frond.close()
+            drawPath(frond, color = color)
+            // Central vein (slightly darker)
+            drawLine(Color(0xFF1A5020).copy(alpha = 0.35f), Offset(ptx, pty), end, strokeWidth = 1.2f)
+        }
+    }
+}
+
+@Composable
 fun BrandungPlayingCard(
     rank: String,
     suit: String,
@@ -1459,7 +1562,7 @@ fun BrandungPlayingCard(
                 color = borderColor,
                 shape = RoundedCornerShape(8.dp),
             )
-            .background(if (faceUp) Color(0xFFFFFBF0) else BrandungTeal),
+            .background(if (faceUp) Color(0xFFFFFBF0) else Color(0xFF0D1F3C)),
     ) {
         if (faceUp) {
             Column(
@@ -1490,9 +1593,7 @@ fun BrandungPlayingCard(
                 }
             }
         } else {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("🌊", fontSize = 20.sp)
-            }
+            CardBackScene(modifier = Modifier.fillMaxSize())
         }
     }
 }
@@ -1503,10 +1604,8 @@ private fun HiddenCard() {
         modifier = Modifier
             .size(width = 28.dp, height = 40.dp)
             .clip(RoundedCornerShape(4.dp))
-            .background(BrandungTeal.copy(alpha = 0.7f))
             .border(1.dp, BrandungTeal, RoundedCornerShape(4.dp)),
-        contentAlignment = Alignment.Center,
     ) {
-        Text("🌊", fontSize = 10.sp)
+        CardBackScene(modifier = Modifier.fillMaxSize())
     }
 }
