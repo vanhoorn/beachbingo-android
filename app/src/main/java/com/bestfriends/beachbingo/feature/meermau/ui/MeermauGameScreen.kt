@@ -795,16 +795,29 @@ fun MeermauGameScreen(
             // ── Player hand ──
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                 Text(
-                    "Du · ${myHand.size} Karten · ${myPlayer?.totalScore ?: 0} Punkte",
+                    "Du · ${myHand.size + if (st.drawnCard != null && isMyTurn) 1 else 0} Karten · ${myPlayer?.totalScore ?: 0} Punkte",
                     style = MaterialTheme.typography.labelSmall, color = TextMuted, modifier = Modifier.padding(bottom = 6.dp),
                 )
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
+                    myHand.forEach { card ->
+                        val canPlay = topCard != null && isMyTurn && st.phase == "PLAYING" &&
+                            canPlayMM(card, topCard, st.wishSuit, st.drawPending, st.settings)
+                        MMPlayingCard(
+                            rank = card.rank, suit = card.suit, faceUp = true,
+                            selected = selectedCardId == card.id,
+                            modifier = Modifier
+                                .clickable(enabled = canPlay || (isMyTurn && selectedCardId == card.id)) {
+                                    selectedCardId = if (selectedCardId == card.id) null else if (canPlay) card.id else null
+                                }
+                                .alpha(if (canPlay || selectedCardId == card.id || !isMyTurn) 1f else 0.45f)
+                                .offset(y = if (selectedCardId == card.id) (-8).dp else 0.dp),
+                        )
+                    }
                     val drawnCard = st.drawnCard
                     if (drawnCard != null && isMyTurn) {
-                        // Show drawn card prominently
                         val canPlay = topCard != null && canPlayMM(drawnCard, topCard, st.wishSuit, st.drawPending, st.settings)
                         Box {
                             MMPlayingCard(
@@ -817,21 +830,6 @@ fun MeermauGameScreen(
                             Surface(color = MeermauViolet, shape = RoundedCornerShape(4.dp), modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp)) {
                                 Text("NEU", fontSize = 7.sp, color = Color.White, modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp))
                             }
-                        }
-                    } else {
-                        myHand.forEach { card ->
-                            val canPlay = topCard != null && isMyTurn && st.phase == "PLAYING" &&
-                                canPlayMM(card, topCard, st.wishSuit, st.drawPending, st.settings)
-                            MMPlayingCard(
-                                rank = card.rank, suit = card.suit, faceUp = true,
-                                selected = selectedCardId == card.id,
-                                modifier = Modifier
-                                    .clickable(enabled = canPlay || (isMyTurn && selectedCardId == card.id)) {
-                                        selectedCardId = if (selectedCardId == card.id) null else if (canPlay) card.id else null
-                                    }
-                                    .alpha(if (canPlay || selectedCardId == card.id || !isMyTurn) 1f else 0.45f)
-                                    .offset(y = if (selectedCardId == card.id) (-8).dp else 0.dp),
-                            )
                         }
                     }
                 }
