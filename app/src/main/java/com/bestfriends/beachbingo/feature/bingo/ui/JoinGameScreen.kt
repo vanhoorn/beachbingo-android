@@ -56,6 +56,8 @@ fun JoinGameScreen(
     onNavigateToBingo: (String) -> Unit,
     onNavigateToPong: (String, Int, Int, String, Int, Boolean, String) -> Unit,
     onNavigateToVier: (String, String) -> Unit,
+    onNavigateToBrandung: (String) -> Unit,
+    onNavigateToMeermau: (String) -> Unit,
     onNavigateBack: () -> Unit,
     viewModel: JoinViewModel = hiltViewModel()
 ) {
@@ -100,12 +102,14 @@ fun JoinGameScreen(
         uiState.destination?.let { dest ->
             viewModel.clearNavigate()
             when (dest) {
-                is JoinDestination.Bingo -> onNavigateToBingo(dest.gameId)
-                is JoinDestination.Pong  -> onNavigateToPong(
+                is JoinDestination.Bingo    -> onNavigateToBingo(dest.gameId)
+                is JoinDestination.Pong     -> onNavigateToPong(
                     dest.gameId, dest.totalPaddles, dest.humanCount,
                     dest.difficulty, dest.scoreLimit, dest.isHost, dest.mySide
                 )
-                is JoinDestination.Vier  -> onNavigateToVier(dest.gameId, dest.myDrinkId)
+                is JoinDestination.Vier     -> onNavigateToVier(dest.gameId, dest.myDrinkId)
+                is JoinDestination.Brandung -> onNavigateToBrandung(dest.gameId)
+                is JoinDestination.MeerMau  -> onNavigateToMeermau(dest.gameId)
             }
         }
     }
@@ -143,7 +147,7 @@ fun JoinGameScreen(
 
             Spacer(Modifier.height(8.dp))
             Text(
-                "BeachBingo · BeachPong · Vier4Bier",
+                "BeachBingo · BeachPong · Vier4Bier · Brandung · MeerMau",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

@@ -28,6 +28,8 @@ sealed class JoinDestination {
         val mySide: String,
     ) : JoinDestination()
     data class Vier(val gameId: String, val myDrinkId: String) : JoinDestination()
+    data class Brandung(val gameId: String) : JoinDestination()
+    data class MeerMau(val gameId: String) : JoinDestination()
 }
 
 data class JoinUiState(
@@ -46,25 +48,37 @@ class JoinViewModel @Inject constructor(
     val uiState: StateFlow<JoinUiState> = _uiState.asStateFlow()
 
     fun joinGame(rawCode: String) {
-        val code = rawCode.trim()
+        val code = rawCode.trim().uppercase()
         if (code.isBlank()) return
         viewModelScope.launch {
             val user = authRepository.currentUser.first { it != null } ?: return@launch
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                val bingoDeferred = async { firestore.collection("games").document(code).get().await() }
-                val pongDeferred  = async { firestore.collection("pongGames").document(code).get().await() }
-                val vierDeferred  = async { firestore.collection("vierGames").document(code).get().await() }
+                val bingoDeferred    = async { firestore.collection("games").document(code).get().await() }
+                val pongDeferred     = async { firestore.collection("pongGames").document(code).get().await() }
+                val vierDeferred     = async { firestore.collection("vierGames").document(code).get().await() }
+                val brandungDeferred = async { firestore.collection("brandungGames").whereEqualTo("gameCode", code).limit(1).get().await() }
+                val meermauDeferred  = async { firestore.collection("meermauGames").whereEqualTo("gameCode", code).limit(1).get().await() }
 
-                val bingoSnap = bingoDeferred.await()
-                val pongSnap  = pongDeferred.await()
-                val vierSnap  = vierDeferred.await()
+                val bingoSnap    = bingoDeferred.await()
+                val pongSnap     = pongDeferred.await()
+                val vierSnap     = vierDeferred.await()
+                val brandungSnap = brandungDeferred.await()
+                val meermauSnap  = meermauDeferred.await()
 
                 val destination: JoinDestination? = when {
-                    bingoSnap.exists() -> joinBingo(code, bingoSnap.data!!, user.uid, user.displayName, user.avatarUrl)
-                    pongSnap.exists()  -> joinPong(code, pongSnap.data!!, user.uid, user.displayName, user.avatarUrl)
-                    vierSnap.exists()  -> joinVier(code, vierSnap.data!!, user.uid, user.displayName, user.avatarUrl, user.preferredVierDrinkId ?: "lager")
-                    else               -> { _uiState.update { it.copy(isLoading = false, error = "Kein Spiel mit diesem Code gefunden.") }; null }
+                    bingoSnap.exists()            -> joinBingo(code, bingoSnap.data!!, user.uid, user.displayName, user.avatarUrl)
+                    pongSnap.exists()             -> joinPong(code, pongSnap.data!!, user.uid, user.displayName, user.avatarUrl)
+                    vierSnap.exists()             -> joinVier(code, vierSnap.data!!, user.uid, user.displayName, user.avatarUrl, user.preferredVierDrinkId ?: "lager")
+                    !brandungSnap.isEmpty        -> {
+                        val doc = brandungSnap.documents[0]
+                        joinBrandung(doc.id, doc.data ?: emptyMap(), user.uid, user.displayName, user.avatarUrl)
+                    }
+                    !meermauSnap.isEmpty         -> {
+                        val doc = meermauSnap.documents[0]
+                        joinMeerMau(doc.id, doc.data ?: emptyMap(), user.uid, user.displayName, user.avatarUrl)
+                    }
+                    else -> { _uiState.update { it.copy(isLoading = false, error = "Kein Spiel mit diesem Code gefunden.") }; null }
                 }
                 if (destination != null) {
                     _uiState.update { it.copy(isLoading = false, destination = destination) }
@@ -188,6 +202,65 @@ class JoinViewModel @Inject constructor(
             )
         ).await()
         return JoinDestination.Vier(code, myDrinkId)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private suspend fun joinBrandung(
+        docId: String, data: Map<String, Any>, uid: String, displayName: String, avatarUrl: String
+    ): JoinDestination? {
+        val status = data["status"] as? String ?: ""
+        if (status == "FINISHED") {
+            _uiState.update { it.copy(isLoading = false, error = "Dieses Spiel ist bereits beendet.") }
+            return null
+        }
+        val playerIds = (data["playerIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+        if (!playerIds.contains(uid)) {
+            val playersRaw = data["players"] as? Map<*, *> ?: emptyMap<String, Any>()
+            if (playersRaw.size >= 6) {
+                _uiState.update { it.copy(isLoading = false, error = "Das Spiel ist voll (max. 6 Spieler).") }
+                return null
+            }
+            val newPlayer = mapOf(
+                "userId" to uid, "displayName" to displayName, "avatarUrl" to avatarUrl,
+                "hand" to emptyList<Any>(), "lives" to 3, "folded" to false,
+                "knocked" to false, "eliminated" to false, "isAI" to false,
+            )
+            firestore.collection("brandungGames").document(docId).update(
+                mapOf("playerIds" to FieldValue.arrayUnion(uid), "players.$uid" to newPlayer)
+            ).await()
+        }
+        return JoinDestination.Brandung(docId)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private suspend fun joinMeerMau(
+        docId: String, data: Map<String, Any>, uid: String, displayName: String, avatarUrl: String
+    ): JoinDestination? {
+        val status = data["status"] as? String ?: ""
+        if (status == "FINISHED") {
+            _uiState.update { it.copy(isLoading = false, error = "Dieses Spiel ist bereits beendet.") }
+            return null
+        }
+        if (status == "RUNNING") {
+            _uiState.update { it.copy(isLoading = false, error = "Das Spiel läuft bereits.") }
+            return null
+        }
+        val playerIds = (data["playerIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+        if (!playerIds.contains(uid)) {
+            if (playerIds.size >= 4) {
+                _uiState.update { it.copy(isLoading = false, error = "Das Spiel ist voll (max. 4 Spieler).") }
+                return null
+            }
+            val newPlayer = mapOf(
+                "userId" to uid, "displayName" to displayName, "avatarUrl" to avatarUrl,
+                "hand" to emptyList<Any>(), "totalScore" to 0,
+                "eliminated" to false, "isAI" to false,
+            )
+            firestore.collection("meermauGames").document(docId).update(
+                mapOf("playerIds" to FieldValue.arrayUnion(uid), "players.$uid" to newPlayer)
+            ).await()
+        }
+        return JoinDestination.MeerMau(docId)
     }
 
     fun clearNavigate() = _uiState.update { it.copy(destination = null, error = null) }

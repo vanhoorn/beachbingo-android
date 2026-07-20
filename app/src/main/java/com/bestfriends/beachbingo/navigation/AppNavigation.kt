@@ -175,9 +175,7 @@ fun AppNavigation() {
         composable<Screen.JoinGame> {
             JoinGameScreen(
                 onNavigateToBingo = { gameId ->
-                    navController.navigate(Screen.Game(gameId)) {
-                        popUpTo(Screen.Home)
-                    }
+                    navController.navigate(Screen.Game(gameId)) { popUpTo(Screen.Home) }
                 },
                 onNavigateToPong = { gameId, totalPaddles, humanCount, difficulty, scoreLimit, isHost, mySide ->
                     navController.navigate(
@@ -185,9 +183,13 @@ fun AppNavigation() {
                     ) { popUpTo(Screen.Home) }
                 },
                 onNavigateToVier = { gameId, myDrinkId ->
-                    navController.navigate(
-                        Screen.VierGame("online", gameId, myDrinkId, null)
-                    ) { popUpTo(Screen.Home) }
+                    navController.navigate(Screen.VierGame("online", gameId, myDrinkId, null)) { popUpTo(Screen.Home) }
+                },
+                onNavigateToBrandung = { gameId ->
+                    navController.navigate(Screen.BrandungGame("online", gameId, 0, "SNIPER")) { popUpTo(Screen.Home) }
+                },
+                onNavigateToMeermau = { gameId ->
+                    navController.navigate(Screen.MeermauGame("online", gameId, 0, "SNIPER")) { popUpTo(Screen.Home) }
                 },
                 onNavigateBack = { navController.popBackStack() }
             )
