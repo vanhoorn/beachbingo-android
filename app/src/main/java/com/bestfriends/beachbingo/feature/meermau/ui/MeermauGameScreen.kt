@@ -695,7 +695,13 @@ fun MeermauGameScreen(
         localState = if (canPlay && (st.difficulty != "ROOKIE" || Random.nextFloat() > 0.3f)) {
             val ws = if (drawnCard.rank == "J" || (st.settings.wildOn10 && drawnCard.rank == "10"))
                 bestWishSuitMM(current.hand) else null
-            doMMPlay(st, st.currentPlayerIndex, drawnCard.id, ws)
+            val stWithCard = st.copy(
+                players = st.players.toMutableList().also {
+                    it[st.currentPlayerIndex] = current.copy(hand = current.hand + drawnCard)
+                },
+                drawnCard = null,
+            )
+            doMMPlay(stWithCard, stWithCard.currentPlayerIndex, drawnCard.id, ws)
         } else {
             val newHand = current.hand + drawnCard
             val nextIdx = nextMMIdx(st.currentPlayerIndex, st.direction, st.players)
@@ -998,7 +1004,14 @@ fun MeermauGameScreen(
                         val canPlayDrawn = topCard != null && canPlayMM(drawnCard, topCard, st.wishSuit, st.drawPending, st.settings)
                         Button(
                             onClick = {
-                                val s = doMMPlay(st, st.currentPlayerIndex, drawnCard.id)
+                                val humanPlayer2 = st.players[st.currentPlayerIndex]
+                                val stWithCard = st.copy(
+                                    players = st.players.toMutableList().also {
+                                        it[st.currentPlayerIndex] = humanPlayer2.copy(hand = humanPlayer2.hand + drawnCard)
+                                    },
+                                    drawnCard = null,
+                                )
+                                val s = doMMPlay(stWithCard, stWithCard.currentPlayerIndex, drawnCard.id)
                                 localState = s; selectedCardId = null; writeOnline(s)
                             },
                             enabled = canPlayDrawn,
