@@ -45,6 +45,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestfriends.beachbingo.core.model.ALL_GAMES
+import com.bestfriends.beachbingo.core.model.CARD_GAMES
+import com.bestfriends.beachbingo.core.model.GameGenre
 import com.bestfriends.beachbingo.core.model.GameMetadata
 import com.bestfriends.beachbingo.core.model.PlayerCount
 import com.bestfriends.beachbingo.feature.auth.viewmodel.AuthViewModel
@@ -86,6 +88,7 @@ fun HomeScreen(
     onNavigateToProfile: () -> Unit,
     onNavigateToJoin: () -> Unit,
     onNavigateToCategory: (String) -> Unit,
+    onNavigateToCardGames: () -> Unit,
     onNavigateToAllGames: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel(),
 ) {
@@ -243,6 +246,40 @@ fun HomeScreen(
                 )
                 Spacer(Modifier.weight(1f))
                 Spacer(Modifier.weight(1f))
+            }
+        }
+
+        // ── Kartenspiele ──────────────────────────────────────────────────────────
+        SectionHeader(
+            title = "KARTENSPIELE", emoji = "🃏",
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp)
+        )
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = SurfaceDark,
+            modifier = Modifier
+                .padding(horizontal = 20.dp)
+                .fillMaxWidth()
+                .border(1.5.dp, Color(0xFF7C3AED).copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                .clickable { onNavigateToCardGames() }
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(text = "🃏", fontSize = 28.sp)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Kartenspiele",
+                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
+                    )
+                    Text(
+                        text = "${CARD_GAMES.size} Spiele · MeerMau, Brandung & mehr",
+                        fontSize = 12.sp, color = TextMuted,
+                    )
+                }
+                Text(text = "›", fontSize = 22.sp, color = Color(0xFF7C3AED))
             }
         }
 

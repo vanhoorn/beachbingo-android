@@ -24,6 +24,7 @@ import com.bestfriends.beachbingo.feature.bingo.ui.JoinGameScreen
 import com.bestfriends.beachbingo.feature.bingo.ui.LobbyScreen
 import com.bestfriends.beachbingo.feature.bingo.ui.ResultsScreen
 import com.bestfriends.beachbingo.feature.home.ui.AllGamesScreen
+import com.bestfriends.beachbingo.feature.home.ui.CardGamesScreen
 import com.bestfriends.beachbingo.feature.home.ui.CategoryScreen
 import com.bestfriends.beachbingo.feature.home.ui.HomeScreen
 import com.bestfriends.beachbingo.feature.pong.ui.PongGameScreen
@@ -124,6 +125,7 @@ fun AppNavigation() {
                 onNavigateToProfile = { navController.navigate(Screen.Profile) },
                 onNavigateToJoin = { navController.navigate(Screen.JoinGame) },
                 onNavigateToCategory = { playerCount -> navController.navigate(Screen.Category(playerCount)) },
+                onNavigateToCardGames = { navController.navigate(Screen.CardGames) },
                 onNavigateToAllGames = { navController.navigate(Screen.AllGames) },
                 viewModel = authViewModel
             )
@@ -140,6 +142,14 @@ fun AppNavigation() {
                 onNavigateToPiratesLobby = { navController.navigate(Screen.PiratesLobby) },
                 onNavigateToWormLobby = { navController.navigate(Screen.WormLobby) },
                 onNavigateToStrandturmLobby = { navController.navigate(Screen.StrandturmLobby) },
+                onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
+                onNavigateToMeermauLobby = { navController.navigate(Screen.MeermauLobby) },
+            )
+        }
+
+        composable<Screen.CardGames> {
+            CardGamesScreen(
+                onNavigateBack = { navController.popBackStack() },
                 onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
                 onNavigateToMeermauLobby = { navController.navigate(Screen.MeermauLobby) },
             )

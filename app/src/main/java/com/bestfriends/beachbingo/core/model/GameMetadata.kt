@@ -13,6 +13,7 @@ enum class GameGenre(val label: String) {
     LOGICAL("Logical"),
     COUCH("Couch"),
     RIDDLE("Riddle"),
+    CARD("Kartenspiel"),
 }
 
 data class GameMetadata(
@@ -87,7 +88,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         description = "Schwimm nicht unter! Sammle 31 Punkte mit gleicher Farbe.",
         color = 0xFF0D9488,
         playerCounts = listOf(PlayerCount.ONE_TWO, PlayerCount.TWO_FOUR, PlayerCount.FOUR_PLUS),
-        genres = listOf(GameGenre.PARTY, GameGenre.LOGICAL),
+        genres = listOf(GameGenre.PARTY, GameGenre.LOGICAL, GameGenre.CARD),
     ),
     GameMetadata(
         id = "meermau",
@@ -96,6 +97,8 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         description = "Werde als Erster alle Karten los! Mau-Mau mit Strand-Feeling.",
         color = 0xFF7C3AED,
         playerCounts = listOf(PlayerCount.ONE_TWO, PlayerCount.TWO_FOUR),
-        genres = listOf(GameGenre.PARTY, GameGenre.LOGICAL),
+        genres = listOf(GameGenre.PARTY, GameGenre.LOGICAL, GameGenre.CARD),
     ),
 )
+
+val CARD_GAMES: List<GameMetadata> = ALL_GAMES.filter { GameGenre.CARD in it.genres }
