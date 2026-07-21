@@ -75,6 +75,8 @@ import kotlin.random.Random
 // ── Constants & Models ────────────────────────────────────────────────────────
 
 private val MeermauViolet = Color(0xFF7C3AED)
+private val MauOrange = Color(0xFFE67E22)
+private val MauMauGreen = Color(0xFF27AE60)
 
 private val MM_SUITS = listOf("♣", "♠", "♥", "♦")
 private val MM_RANKS = listOf("7", "8", "9", "10", "J", "Q", "K", "A")
@@ -95,6 +97,8 @@ data class MMPlayer(
 
 data class MMSettings(val reverseOn9: Boolean, val stopperOn8: Boolean, val wildOn10: Boolean)
 
+data class MoveLogEntry(val round: Int, val playerName: String, val detail: String, val ts: Long)
+
 data class MMState(
     val players: List<MMPlayer>,
     val drawPile: List<MMCard>,
@@ -105,6 +109,9 @@ data class MMState(
     val wishSuit: String?,
     val phase: String,
     val mauPlayerId: String?,
+    val pendingMau: String? = null,
+    val pendingMauMau: String? = null,
+    val mauMauReady: Boolean = false,
     val drawnCard: MMCard?,
     val roundWinnerId: String?,
     val gameWinnerId: String?,
@@ -115,15 +122,18 @@ data class MMState(
     val difficulty: String,
     val settings: MMSettings,
     val lastSkippedId: String?,
+    val moveLog: List<MoveLogEntry> = emptyList(),
     val turnId: Int = 0,
 )
 
 // ── Pure game logic ───────────────────────────────────────────────────────────
 
-private fun createMMDeck(): List<MMCard> = MM_SUITS.flatMap { s -> MM_RANKS.map { r -> MMCard(s, r, "$s$r") } }
+private fun createMMDeck(): List<MMCard> =
+    MM_SUITS.flatMap { s -> MM_RANKS.map { r -> MMCard(s, r, "$s$r") } }
 
 private fun shuffleMMDeck(deck: List<MMCard>): List<MMCard> = deck.shuffled()
 
+/** Fix: J is always a wildcard in normal play (no drawPending, no wishSuit). */
 private fun canPlayMM(card: MMCard, top: MMCard, wishSuit: String?, drawPending: Int, settings: MMSettings): Boolean {
     if (drawPending > 0) {
         if (card.rank == "7") return true
@@ -135,28 +145,31 @@ private fun canPlayMM(card: MMCard, top: MMCard, wishSuit: String?, drawPending:
         if (settings.wildOn10 && card.rank == "10") return true
         return card.suit == wishSuit
     }
-    return card.suit == top.suit || card.rank == top.rank
+    return card.rank == "J" || card.suit == top.suit || card.rank == top.rank
 }
 
 private fun mmHandPoints(hand: List<MMCard>): Int = hand.sumOf { MM_CARD_POINTS[it.rank] ?: 0 }
 
-private fun bestWishSuitMM(hand: List<MMCard>): String {
-    val counts = MM_SUITS.associateWith { s -> hand.count { it.suit == s } }
-    return counts.maxByOrNull { it.value }?.key ?: "♠"
-}
+private fun bestWishSuitMM(hand: List<MMCard>): String =
+    MM_SUITS.associateWith { s -> hand.count { it.suit == s } }.maxByOrNull { it.value }?.key ?: "♠"
 
-private fun mmAIMove(hand: List<MMCard>, top: MMCard, wishSuit: String?, drawPending: Int, difficulty: String, settings: MMSettings): Pair<String?, String?> {
+private fun mmAIMove(
+    hand: List<MMCard>, top: MMCard, wishSuit: String?,
+    drawPending: Int, difficulty: String, settings: MMSettings,
+): Pair<String?, String?> {
     val playable = hand.filter { canPlayMM(it, top, wishSuit, drawPending, settings) }
     if (difficulty == "ROOKIE") {
         if (playable.isEmpty() || Random.nextFloat() < 0.15f) return null to null
         val chosen = playable.random()
-        val ws = if (chosen.rank == "J" || (settings.wildOn10 && chosen.rank == "10")) bestWishSuitMM(hand.filter { it.id != chosen.id }) else null
+        val ws = if (chosen.rank == "J" || (settings.wildOn10 && chosen.rank == "10"))
+            bestWishSuitMM(hand.filter { it.id != chosen.id }) else null
         return chosen.id to ws
     }
     if (playable.isEmpty()) return null to null
     fun weight(r: String) = when (r) { "7" -> 40; "8" -> 30; "J" -> 20; "9" -> 10; else -> 0 }
     val chosen = playable.maxByOrNull { weight(it.rank) + (MM_CARD_POINTS[it.rank] ?: 0) }!!
-    val ws = if (chosen.rank == "J" || (settings.wildOn10 && chosen.rank == "10")) bestWishSuitMM(hand.filter { it.id != chosen.id }) else null
+    val ws = if (chosen.rank == "J" || (settings.wildOn10 && chosen.rank == "10"))
+        bestWishSuitMM(hand.filter { it.id != chosen.id }) else null
     return chosen.id to ws
 }
 
@@ -176,55 +189,70 @@ private fun nextMMIdx(from: Int, dir: Int, players: List<MMPlayer>, extraSkip: I
 private fun mmReshuffleIfNeeded(draw: List<MMCard>, discard: List<MMCard>): Pair<List<MMCard>, List<MMCard>> {
     if (draw.isNotEmpty() || discard.size <= 1) return draw to discard
     val top = discard.last()
-    val newDraw = shuffleMMDeck(discard.dropLast(1))
-    return newDraw to listOf(top)
+    return shuffleMMDeck(discard.dropLast(1)) to listOf(top)
 }
 
-private fun mmDealCards(playerCount: Int): Triple<List<List<MMCard>>, List<MMCard>, MMCard> {
-    var deck = shuffleMMDeck(createMMDeck()).toMutableList()
-    val hands = Array(playerCount) { mutableListOf<MMCard>() }
-    repeat(5) { repeat(playerCount) { p -> hands[p].add(deck.removeAt(0)) } }
-    var topCard: MMCard? = null
-    val remaining = mutableListOf<MMCard>()
-    for (c in deck) {
-        if (topCard == null && c.rank != "J") topCard = c else remaining.add(c)
-    }
-    if (topCard == null) return mmDealCards(playerCount)
-    return Triple(hands.map { it.toList() }, remaining, topCard)
+/** If a player played to 1 card but hasn't called MAU before another player acts → 1 penalty card. */
+private fun applyPendingMauPenalty(state: MMState): MMState {
+    val pendingId = state.pendingMau ?: return state
+    if (state.players.getOrNull(state.currentPlayerIndex)?.userId == pendingId) return state
+    val pidx = state.players.indexOfFirst { it.userId == pendingId }
+    if (pidx < 0) return state.copy(pendingMau = null)
+    val pp = state.players[pidx]
+    val (draw, discard) = mmReshuffleIfNeeded(state.drawPile, state.discardPile)
+    if (draw.isEmpty()) return state.copy(pendingMau = null)
+    val newPlayers = state.players.toMutableList().also { it[pidx] = pp.copy(hand = pp.hand + draw.first()) }
+    val entry = MoveLogEntry(state.round, pp.displayName, "${pp.displayName} vergisst MAU — zieht 1 Strafkarte", System.currentTimeMillis())
+    return state.copy(players = newPlayers, drawPile = draw.drop(1), discardPile = discard, pendingMau = null, moveLog = state.moveLog + entry)
+}
+
+/** If a player played their last card without calling MAU MAU before another player acts → 1 penalty card. */
+private fun applyPendingMauMauPenalty(state: MMState): MMState {
+    val pendingId = state.pendingMauMau ?: return state
+    if (state.players.getOrNull(state.currentPlayerIndex)?.userId == pendingId) return state
+    val pidx = state.players.indexOfFirst { it.userId == pendingId }
+    if (pidx < 0) return state.copy(pendingMauMau = null)
+    val pp = state.players[pidx]
+    val (draw, discard) = mmReshuffleIfNeeded(state.drawPile, state.discardPile)
+    if (draw.isEmpty()) return state.copy(pendingMauMau = null)
+    val newPlayers = state.players.toMutableList().also { it[pidx] = pp.copy(hand = pp.hand + draw.first()) }
+    val entry = MoveLogEntry(state.round, pp.displayName, "${pp.displayName} vergisst MAU MAU — zieht 1 Strafkarte", System.currentTimeMillis())
+    return state.copy(players = newPlayers, drawPile = draw.drop(1), discardPile = discard, pendingMauMau = null, moveLog = state.moveLog + entry)
 }
 
 private fun doMMPlay(state: MMState, playerIdx: Int, cardId: String, chosenWishSuit: String? = null): MMState {
-    val player = state.players[playerIdx]
-    val card = player.hand.find { it.id == cardId } ?: return state
+    var st = applyPendingMauPenalty(state)
+    st = applyPendingMauMauPenalty(st)
+
+    val player = st.players[playerIdx]
+    val card = player.hand.find { it.id == cardId } ?: return st
     val newHand = player.hand.filter { it.id != cardId }
-    val newDiscard = state.discardPile + card
+    val newDiscard = st.discardPile + card
+    val newPlayers = st.players.toMutableList().also { it[playerIdx] = player.copy(hand = newHand) }
 
-    val newPlayers = state.players.toMutableList().also {
-        it[playerIdx] = player.copy(hand = newHand)
-    }
-
-    // Determine next state based on card rank
-    var nextDrawPending = state.drawPending
-    var nextWishSuit: String? = if (card.rank == "7" || card.rank == "8") state.wishSuit else null
-    var nextDir = state.direction
+    var nextDrawPending = st.drawPending
+    var nextWishSuit: String? = if (card.rank == "7" || card.rank == "8") st.wishSuit else null
+    var nextDir = st.direction
     var extraSkip = 0
-    var nextPhase = "PLAYING"
     var action = "${player.displayName} spielt ${card.rank}${card.suit}"
 
     when (card.rank) {
-        "7" -> { nextDrawPending = state.drawPending + 2; action = "${player.displayName} spielt 7 → ${state.drawPending + 2} Karten ziehen!" }
+        "7" -> {
+            nextDrawPending = st.drawPending + 2
+            action = "${player.displayName} spielt 7 → ${st.drawPending + 2} Karten ziehen!"
+        }
         "8" -> {
-            if (state.drawPending > 0 && state.settings.stopperOn8) {
+            if (st.drawPending > 0 && st.settings.stopperOn8) {
                 nextDrawPending = 0
                 action = "${player.displayName} stoppt den Stapel mit 8!"
             } else {
                 extraSkip = 1
-                action = "${player.displayName} spielt 8 → ${state.players[nextMMIdx(playerIdx, nextDir, state.players)].displayName} ausgesetzt!"
+                action = "${player.displayName} spielt 8 → ${st.players[nextMMIdx(playerIdx, nextDir, st.players)].displayName} ausgesetzt!"
             }
         }
         "9" -> {
-            if (state.settings.reverseOn9) {
-                nextDir = -state.direction
+            if (st.settings.reverseOn9) {
+                nextDir = -st.direction
                 action = "${player.displayName} spielt 9 → Richtung umgekehrt!"
             }
         }
@@ -233,54 +261,84 @@ private fun doMMPlay(state: MMState, playerIdx: Int, cardId: String, chosenWishS
                 nextWishSuit = chosenWishSuit ?: bestWishSuitMM(newHand)
                 action = "${player.displayName} spielt Bube → wünscht ${nextWishSuit}!"
             } else {
-                val st = state.copy(players = newPlayers, discardPile = newDiscard, drawnCard = null, phase = "WISH", lastActionText = "${player.displayName} spielt Bube – Farbe wählen!")
-                return st
+                val entry = MoveLogEntry(st.round, player.displayName, action, System.currentTimeMillis())
+                return st.copy(players = newPlayers, discardPile = newDiscard, drawnCard = null,
+                    phase = "WISH", lastActionText = "${player.displayName} spielt Bube – Farbe wählen!",
+                    moveLog = st.moveLog + entry)
             }
         }
         "10" -> {
-            if (state.settings.wildOn10) {
+            if (st.settings.wildOn10) {
                 if (player.isAI || chosenWishSuit != null) {
                     nextWishSuit = chosenWishSuit ?: bestWishSuitMM(newHand)
                     action = "${player.displayName} spielt 10 → wünscht ${nextWishSuit}!"
                 } else {
-                    val st = state.copy(players = newPlayers, discardPile = newDiscard, drawnCard = null, phase = "WISH", lastActionText = "${player.displayName} spielt 10 – Farbe wählen!")
-                    return st
+                    val entry = MoveLogEntry(st.round, player.displayName, action, System.currentTimeMillis())
+                    return st.copy(players = newPlayers, discardPile = newDiscard, drawnCard = null,
+                        phase = "WISH", lastActionText = "${player.displayName} spielt 10 – Farbe wählen!",
+                        moveLog = st.moveLog + entry)
                 }
             }
         }
     }
 
-    val skippedId = if (extraSkip > 0) state.players[nextMMIdx(playerIdx, nextDir, state.players)].userId else null
-    val nextIdx = nextMMIdx(playerIdx, nextDir, newPlayers.map { if (it.userId == skippedId) it.copy(eliminated = true) else it }, extraSkip = 0)
-    val finalPlayers = newPlayers
+    val skippedId = if (extraSkip > 0) st.players[nextMMIdx(playerIdx, nextDir, st.players)].userId else null
+    val nextIdx = nextMMIdx(playerIdx, nextDir,
+        newPlayers.map { if (it.userId == skippedId) it.copy(eliminated = true) else it })
+    val (rDraw, rDiscard) = mmReshuffleIfNeeded(st.drawPile, newDiscard)
+    val entry = MoveLogEntry(st.round, player.displayName, action, System.currentTimeMillis())
 
-    val (rDraw, rDiscard) = mmReshuffleIfNeeded(state.drawPile, newDiscard)
-
-    val nextState = state.copy(
-        players = finalPlayers,
-        drawPile = rDraw,
-        discardPile = rDiscard,
-        currentPlayerIndex = nextIdx,
-        direction = nextDir,
-        drawPending = nextDrawPending,
-        wishSuit = nextWishSuit,
-        drawnCard = null,
-        lastActionText = action,
-        phase = nextPhase,
-        lastSkippedId = skippedId,
-        turnId = state.turnId + 1,
-    )
-    return mmCheckWin(nextState, playerIdx, nextPhase)
-}
-
-private fun mmCheckWin(state: MMState, playedIdx: Int, nextPhase: String): MMState {
-    if (nextPhase == "WISH") return state
-    val player = state.players[playedIdx]
-    if (player.hand.isEmpty()) return mmResolveRound(state, playedIdx)
-    if (player.hand.size == 1) {
-        return state.copy(phase = "MAU_CHECK", mauPlayerId = player.userId)
+    // ── 0 cards: MAU MAU path ──
+    if (newHand.isEmpty()) {
+        val base = st.copy(
+            players = newPlayers, drawPile = rDraw, discardPile = rDiscard,
+            direction = nextDir, drawPending = nextDrawPending, wishSuit = nextWishSuit,
+            drawnCard = null, lastActionText = action, lastSkippedId = skippedId,
+            turnId = st.turnId + 1, moveLog = st.moveLog + entry,
+        )
+        return if (playerIdx != 0 || st.mauMauReady) {
+            // AI always wins; human wins if they pre-declared MAU MAU
+            mmResolveRound(base.copy(mauMauReady = false, pendingMauMau = null, roundWinnerId = player.userId), playerIdx)
+        } else {
+            // Human played last card without pressing MAU MAU — penalty pending
+            base.copy(currentPlayerIndex = nextIdx, phase = "PLAYING",
+                pendingMauMau = player.userId, mauMauReady = false,
+                lastActionText = "${player.displayName} spielt letzte Karte!")
+        }
     }
-    return state
+
+    // ── 1 card: MAU path ──
+    if (newHand.size == 1) {
+        val autoMau = playerIdx != 0 || st.mauPlayerId == player.userId
+        val mauTxt = "${player.displayName}: MAU!"
+        val logs = if (autoMau) {
+            val mauEntry = MoveLogEntry(st.round, player.displayName, mauTxt, System.currentTimeMillis() + 1)
+            st.moveLog + entry + mauEntry
+        } else {
+            st.moveLog + entry
+        }
+        return st.copy(
+            players = newPlayers, drawPile = rDraw, discardPile = rDiscard,
+            currentPlayerIndex = nextIdx, direction = nextDir,
+            drawPending = nextDrawPending, wishSuit = nextWishSuit,
+            drawnCard = null, phase = "PLAYING",
+            mauPlayerId = if (autoMau) player.userId else null,
+            pendingMau = if (!autoMau) player.userId else null,
+            pendingMauMau = null,
+            lastActionText = if (autoMau) mauTxt else action,
+            aiThinking = false, lastSkippedId = skippedId,
+            turnId = st.turnId + 1, moveLog = logs,
+        )
+    }
+
+    // ── Normal play ──
+    return st.copy(
+        players = newPlayers, drawPile = rDraw, discardPile = rDiscard,
+        currentPlayerIndex = nextIdx, direction = nextDir,
+        drawPending = nextDrawPending, wishSuit = nextWishSuit,
+        drawnCard = null, lastActionText = action, phase = "PLAYING",
+        lastSkippedId = skippedId, turnId = st.turnId + 1, moveLog = st.moveLog + entry,
+    )
 }
 
 private fun mmResolveRound(state: MMState, winnerIdx: Int): MMState {
@@ -288,8 +346,7 @@ private fun mmResolveRound(state: MMState, winnerIdx: Int): MMState {
     val newScores = state.roundScores.toMutableMap()
     state.players.forEachIndexed { idx, p ->
         if (!p.eliminated && idx != winnerIdx) {
-            val pts = mmHandPoints(p.hand)
-            newScores[p.userId] = (newScores[p.userId] ?: 0) + pts
+            newScores[p.userId] = (newScores[p.userId] ?: 0) + mmHandPoints(p.hand)
         }
     }
     val newPlayers = state.players.map { p ->
@@ -297,17 +354,22 @@ private fun mmResolveRound(state: MMState, winnerIdx: Int): MMState {
         p.copy(totalScore = total, eliminated = total >= 100 || (p.eliminated && p.userId != winner.userId))
     }
     val alive = newPlayers.filter { !it.eliminated }
-    if (alive.size <= 1) {
-        return state.copy(
+    val winEntry = MoveLogEntry(state.round, winner.displayName, "🏆 ${winner.displayName} gewinnt die Runde!", System.currentTimeMillis())
+    val cleared = state.copy(mauMauReady = false, pendingMau = null, pendingMauMau = null, mauPlayerId = null)
+    return if (alive.size <= 1) {
+        cleared.copy(
             players = newPlayers, roundScores = newScores, roundWinnerId = winner.userId,
             gameWinnerId = (alive.firstOrNull() ?: winner).userId,
-            phase = "GAME_OVER", lastActionText = "${winner.displayName} hat die Karten los!",
+            phase = "GAME_OVER", lastActionText = "🏆 ${winner.displayName} gewinnt das Spiel!",
+            moveLog = state.moveLog + winEntry,
+        )
+    } else {
+        cleared.copy(
+            players = newPlayers, roundScores = newScores, roundWinnerId = winner.userId,
+            phase = "ROUND_END", lastActionText = "${winner.displayName} ist raus!",
+            moveLog = state.moveLog + winEntry,
         )
     }
-    return state.copy(
-        players = newPlayers, roundScores = newScores, roundWinnerId = winner.userId,
-        phase = "ROUND_END", lastActionText = "${winner.displayName} ist raus!",
-    )
 }
 
 private fun mmStartNewRound(state: MMState): MMState {
@@ -318,51 +380,52 @@ private fun mmStartNewRound(state: MMState): MMState {
         if (!p.eliminated && aliveIdx >= 0) p.copy(hand = hands[aliveIdx]) else p
     }
     val firstIdx = newPlayers.indexOfFirst { !it.eliminated }.coerceAtLeast(0)
+    val roundEntry = MoveLogEntry(state.round + 1, "System", "── Runde ${state.round + 1} beginnt ──", System.currentTimeMillis())
     return state.copy(
-        players = newPlayers,
-        drawPile = drawPile,
-        discardPile = listOf(topCard),
-        currentPlayerIndex = firstIdx,
-        direction = 1,
-        drawPending = 0,
-        wishSuit = null,
-        phase = "PLAYING",
-        mauPlayerId = null,
-        drawnCard = null,
-        roundWinnerId = null,
+        players = newPlayers, drawPile = drawPile, discardPile = listOf(topCard),
+        currentPlayerIndex = firstIdx, direction = 1, drawPending = 0, wishSuit = null,
+        phase = "PLAYING", mauPlayerId = null, pendingMau = null, pendingMauMau = null,
+        mauMauReady = false, drawnCard = null, roundWinnerId = null,
         roundScores = state.players.associate { it.userId to it.totalScore },
-        round = state.round + 1,
-        lastActionText = "Runde ${state.round + 1} beginnt!",
-        aiThinking = false,
-        lastSkippedId = null,
+        round = state.round + 1, lastActionText = "Runde ${state.round + 1} beginnt!",
+        aiThinking = false, lastSkippedId = null, moveLog = state.moveLog + roundEntry,
     )
 }
 
 private fun doMMDraw(state: MMState, playerIdx: Int): MMState {
-    val player = state.players[playerIdx]
-    var (draw, discard) = mmReshuffleIfNeeded(state.drawPile, state.discardPile)
-    if (draw.isEmpty()) return state.copy(lastActionText = "Stapel leer – kein Ziehen möglich")
+    var st = applyPendingMauPenalty(state)
+    st = applyPendingMauMauPenalty(st)
 
-    if (state.drawPending > 0) {
-        // Draw penalty cards
-        val count = minOf(state.drawPending, draw.size)
+    val player = st.players[playerIdx]
+    var (draw, discard) = mmReshuffleIfNeeded(st.drawPile, st.discardPile)
+    if (draw.isEmpty()) return st.copy(lastActionText = "Stapel leer – kein Ziehen möglich")
+
+    val newMauPlayerId = if (player.userId == st.mauPlayerId) null else st.mauPlayerId
+
+    if (st.drawPending > 0) {
+        val count = minOf(st.drawPending, draw.size)
         val drawnCards = draw.take(count)
         draw = draw.drop(count)
-        val newHand = player.hand + drawnCards
-        val nextIdx = nextMMIdx(playerIdx, state.direction, state.players)
-        val newPlayers = state.players.toMutableList().also { it[playerIdx] = player.copy(hand = newHand) }
-        return state.copy(
+        val newPlayers = st.players.toMutableList().also {
+            it[playerIdx] = player.copy(hand = player.hand + drawnCards)
+        }
+        val nextIdx = nextMMIdx(playerIdx, st.direction, st.players)
+        val txt = "${player.displayName} zieht $count Karten (Strafe)"
+        val entry = MoveLogEntry(st.round, player.displayName, txt, System.currentTimeMillis())
+        return st.copy(
             players = newPlayers, drawPile = draw, discardPile = discard,
             currentPlayerIndex = nextIdx, drawPending = 0, drawnCard = null,
-            lastActionText = "${player.displayName} zieht ${count} Karten!",
-            turnId = state.turnId + 1,
+            mauPlayerId = newMauPlayerId, lastActionText = txt,
+            turnId = st.turnId + 1, moveLog = st.moveLog + entry,
         )
     }
 
-    // Draw one card, offer to play
     val drawnCard = draw.first()
     draw = draw.drop(1)
-    return state.copy(drawPile = draw, discardPile = discard, drawnCard = drawnCard, lastActionText = "${player.displayName} zieht eine Karte")
+    val txt = "${player.displayName} zieht eine Karte"
+    val entry = MoveLogEntry(st.round, player.displayName, txt, System.currentTimeMillis())
+    return st.copy(drawPile = draw, discardPile = discard, drawnCard = drawnCard,
+        mauPlayerId = newMauPlayerId, lastActionText = txt, moveLog = st.moveLog + entry)
 }
 
 // ── Online serialization ──────────────────────────────────────────────────────
@@ -456,6 +519,21 @@ private fun serializeMMState(state: MMState, adminId: String, playerIds: List<St
     ),
 )
 
+// ── Deck helper ───────────────────────────────────────────────────────────────
+
+private fun mmDealCards(playerCount: Int): Triple<List<List<MMCard>>, List<MMCard>, MMCard> {
+    var deck = shuffleMMDeck(createMMDeck()).toMutableList()
+    val hands = Array(playerCount) { mutableListOf<MMCard>() }
+    repeat(5) { repeat(playerCount) { p -> hands[p].add(deck.removeAt(0)) } }
+    var topCard: MMCard? = null
+    val remaining = mutableListOf<MMCard>()
+    for (c in deck) {
+        if (topCard == null && c.rank != "J") topCard = c else remaining.add(c)
+    }
+    if (topCard == null) return mmDealCards(playerCount)
+    return Triple(hands.map { it.toList() }, remaining, topCard)
+}
+
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -472,11 +550,13 @@ fun MeermauGameScreen(
     val uid = auth.currentUser?.uid ?: ""
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val logSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var localState by remember { mutableStateOf<MMState?>(null) }
     var selectedCardId by remember { mutableStateOf<String?>(null) }
     var adminId by remember { mutableStateOf("") }
     var onlinePlayerIds by remember { mutableStateOf<List<String>>(emptyList()) }
+    var showLog by remember { mutableStateOf(false) }
 
     val writeOnline: (MMState) -> Unit = { newState ->
         if (mode == "online" && gameId != null) {
@@ -490,7 +570,7 @@ fun MeermauGameScreen(
         }
     }
 
-    // Init
+    // ── Init ──────────────────────────────────────────────────────────────────
     LaunchedEffect(Unit) {
         val userSnap = db.collection("users").document(uid).get().await()
         val displayName = userSnap.getString("displayName") ?: "Du"
@@ -555,7 +635,7 @@ fun MeermauGameScreen(
         )
     }
 
-    // Online: Firestore snapshot listener
+    // ── Online snapshot listener ───────────────────────────────────────────────
     LaunchedEffect(gameId) {
         if (mode != "online" || gameId == null) return@LaunchedEffect
         val listener = db.collection("meermauGames").document(gameId)
@@ -570,7 +650,7 @@ fun MeermauGameScreen(
         try { awaitCancellation() } finally { listener.remove() }
     }
 
-    // Online: admin starts new round after ROUND_END
+    // ── Online: admin starts new round after ROUND_END ─────────────────────────
     LaunchedEffect(localState?.phase, localState?.round) {
         if (mode != "online" || gameId == null || uid != adminId || adminId.isEmpty()) return@LaunchedEffect
         val st = localState ?: return@LaunchedEffect
@@ -583,7 +663,7 @@ fun MeermauGameScreen(
         } catch (_: Exception) {}
     }
 
-    // AI turn
+    // ── AI turn ───────────────────────────────────────────────────────────────
     LaunchedEffect(localState?.currentPlayerIndex, localState?.phase, localState?.drawnCard, localState?.turnId) {
         if (mode == "online") return@LaunchedEffect
         val st = localState ?: return@LaunchedEffect
@@ -601,7 +681,7 @@ fun MeermauGameScreen(
         }
     }
 
-    // AI drawn-card decision
+    // ── AI drawn-card decision ─────────────────────────────────────────────────
     LaunchedEffect(localState?.drawnCard, localState?.currentPlayerIndex) {
         if (mode == "online") return@LaunchedEffect
         val st = localState ?: return@LaunchedEffect
@@ -612,40 +692,33 @@ fun MeermauGameScreen(
         val top = st.discardPile.lastOrNull() ?: return@LaunchedEffect
         val canPlay = canPlayMM(drawnCard, top, st.wishSuit, st.drawPending, st.settings)
         localState = if (canPlay && (st.difficulty != "ROOKIE" || Random.nextFloat() > 0.3f)) {
-            val ws = if (drawnCard.rank == "J" || (st.settings.wildOn10 && drawnCard.rank == "10")) bestWishSuitMM(current.hand) else null
+            val ws = if (drawnCard.rank == "J" || (st.settings.wildOn10 && drawnCard.rank == "10"))
+                bestWishSuitMM(current.hand) else null
             doMMPlay(st, st.currentPlayerIndex, drawnCard.id, ws)
         } else {
-            // Keep drawn card
             val newHand = current.hand + drawnCard
             val nextIdx = nextMMIdx(st.currentPlayerIndex, st.direction, st.players)
-            val newPlayers = st.players.toMutableList().also { it[st.currentPlayerIndex] = current.copy(hand = newHand) }
-            st.copy(players = newPlayers, drawnCard = null, currentPlayerIndex = nextIdx, lastActionText = "${current.displayName} behält die Karte")
+            val newPlayers = st.players.toMutableList().also {
+                it[st.currentPlayerIndex] = current.copy(hand = newHand)
+            }
+            st.copy(players = newPlayers, drawnCard = null, currentPlayerIndex = nextIdx,
+                lastActionText = "${current.displayName} behält die Karte")
         }
     }
 
-    // AI MAU check
-    LaunchedEffect(localState?.phase, localState?.mauPlayerId) {
-        if (mode == "online") return@LaunchedEffect
-        val st = localState ?: return@LaunchedEffect
-        if (st.phase != "MAU_CHECK") return@LaunchedEffect
-        val mauPlayer = st.players.find { it.userId == st.mauPlayerId } ?: return@LaunchedEffect
-        if (!mauPlayer.isAI) return@LaunchedEffect
-        delay(700)
-        localState = st.copy(phase = "PLAYING", mauPlayerId = null, lastActionText = "${mauPlayer.displayName}: MAU!")
-    }
-
-    // Save result on game over
+    // ── Save result on game over ───────────────────────────────────────────────
     LaunchedEffect(localState?.phase) {
         val st = localState ?: return@LaunchedEffect
         if (st.phase != "GAME_OVER") return@LaunchedEffect
         val winnerId = st.gameWinnerId ?: return@LaunchedEffect
-        val winner = st.players.find { it.userId == winnerId } ?: return@LaunchedEffect
         try {
             db.collection("meermauResults").add(
                 mapOf(
                     "winnerId" to winnerId,
                     "playerIds" to st.players.map { it.userId },
-                    "players" to st.players.map { mapOf("userId" to it.userId, "displayName" to it.displayName, "avatarUrl" to it.avatarUrl) },
+                    "players" to st.players.map {
+                        mapOf("userId" to it.userId, "displayName" to it.displayName, "avatarUrl" to it.avatarUrl)
+                    },
                     "rounds" to st.round,
                     "mode" to mode,
                     "difficulty" to difficulty,
@@ -655,6 +728,7 @@ fun MeermauGameScreen(
         } catch (_: Exception) {}
     }
 
+    // ── Render ────────────────────────────────────────────────────────────────
     val st = localState
     if (st == null) {
         Box(Modifier.fillMaxSize().background(BgDark), contentAlignment = Alignment.Center) {
@@ -667,8 +741,58 @@ fun MeermauGameScreen(
     val myHand = myPlayer?.hand ?: emptyList()
     val topCard = st.discardPile.lastOrNull()
     val currentPlayer = st.players.getOrNull(st.currentPlayerIndex)
-    val isMyTurn = currentPlayer?.userId == uid
+    val isMyTurn = currentPlayer?.userId == uid && !st.aiThinking
     val opponents = st.players.filter { it.userId != uid }
+    val drawnCard = st.drawnCard
+
+    val playableIds = if (isMyTurn && st.phase == "PLAYING" && topCard != null)
+        myHand.filter { canPlayMM(it, topCard, st.wishSuit, st.drawPending, st.settings) }.map { it.id }.toSet()
+    else emptySet()
+
+    val canPlaySelected = selectedCardId != null && playableIds.contains(selectedCardId)
+    val hasAnyPlayable = playableIds.isNotEmpty()
+
+    // ── MAU / MAU-MAU handlers ─────────────────────────────────────────────
+    fun handleMau() {
+        val s = localState ?: return
+        val postPlay = s.pendingMau == uid
+        val prePlay = isMyTurn && s.phase == "PLAYING" && myHand.size == 2 && canPlaySelected && drawnCard == null
+        if (!postPlay && !prePlay) return
+        val mp = s.players[0]
+        val mauTxt = "${mp.displayName}: MAU!"
+        val entry = MoveLogEntry(s.round, mp.displayName, mauTxt, System.currentTimeMillis())
+        localState = s.copy(pendingMau = null, mauPlayerId = uid, lastActionText = mauTxt, moveLog = s.moveLog + entry)
+    }
+
+    fun handleMauMau() {
+        val s = localState ?: return
+        if (s.pendingMauMau == uid) {
+            val ph = s.players.find { it.userId == uid } ?: return
+            val entry = MoveLogEntry(s.round, ph.displayName, "🏆 ${ph.displayName}: MAU MAU!", System.currentTimeMillis())
+            val winnerIdx = s.players.indexOfFirst { it.userId == uid }
+            localState = mmResolveRound(
+                s.copy(pendingMauMau = null, roundWinnerId = uid,
+                    lastActionText = "🏆 ${ph.displayName}: MAU MAU!",
+                    moveLog = s.moveLog + entry),
+                winnerIdx,
+            )
+            return
+        }
+        if (!isMyTurn || s.phase != "PLAYING" || myHand.size != 1 || !hasAnyPlayable || s.mauMauReady || drawnCard != null) return
+        val mp = s.players[0]
+        val mauTxt = "${mp.displayName}: MAU MAU! (bereit)"
+        val entry = MoveLogEntry(s.round, mp.displayName, mauTxt, System.currentTimeMillis())
+        localState = s.copy(mauMauReady = true, moveLog = s.moveLog + entry)
+    }
+
+    val statusText = when {
+        st.pendingMauMau == uid -> "⚡ Schnell MAU MAU drücken!"
+        st.pendingMau == uid    -> "⚡ Schnell MAU drücken!"
+        st.aiThinking           -> "${currentPlayer?.displayName ?: ""} denkt…"
+        isMyTurn && st.phase == "PLAYING" -> "Du bist dran"
+        st.phase == "PLAYING"   -> "${currentPlayer?.displayName ?: ""} ist dran"
+        else                    -> ""
+    }
 
     Scaffold(
         containerColor = BgDark,
@@ -683,6 +807,26 @@ fun MeermauGameScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück", tint = TextPrimary)
+                    }
+                },
+                actions = {
+                    Box {
+                        IconButton(onClick = { showLog = true }) {
+                            Text("📋", fontSize = 18.sp)
+                        }
+                        if (st.moveLog.isNotEmpty()) {
+                            Surface(
+                                color = MeermauViolet, shape = RoundedCornerShape(50),
+                                modifier = Modifier.size(16.dp).align(Alignment.TopEnd).offset(x = (-4).dp, y = 4.dp),
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        if (st.moveLog.size > 99) "99+" else "${st.moveLog.size}",
+                                        fontSize = 7.sp, color = Color.White, fontWeight = FontWeight.Black,
+                                    )
+                                }
+                            }
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark),
@@ -700,6 +844,7 @@ fun MeermauGameScreen(
             ) {
                 opponents.forEach { opp ->
                     val isOppTurn = currentPlayer?.userId == opp.userId
+                    val isMau = opp.userId == st.mauPlayerId
                     Surface(
                         color = if (isOppTurn) MeermauViolet.copy(alpha = 0.18f) else SurfaceDark,
                         shape = RoundedCornerShape(12.dp),
@@ -707,16 +852,18 @@ fun MeermauGameScreen(
                     ) {
                         Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(opp.avatarUrl, fontSize = 22.sp)
-                            Text(opp.displayName, style = MaterialTheme.typography.labelMedium, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(opp.displayName, style = MaterialTheme.typography.labelMedium, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                                if (isMau) Text("MAU!", style = MaterialTheme.typography.labelSmall, color = MeermauViolet, fontWeight = FontWeight.Black)
+                            }
                             Text("${opp.hand.size} Karten · ${opp.totalScore}P", style = MaterialTheme.typography.labelSmall, color = TextMuted)
                             if (opp.eliminated) Text("❌ Aus", style = MaterialTheme.typography.labelSmall, color = Danger)
-                            // Face-down cards
                             Row(horizontalArrangement = Arrangement.spacedBy((-12).dp), modifier = Modifier.padding(top = 6.dp)) {
                                 opp.hand.take(5).forEach { _ ->
-                                    Box(
-                                        modifier = Modifier.size(width = 28.dp, height = 40.dp).clip(RoundedCornerShape(4.dp))
-                                            .border(1.dp, MeermauViolet.copy(alpha = 0.4f), RoundedCornerShape(4.dp)),
-                                    ) { CardBackScene(modifier = Modifier.fillMaxSize()) }
+                                    Box(modifier = Modifier.size(width = 28.dp, height = 40.dp).clip(RoundedCornerShape(4.dp))
+                                        .border(1.dp, MeermauViolet.copy(alpha = 0.4f), RoundedCornerShape(4.dp))) {
+                                        CardBackScene(modifier = Modifier.fillMaxSize())
+                                    }
                                 }
                                 if (opp.hand.size > 5) Text("+${opp.hand.size - 5}", color = TextMuted, fontSize = 10.sp, modifier = Modifier.align(Alignment.CenterVertically))
                             }
@@ -733,7 +880,6 @@ fun MeermauGameScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                        // Draw pile
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Box(modifier = Modifier.size(width = 56.dp, height = 80.dp).clip(RoundedCornerShape(8.dp)).border(1.dp, MeermauViolet.copy(alpha = 0.4f), RoundedCornerShape(8.dp))) {
                                 CardBackScene(modifier = Modifier.fillMaxSize())
@@ -741,20 +887,12 @@ fun MeermauGameScreen(
                             Text("${st.drawPile.size} 🂠", style = MaterialTheme.typography.labelSmall, color = TextMuted)
                             if (st.drawPending > 0) Text("+${st.drawPending}", style = MaterialTheme.typography.labelMedium, color = Danger, fontWeight = FontWeight.Bold)
                         }
-
-                        // Direction indicator
                         Text(if (st.direction == 1) "→" else "←", fontSize = 24.sp, color = MeermauViolet)
-
-                        // Discard pile
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            if (topCard != null) {
-                                MMPlayingCard(rank = topCard.rank, suit = topCard.suit, faceUp = true, selected = false)
-                            }
+                            if (topCard != null) MMPlayingCard(rank = topCard.rank, suit = topCard.suit, faceUp = true, selected = false)
                             Text("Ablage", style = MaterialTheme.typography.labelSmall, color = TextMuted)
                         }
                     }
-
-                    // Wish suit / skip indicators
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                         if (st.wishSuit != null) {
                             Surface(color = MeermauViolet.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp)) {
@@ -774,17 +912,15 @@ fun MeermauGameScreen(
 
             // ── Status ──
             Text(
-                text = when {
-                    st.aiThinking -> "${currentPlayer?.displayName ?: ""} denkt…"
-                    isMyTurn && st.phase == "PLAYING" -> "Du bist dran"
-                    isMyTurn && st.phase == "MAU_CHECK" -> "Sag MAU!"
-                    st.phase == "PLAYING" -> "${currentPlayer?.displayName ?: ""} ist dran"
-                    else -> ""
-                },
+                text = statusText,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.titleSmall,
-                color = if (isMyTurn) MeermauViolet else TextSub,
+                color = when {
+                    st.pendingMauMau == uid || st.pendingMau == uid -> MauOrange
+                    isMyTurn -> MeermauViolet
+                    else -> TextSub
+                },
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
@@ -798,37 +934,37 @@ fun MeermauGameScreen(
             // ── Player hand ──
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                 Text(
-                    "Du · ${myHand.size + if (st.drawnCard != null && isMyTurn) 1 else 0} Karten · ${myPlayer?.totalScore ?: 0} Punkte",
+                    "Du · ${myHand.size + if (drawnCard != null && isMyTurn) 1 else 0} Karten · ${myPlayer?.totalScore ?: 0} Punkte",
                     style = MaterialTheme.typography.labelSmall, color = TextMuted, modifier = Modifier.padding(bottom = 6.dp),
                 )
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     myHand.forEach { card ->
-                        val canPlay = topCard != null && isMyTurn && st.phase == "PLAYING" &&
-                            canPlayMM(card, topCard, st.wishSuit, st.drawPending, st.settings)
+                        val canPlay = topCard != null && isMyTurn && st.phase == "PLAYING" && playableIds.contains(card.id)
                         MMPlayingCard(
                             rank = card.rank, suit = card.suit, faceUp = true,
                             selected = selectedCardId == card.id,
                             modifier = Modifier
-                                .clickable(enabled = canPlay || (isMyTurn && selectedCardId == card.id)) {
-                                    selectedCardId = if (selectedCardId == card.id) null else if (canPlay) card.id else null
+                                .clickable(enabled = isMyTurn && st.phase == "PLAYING") {
+                                    selectedCardId = if (selectedCardId == card.id) null
+                                    else if (canPlay || selectedCardId != null) card.id
+                                    else null
                                 }
                                 .alpha(if (canPlay || selectedCardId == card.id || !isMyTurn) 1f else 0.45f)
                                 .offset(y = if (selectedCardId == card.id) (-8).dp else 0.dp),
                         )
                     }
-                    val drawnCard = st.drawnCard
                     if (drawnCard != null && isMyTurn) {
-                        val canPlay = topCard != null && canPlayMM(drawnCard, topCard, st.wishSuit, st.drawPending, st.settings)
+                        val canPlayDrawn = topCard != null && canPlayMM(drawnCard, topCard, st.wishSuit, st.drawPending, st.settings)
                         Box {
                             MMPlayingCard(
                                 rank = drawnCard.rank, suit = drawnCard.suit, faceUp = true,
                                 selected = selectedCardId == drawnCard.id,
-                                modifier = Modifier.clickable(enabled = isMyTurn && canPlay) {
-                                    selectedCardId = if (selectedCardId == drawnCard.id) null else drawnCard.id
-                                }.alpha(if (isMyTurn && canPlay) 1f else 0.5f).offset(y = if (selectedCardId == drawnCard.id) (-8).dp else 0.dp),
+                                modifier = Modifier
+                                    .clickable(enabled = isMyTurn && canPlayDrawn) {
+                                        selectedCardId = if (selectedCardId == drawnCard.id) null else drawnCard.id
+                                    }
+                                    .alpha(if (isMyTurn && canPlayDrawn) 1f else 0.5f)
+                                    .offset(y = if (selectedCardId == drawnCard.id) (-8).dp else 0.dp),
                             )
                             Surface(color = MeermauViolet, shape = RoundedCornerShape(4.dp), modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp)) {
                                 Text("NEU", fontSize = 7.sp, color = Color.White, modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp))
@@ -839,82 +975,97 @@ fun MeermauGameScreen(
             }
 
             // ── Action buttons ──
-            val drawnCard = st.drawnCard
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                if (drawnCard != null && isMyTurn) {
-                    // Keep or play drawn card
-                    OutlinedButton(
-                        onClick = {
-                            val newHand = myHand + drawnCard
-                            val nextIdx = nextMMIdx(st.currentPlayerIndex, st.direction, st.players)
-                            val newPlayers = st.players.toMutableList().also {
-                                it[st.currentPlayerIndex] = it[st.currentPlayerIndex].copy(hand = newHand)
-                            }
-                            val ns = st.copy(players = newPlayers, drawnCard = null, currentPlayerIndex = nextIdx, lastActionText = "Du behältst die Karte")
-                            localState = ns; selectedCardId = null
-                            writeOnline(ns)
-                        },
-                        modifier = Modifier.weight(1f).height(50.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSub),
-                    ) { Text("Behalten") }
-
-                    val canPlayDrawn = topCard != null && canPlayMM(drawnCard, topCard, st.wishSuit, st.drawPending, st.settings)
-                    Button(
-                        onClick = {
-                            val s = doMMPlay(st, st.currentPlayerIndex, drawnCard.id)
-                            localState = s; selectedCardId = null
-                            writeOnline(s)
-                        },
-                        enabled = canPlayDrawn,
-                        modifier = Modifier.weight(1f).height(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MeermauViolet, disabledContainerColor = MeermauViolet.copy(alpha = 0.3f)),
-                        shape = RoundedCornerShape(12.dp),
-                    ) { Text("Spielen", fontWeight = FontWeight.Bold) }
-                } else {
-                    // Draw or play
-                    OutlinedButton(
-                        onClick = {
-                            if (!isMyTurn || st.phase != "PLAYING") return@OutlinedButton
-                            localState = doMMDraw(st, st.currentPlayerIndex)
-                            selectedCardId = null
-                        },
-                        enabled = isMyTurn && st.phase == "PLAYING" && drawnCard == null,
-                        modifier = Modifier.weight(1f).height(50.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSub),
-                    ) { Text(if (st.drawPending > 0) "Ziehen (+${st.drawPending})" else "Karte ziehen") }
-
-                    Button(
-                        onClick = {
-                            val cid = selectedCardId ?: return@Button
-                            val s = doMMPlay(st, st.currentPlayerIndex, cid)
-                            localState = s; selectedCardId = null
-                            writeOnline(s)
-                        },
-                        enabled = isMyTurn && st.phase == "PLAYING" && selectedCardId != null,
-                        modifier = Modifier.weight(1f).height(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MeermauViolet, disabledContainerColor = MeermauViolet.copy(alpha = 0.3f)),
-                        shape = RoundedCornerShape(12.dp),
-                    ) { Text("Spielen", fontWeight = FontWeight.Bold) }
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Row 1: Ziehen/Behalten + Spielen
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (drawnCard != null && isMyTurn) {
+                        OutlinedButton(
+                            onClick = {
+                                val newHand = myHand + drawnCard
+                                val nextIdx = nextMMIdx(st.currentPlayerIndex, st.direction, st.players)
+                                val newPlayers = st.players.toMutableList().also {
+                                    it[st.currentPlayerIndex] = it[st.currentPlayerIndex].copy(hand = newHand)
+                                }
+                                val ns = st.copy(players = newPlayers, drawnCard = null, currentPlayerIndex = nextIdx, lastActionText = "Du behältst die Karte")
+                                localState = ns; selectedCardId = null; writeOnline(ns)
+                            },
+                            modifier = Modifier.weight(1f).height(50.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSub),
+                        ) { Text("Behalten") }
+                        val canPlayDrawn = topCard != null && canPlayMM(drawnCard, topCard, st.wishSuit, st.drawPending, st.settings)
+                        Button(
+                            onClick = {
+                                val s = doMMPlay(st, st.currentPlayerIndex, drawnCard.id)
+                                localState = s; selectedCardId = null; writeOnline(s)
+                            },
+                            enabled = canPlayDrawn,
+                            modifier = Modifier.weight(1f).height(50.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MeermauViolet, disabledContainerColor = MeermauViolet.copy(alpha = 0.3f)),
+                            shape = RoundedCornerShape(12.dp),
+                        ) { Text("Spielen", fontWeight = FontWeight.Bold) }
+                    } else {
+                        OutlinedButton(
+                            onClick = {
+                                if (!isMyTurn || st.phase != "PLAYING") return@OutlinedButton
+                                localState = doMMDraw(st, st.currentPlayerIndex); selectedCardId = null
+                            },
+                            enabled = isMyTurn && st.phase == "PLAYING" && drawnCard == null,
+                            modifier = Modifier.weight(1f).height(50.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSub),
+                        ) { Text(if (st.drawPending > 0) "Ziehen (+${st.drawPending})" else "Karte ziehen") }
+                        Button(
+                            onClick = {
+                                val cid = selectedCardId ?: return@Button
+                                val s = doMMPlay(st, st.currentPlayerIndex, cid)
+                                localState = s; selectedCardId = null; writeOnline(s)
+                            },
+                            enabled = isMyTurn && st.phase == "PLAYING" && canPlaySelected && drawnCard == null,
+                            modifier = Modifier.weight(1f).height(50.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MeermauViolet, disabledContainerColor = MeermauViolet.copy(alpha = 0.3f)),
+                            shape = RoundedCornerShape(12.dp),
+                        ) { Text("Spielen", fontWeight = FontWeight.Bold) }
+                    }
                 }
-            }
 
-            // MAU button
-            if (st.phase == "MAU_CHECK" && st.mauPlayerId == uid) {
-                Button(
-                    onClick = {
-                        val ns = st.copy(phase = "PLAYING", mauPlayerId = null, lastActionText = "MAU!")
-                        localState = ns; writeOnline(ns)
-                    },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).height(52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = SandGold),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text("MAU! 🂠", fontWeight = FontWeight.Black, fontSize = 18.sp, color = BgDark)
+                // Row 2: MAU + MAU MAU buttons
+                val showMau = (isMyTurn && st.phase == "PLAYING" && myHand.size == 2 && canPlaySelected && drawnCard == null)
+                    || st.pendingMau == uid
+                val showMauMau = ((isMyTurn && st.phase == "PLAYING" && myHand.size == 1 && hasAnyPlayable && !st.mauMauReady && drawnCard == null)
+                    || st.pendingMauMau == uid)
+                val showMauMauReady = st.mauMauReady && isMyTurn && st.phase == "PLAYING" && myHand.size == 1
+
+                if (showMau || showMauMau || showMauMauReady) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (showMau) {
+                            Button(
+                                onClick = { handleMau() },
+                                modifier = Modifier.weight(1f).height(50.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MauOrange),
+                                shape = RoundedCornerShape(12.dp),
+                            ) { Text("🂠 MAU!", fontWeight = FontWeight.Black, fontSize = 16.sp) }
+                        }
+                        if (showMauMau) {
+                            Button(
+                                onClick = { handleMauMau() },
+                                modifier = Modifier.weight(1f).height(50.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MauMauGreen),
+                                shape = RoundedCornerShape(12.dp),
+                            ) { Text("🏆 MAU MAU!", fontWeight = FontWeight.Black, fontSize = 16.sp) }
+                        }
+                        if (showMauMauReady) {
+                            Surface(
+                                color = MauMauGreen.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.weight(1f).height(50.dp).border(1.dp, MauMauGreen, RoundedCornerShape(12.dp)),
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text("✓ MAU MAU gerufen!", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MauMauGreen)
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -922,7 +1073,74 @@ fun MeermauGameScreen(
         }
     }
 
-    // ── WISH dialog ──
+    // ── Spielverlauf sheet ────────────────────────────────────────────────────
+    if (showLog) {
+        ModalBottomSheet(
+            onDismissRequest = { showLog = false },
+            sheetState = logSheetState,
+            containerColor = SurfaceDark,
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp).fillMaxWidth()) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("📋 Spielverlauf", style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.ExtraBold)
+                    IconButton(onClick = { showLog = false; scope.launch { logSheetState.hide() } }) {
+                        Text("✕", color = TextMuted, fontSize = 18.sp)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    if (st.moveLog.isEmpty()) {
+                        Text("Noch keine Spielzüge", color = TextMuted, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 20.dp).fillMaxWidth(), textAlign = TextAlign.Center)
+                    } else {
+                        st.moveLog.reversed().forEach { entry ->
+                            val isSystem = entry.playerName == "System"
+                            val isMAU = entry.detail.contains("MAU")
+                            val isDraw = entry.detail.contains("zieht")
+                            val isWin = entry.detail.contains("gewinnt") || entry.detail.contains("🏆")
+                            if (isSystem) {
+                                Text(entry.detail, style = MaterialTheme.typography.labelSmall, color = TextMuted, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                            } else {
+                                val borderColor = when {
+                                    isWin || isMAU -> MeermauViolet
+                                    isDraw -> Danger
+                                    else -> Color(0xFF1E3050)
+                                }
+                                val textColor = when {
+                                    isWin || isMAU -> MeermauViolet
+                                    isDraw -> Danger
+                                    else -> TextPrimary
+                                }
+                                Surface(
+                                    color = when {
+                                        isWin -> MeermauViolet.copy(alpha = 0.12f)
+                                        isMAU -> MeermauViolet.copy(alpha = 0.08f)
+                                        isDraw -> Danger.copy(alpha = 0.08f)
+                                        else -> Surface2Dark
+                                    },
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth().border(1.dp, borderColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
+                                ) {
+                                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                                        Text(entry.detail, style = MaterialTheme.typography.bodySmall, color = textColor, fontWeight = if (isWin || isMAU) FontWeight.Bold else FontWeight.Normal)
+                                        Text(
+                                            "Runde ${entry.round} · ${java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.GERMAN).format(java.util.Date(entry.ts))}",
+                                            style = MaterialTheme.typography.labelSmall, color = TextMuted,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
+            }
+        }
+    }
+
+    // ── WISH dialog ───────────────────────────────────────────────────────────
     if (st.phase == "WISH") {
         Dialog(onDismissRequest = {}) {
             Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = SurfaceDark)) {
@@ -937,14 +1155,35 @@ fun MeermauGameScreen(
                                     val playerIdx = st.currentPlayerIndex
                                     val player2 = st.players[playerIdx]
                                     val ns = when {
-                                        player2.hand.isEmpty() -> mmResolveRound(st.copy(wishSuit = suit), playerIdx)
+                                        player2.hand.isEmpty() -> {
+                                            if (playerIdx != 0 || st.mauMauReady) {
+                                                mmResolveRound(st.copy(wishSuit = suit, mauMauReady = false, pendingMauMau = null, roundWinnerId = player2.userId), playerIdx)
+                                            } else {
+                                                val ni = nextMMIdx(playerIdx, st.direction, st.players)
+                                                st.copy(wishSuit = suit, phase = "PLAYING", currentPlayerIndex = ni,
+                                                    pendingMauMau = player2.userId, mauMauReady = false,
+                                                    lastActionText = "${player2.displayName} spielt letzte Karte!")
+                                            }
+                                        }
                                         player2.hand.size == 1 -> {
-                                            val nextIdx = nextMMIdx(playerIdx, st.direction, st.players)
-                                            st.copy(wishSuit = suit, phase = "MAU_CHECK", mauPlayerId = player2.userId, currentPlayerIndex = nextIdx)
+                                            val ni = nextMMIdx(playerIdx, st.direction, st.players)
+                                            val autoMau = playerIdx != 0 || st.mauPlayerId == player2.userId
+                                            val mauTxt = "${player2.displayName}: MAU!"
+                                            if (autoMau) {
+                                                val mauEntry = MoveLogEntry(st.round, player2.displayName, mauTxt, System.currentTimeMillis())
+                                                st.copy(wishSuit = suit, phase = "PLAYING", currentPlayerIndex = ni,
+                                                    mauPlayerId = player2.userId, pendingMau = null,
+                                                    lastActionText = mauTxt, moveLog = st.moveLog + mauEntry)
+                                            } else {
+                                                st.copy(wishSuit = suit, phase = "PLAYING", currentPlayerIndex = ni,
+                                                    mauPlayerId = null, pendingMau = player2.userId,
+                                                    lastActionText = "${player2.displayName} wünscht $suit!")
+                                            }
                                         }
                                         else -> {
-                                            val nextIdx = nextMMIdx(playerIdx, st.direction, st.players)
-                                            st.copy(wishSuit = suit, phase = "PLAYING", currentPlayerIndex = nextIdx, lastActionText = "${player2.displayName} wünscht $suit!")
+                                            val ni = nextMMIdx(playerIdx, st.direction, st.players)
+                                            st.copy(wishSuit = suit, phase = "PLAYING", currentPlayerIndex = ni,
+                                                lastActionText = "${player2.displayName} wünscht $suit!")
                                         }
                                     }
                                     localState = ns; writeOnline(ns)
@@ -960,7 +1199,7 @@ fun MeermauGameScreen(
         }
     }
 
-    // ── Round end / Game over sheet ──
+    // ── Round end / Game over sheet ───────────────────────────────────────────
     if (st.phase == "ROUND_END" || st.phase == "GAME_OVER") {
         ModalBottomSheet(
             onDismissRequest = {},
