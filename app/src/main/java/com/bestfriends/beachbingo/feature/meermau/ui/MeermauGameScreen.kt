@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -839,7 +840,7 @@ fun MeermauGameScreen(
         ) {
             // ── Opponents ──
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).horizontalScroll(rememberScrollState()),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp).horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 opponents.forEach { opp ->
@@ -875,8 +876,9 @@ fun MeermauGameScreen(
             // ── Table ──
             Card(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+                shape = RoundedCornerShape(60.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1a5c2e)),
+                border = androidx.compose.foundation.BorderStroke(4.dp, Color(0xFF8B7355)),
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
@@ -1188,10 +1190,18 @@ fun MeermauGameScreen(
                                     }
                                     localState = ns; writeOnline(ns)
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = if (isRed) Danger else Color(0xFF1A1A2E)),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFF5F5F5),
+                                    contentColor = if (isRed) Color(0xFFCC0000) else Color(0xFF111111),
+                                ),
                                 shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.size(56.dp),
-                            ) { Text(suit, fontSize = 22.sp) }
+                                modifier = Modifier.size(64.dp),
+                                contentPadding = PaddingValues(0.dp),
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Text(suit, fontSize = 28.sp, lineHeight = 28.sp)
+                                }
+                            }
                         }
                     }
                 }
