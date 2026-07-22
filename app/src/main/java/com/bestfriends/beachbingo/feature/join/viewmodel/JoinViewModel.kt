@@ -48,7 +48,7 @@ class JoinViewModel @Inject constructor(
     val uiState: StateFlow<JoinUiState> = _uiState.asStateFlow()
 
     fun joinGame(rawCode: String) {
-        val code = rawCode.trim().uppercase()
+        val code = rawCode.trim()
         if (code.isBlank()) return
         viewModelScope.launch {
             val user = authRepository.currentUser.first { it != null } ?: return@launch
@@ -57,8 +57,8 @@ class JoinViewModel @Inject constructor(
                 val bingoDeferred    = async { firestore.collection("games").document(code).get().await() }
                 val pongDeferred     = async { firestore.collection("pongGames").document(code).get().await() }
                 val vierDeferred     = async { firestore.collection("vierGames").document(code).get().await() }
-                val brandungDeferred = async { firestore.collection("brandungGames").whereEqualTo("gameCode", code).limit(1).get().await() }
-                val meermauDeferred  = async { firestore.collection("meermauGames").whereEqualTo("gameCode", code).limit(1).get().await() }
+                val brandungDeferred = async { firestore.collection("brandungGames").document(code).get().await() }
+                val meermauDeferred  = async { firestore.collection("meermauGames").document(code).get().await() }
 
                 val bingoSnap    = bingoDeferred.await()
                 val pongSnap     = pongDeferred.await()
@@ -67,17 +67,11 @@ class JoinViewModel @Inject constructor(
                 val meermauSnap  = meermauDeferred.await()
 
                 val destination: JoinDestination? = when {
-                    bingoSnap.exists()            -> joinBingo(code, bingoSnap.data!!, user.uid, user.displayName, user.avatarUrl)
-                    pongSnap.exists()             -> joinPong(code, pongSnap.data!!, user.uid, user.displayName, user.avatarUrl)
-                    vierSnap.exists()             -> joinVier(code, vierSnap.data!!, user.uid, user.displayName, user.avatarUrl, user.preferredVierDrinkId ?: "lager")
-                    !brandungSnap.isEmpty        -> {
-                        val doc = brandungSnap.documents[0]
-                        joinBrandung(doc.id, doc.data ?: emptyMap(), user.uid, user.displayName, user.avatarUrl)
-                    }
-                    !meermauSnap.isEmpty         -> {
-                        val doc = meermauSnap.documents[0]
-                        joinMeerMau(doc.id, doc.data ?: emptyMap(), user.uid, user.displayName, user.avatarUrl)
-                    }
+                    bingoSnap.exists()    -> joinBingo(code, bingoSnap.data!!, user.uid, user.displayName, user.avatarUrl)
+                    pongSnap.exists()     -> joinPong(code, pongSnap.data!!, user.uid, user.displayName, user.avatarUrl)
+                    vierSnap.exists()     -> joinVier(code, vierSnap.data!!, user.uid, user.displayName, user.avatarUrl, user.preferredVierDrinkId ?: "lager")
+                    brandungSnap.exists() -> joinBrandung(code, brandungSnap.data!!, user.uid, user.displayName, user.avatarUrl)
+                    meermauSnap.exists()  -> joinMeerMau(code, meermauSnap.data!!, user.uid, user.displayName, user.avatarUrl)
                     else -> { _uiState.update { it.copy(isLoading = false, error = "Kein Spiel mit diesem Code gefunden.") }; null }
                 }
                 if (destination != null) {
