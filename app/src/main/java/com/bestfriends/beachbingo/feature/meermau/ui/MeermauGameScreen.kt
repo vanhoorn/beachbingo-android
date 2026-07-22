@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -865,10 +866,27 @@ fun MeermauGameScreen(
                             }
                             Text("${opp.hand.size} Karten · ${opp.totalScore}P", style = MaterialTheme.typography.labelSmall, color = TextMuted)
                             if (opp.eliminated) Text("❌ Aus", style = MaterialTheme.typography.labelSmall, color = Danger)
-                            Row(horizontalArrangement = Arrangement.spacedBy((-12).dp), modifier = Modifier.padding(top = 6.dp)) {
-                                opp.hand.take(5).forEach { _ ->
-                                    Box(modifier = Modifier.size(width = 28.dp, height = 40.dp).clip(RoundedCornerShape(4.dp))
-                                        .border(1.dp, MeermauViolet.copy(alpha = 0.4f), RoundedCornerShape(4.dp))) {
+                            val fanCount = minOf(opp.hand.size, 5)
+                            val fanAngles = when (fanCount) {
+                                1 -> listOf(0f)
+                                2 -> listOf(-10f, 10f)
+                                3 -> listOf(-15f, 0f, 15f)
+                                4 -> listOf(-20f, -7f, 7f, 20f)
+                                else -> listOf(-20f, -10f, 0f, 10f, 20f)
+                            }
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy((-10).dp),
+                                modifier = Modifier.padding(top = 6.dp),
+                                verticalAlignment = Alignment.Bottom,
+                            ) {
+                                fanAngles.forEachIndexed { idx, angle ->
+                                    Box(
+                                        modifier = Modifier
+                                            .size(width = 28.dp, height = 40.dp)
+                                            .rotate(angle)
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .border(1.dp, MeermauViolet.copy(alpha = 0.4f), RoundedCornerShape(4.dp)),
+                                    ) {
                                         CardBackScene(modifier = Modifier.fillMaxSize())
                                     }
                                 }

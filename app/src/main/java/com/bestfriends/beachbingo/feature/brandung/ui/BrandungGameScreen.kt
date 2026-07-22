@@ -1079,8 +1079,9 @@ fun BrandungGameScreen(
             // ── Table (middle) ──
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Surface2Dark),
+                shape = RoundedCornerShape(60.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1a5c2e)),
+                border = androidx.compose.foundation.BorderStroke(3.dp, Color(0xFF8B7355)),
             ) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
@@ -1088,8 +1089,8 @@ fun BrandungGameScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("Tischmitte", style = MaterialTheme.typography.labelSmall, color = TextMuted)
-                        Text("Stapel: ${currentState.deck.size}", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                        Text("Tischmitte", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
+                        Text("Stapel: ${currentState.deck.size}", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth(),

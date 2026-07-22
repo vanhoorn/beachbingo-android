@@ -306,6 +306,8 @@ fun WormGameScreen(
             Text("Länge", fontSize = 10.sp, color = TextMuted)
         }
 
+        Spacer(Modifier.height(8.dp))
+
         // Canvas
         Box(
             modifier = Modifier
@@ -313,9 +315,10 @@ fun WormGameScreen(
                 .weight(1f),
             contentAlignment = Alignment.Center,
         ) {
-            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                val pxW  = with(density) { maxWidth.toPx() }
-                val scale = pxW / VIRT_W
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val pxW   = with(density) { maxWidth.toPx() }
+                val pxH   = with(density) { maxHeight.toPx() }
+                val scale = min(pxW / VIRT_W, pxH / VIRT_H)
 
                 val swipeMod = if (controlMode == "SWIPE") {
                     Modifier.pointerInput(Unit) {
@@ -333,8 +336,10 @@ fun WormGameScreen(
 
                 Canvas(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(with(density) { (VIRT_H * scale).toDp() })
+                        .size(
+                            width  = with(density) { (VIRT_W * scale).toDp() },
+                            height = with(density) { (VIRT_H * scale).toDp() },
+                        )
                         .then(swipeMod),
                 ) {
                     @Suppress("UNUSED_EXPRESSION")
