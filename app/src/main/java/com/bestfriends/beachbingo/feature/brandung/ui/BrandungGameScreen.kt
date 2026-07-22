@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -46,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -53,11 +55,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalConfiguration
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -1016,6 +1020,13 @@ fun BrandungGameScreen(
             return@Scaffold
         }
 
+        val screenWidthDp = LocalConfiguration.current.screenWidthDp
+        val cardScale = (screenWidthDp / 390f).coerceIn(1f, 2f)
+        val scaledCardW = (56 * cardScale).dp
+        val scaledCardH = (80 * cardScale).dp
+        val scaledHiddenW = (28 * cardScale).dp
+        val scaledHiddenH = (40 * cardScale).dp
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -1067,8 +1078,24 @@ fun BrandungGameScreen(
                                 if (opponent.isAI && currentState.aiThinking && isCurrentTurn) {
                                     Text("…", color = BrandungTeal, fontSize = 18.sp)
                                 }
-                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    repeat(3) { HiddenCard() }
+                                Box(
+                                    modifier = Modifier
+                                        .width((scaledHiddenW.value * 2.5f).dp)
+                                        .height((scaledHiddenH.value + 8).dp),
+                                ) {
+                                    listOf(-14f, 0f, 14f).forEachIndexed { i, angle ->
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.BottomCenter)
+                                                .offset(x = ((i - 1) * scaledHiddenW.value * 0.5f).dp)
+                                                .size(width = scaledHiddenW, height = scaledHiddenH)
+                                                .rotate(angle)
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .border(1.dp, BrandungTeal, RoundedCornerShape(4.dp)),
+                                        ) {
+                                            CardBackScene(modifier = Modifier.fillMaxSize())
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1104,6 +1131,8 @@ fun BrandungGameScreen(
                                 suit = card.suit,
                                 faceUp = true,
                                 selected = isSelected,
+                                cardWidth = scaledCardW,
+                                cardHeight = scaledCardH,
                                 modifier = Modifier
                                     .padding(horizontal = 4.dp)
                                     .clickable {
@@ -1169,6 +1198,8 @@ fun BrandungGameScreen(
                                     suit = card.suit,
                                     faceUp = true,
                                     selected = isSelected,
+                                    cardWidth = scaledCardW,
+                                    cardHeight = scaledCardH,
                                     modifier = Modifier
                                         .padding(horizontal = 4.dp)
                                         .clickable {
@@ -1549,6 +1580,8 @@ fun BrandungPlayingCard(
     faceUp: Boolean,
     selected: Boolean,
     modifier: Modifier = Modifier,
+    cardWidth: Dp = 56.dp,
+    cardHeight: Dp = 80.dp,
 ) {
     val isRed = suit in RED_SUITS
     val cardColor = if (isRed) Danger else Color(0xFF1A1A2E)
@@ -1556,7 +1589,7 @@ fun BrandungPlayingCard(
 
     Box(
         modifier = modifier
-            .size(width = 56.dp, height = 80.dp)
+            .size(width = cardWidth, height = cardHeight)
             .clip(RoundedCornerShape(8.dp))
             .border(
                 width = if (selected) 2.5.dp else 1.dp,
@@ -1600,10 +1633,10 @@ fun BrandungPlayingCard(
 }
 
 @Composable
-private fun HiddenCard() {
+private fun HiddenCard(cardWidth: Dp = 28.dp, cardHeight: Dp = 40.dp) {
     Box(
         modifier = Modifier
-            .size(width = 28.dp, height = 40.dp)
+            .size(width = cardWidth, height = cardHeight)
             .clip(RoundedCornerShape(4.dp))
             .border(1.dp, BrandungTeal, RoundedCornerShape(4.dp)),
     ) {

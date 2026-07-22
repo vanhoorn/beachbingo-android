@@ -52,6 +52,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -841,6 +843,13 @@ fun MeermauGameScreen(
             )
         },
     ) { padding ->
+        val screenWidthDp = LocalConfiguration.current.screenWidthDp
+        val cardScale = (screenWidthDp / 390f).coerceIn(1f, 2f)
+        val scaledCardW = (56 * cardScale).dp
+        val scaledCardH = (80 * cardScale).dp
+        val scaledSmallW = (28 * cardScale).dp
+        val scaledSmallH = (40 * cardScale).dp
+
         Column(
             modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -869,20 +878,25 @@ fun MeermauGameScreen(
                             val fanCount = minOf(opp.hand.size, 5)
                             val fanAngles = when (fanCount) {
                                 1 -> listOf(0f)
-                                2 -> listOf(-10f, 10f)
-                                3 -> listOf(-15f, 0f, 15f)
-                                4 -> listOf(-20f, -7f, 7f, 20f)
-                                else -> listOf(-20f, -10f, 0f, 10f, 20f)
+                                2 -> listOf(-12f, 12f)
+                                3 -> listOf(-18f, 0f, 18f)
+                                4 -> listOf(-22f, -7f, 7f, 22f)
+                                else -> listOf(-22f, -11f, 0f, 11f, 22f)
                             }
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy((-10).dp),
-                                modifier = Modifier.padding(top = 6.dp),
-                                verticalAlignment = Alignment.Bottom,
+                            val spread = scaledSmallW.value * 0.5f
+                            Box(
+                                modifier = Modifier
+                                    .padding(top = 6.dp)
+                                    .width((scaledSmallW.value + spread * (fanCount - 1) + 8).dp)
+                                    .height((scaledSmallH.value + 10).dp),
                             ) {
                                 fanAngles.forEachIndexed { idx, angle ->
+                                    val xOff = if (fanCount > 1) (idx - (fanCount - 1) / 2f) * spread else 0f
                                     Box(
                                         modifier = Modifier
-                                            .size(width = 28.dp, height = 40.dp)
+                                            .align(Alignment.BottomCenter)
+                                            .offset(x = xOff.dp)
+                                            .size(width = scaledSmallW, height = scaledSmallH)
                                             .rotate(angle)
                                             .clip(RoundedCornerShape(4.dp))
                                             .border(1.dp, MeermauViolet.copy(alpha = 0.4f), RoundedCornerShape(4.dp)),
@@ -890,8 +904,8 @@ fun MeermauGameScreen(
                                         CardBackScene(modifier = Modifier.fillMaxSize())
                                     }
                                 }
-                                if (opp.hand.size > 5) Text("+${opp.hand.size - 5}", color = TextMuted, fontSize = 10.sp, modifier = Modifier.align(Alignment.CenterVertically))
                             }
+                            if (opp.hand.size > 5) Text("+${opp.hand.size - 5}", color = TextMuted, fontSize = 10.sp)
                         }
                     }
                 }
@@ -907,7 +921,7 @@ fun MeermauGameScreen(
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Box(modifier = Modifier.size(width = 56.dp, height = 80.dp).clip(RoundedCornerShape(8.dp)).border(1.dp, MeermauViolet.copy(alpha = 0.4f), RoundedCornerShape(8.dp))) {
+                            Box(modifier = Modifier.size(width = scaledCardW, height = scaledCardH).clip(RoundedCornerShape(8.dp)).border(1.dp, MeermauViolet.copy(alpha = 0.4f), RoundedCornerShape(8.dp))) {
                                 CardBackScene(modifier = Modifier.fillMaxSize())
                             }
                             Text("${st.drawPile.size} 🂠", style = MaterialTheme.typography.labelSmall, color = TextMuted)
@@ -915,7 +929,7 @@ fun MeermauGameScreen(
                         }
                         Text(if (st.direction == 1) "→" else "←", fontSize = 24.sp, color = MeermauViolet)
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            if (topCard != null) MMPlayingCard(rank = topCard.rank, suit = topCard.suit, faceUp = true, selected = false)
+                            if (topCard != null) MMPlayingCard(rank = topCard.rank, suit = topCard.suit, faceUp = true, selected = false, cardWidth = scaledCardW, cardHeight = scaledCardH)
                             Text("Ablage", style = MaterialTheme.typography.labelSmall, color = TextMuted)
                         }
                     }
@@ -969,6 +983,7 @@ fun MeermauGameScreen(
                         MMPlayingCard(
                             rank = card.rank, suit = card.suit, faceUp = true,
                             selected = selectedCardId == card.id,
+                            cardWidth = scaledCardW, cardHeight = scaledCardH,
                             modifier = Modifier
                                 .clickable(enabled = isMyTurn && st.phase == "PLAYING") {
                                     selectedCardId = if (selectedCardId == card.id) null
@@ -985,6 +1000,7 @@ fun MeermauGameScreen(
                             MMPlayingCard(
                                 rank = drawnCard.rank, suit = drawnCard.suit, faceUp = true,
                                 selected = selectedCardId == drawnCard.id,
+                                cardWidth = scaledCardW, cardHeight = scaledCardH,
                                 modifier = Modifier
                                     .clickable(enabled = isMyTurn && canPlayDrawn) {
                                         selectedCardId = if (selectedCardId == drawnCard.id) null else drawnCard.id
@@ -1310,6 +1326,8 @@ private fun MMPlayingCard(
     faceUp: Boolean,
     selected: Boolean,
     modifier: Modifier = Modifier,
+    cardWidth: Dp = 56.dp,
+    cardHeight: Dp = 80.dp,
 ) {
     val isRed = suit in MM_RED_SUITS
     val cardColor = if (isRed) Danger else Color(0xFF1A1A2E)
@@ -1317,7 +1335,7 @@ private fun MMPlayingCard(
 
     Box(
         modifier = modifier
-            .size(width = 56.dp, height = 80.dp)
+            .size(width = cardWidth, height = cardHeight)
             .clip(RoundedCornerShape(8.dp))
             .border(width = if (selected) 2.5.dp else 1.dp, color = borderColor, shape = RoundedCornerShape(8.dp))
             .background(if (faceUp) Color(0xFFFFFBF0) else Color(0xFF0D1F3C)),
