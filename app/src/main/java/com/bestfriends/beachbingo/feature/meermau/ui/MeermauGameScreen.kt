@@ -553,7 +553,6 @@ fun MeermauGameScreen(
     val db = FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid ?: ""
     val scope = rememberCoroutineScope()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val logSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var localState by remember { mutableStateOf<MMState?>(null) }
@@ -1256,62 +1255,62 @@ fun MeermauGameScreen(
         }
     }
 
-    // ── Round end / Game over sheet ───────────────────────────────────────────
+    // ── Round end / Game over dialog ──────────────────────────────────────────
     if (st.phase == "ROUND_END" || st.phase == "GAME_OVER") {
-        ModalBottomSheet(
-            onDismissRequest = {},
-            sheetState = sheetState,
-            containerColor = SurfaceDark,
-        ) {
-            Column(modifier = Modifier.padding(24.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text(
-                    if (st.phase == "GAME_OVER") "🏆 Spiel vorbei!" else "Runde vorbei!",
-                    style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.ExtraBold,
-                )
-                val winner = st.players.find { it.userId == if (st.phase == "GAME_OVER") st.gameWinnerId else st.roundWinnerId }
-                if (winner != null) {
-                    Surface(color = SandGold.copy(alpha = 0.15f), shape = RoundedCornerShape(12.dp)) {
-                        Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text("🏆", fontSize = 24.sp)
-                            Text("${winner.avatarUrl} ${winner.displayName}", style = MaterialTheme.typography.titleMedium, color = SandGold, fontWeight = FontWeight.Bold)
+        Dialog(onDismissRequest = {}) {
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+            ) {
+                Column(modifier = Modifier.padding(24.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text(
+                        if (st.phase == "GAME_OVER") "🏆 Spiel vorbei!" else "Runde vorbei!",
+                        style = MaterialTheme.typography.titleLarge, color = TextPrimary, fontWeight = FontWeight.ExtraBold,
+                    )
+                    val winner = st.players.find { it.userId == if (st.phase == "GAME_OVER") st.gameWinnerId else st.roundWinnerId }
+                    if (winner != null) {
+                        Surface(color = SandGold.copy(alpha = 0.15f), shape = RoundedCornerShape(12.dp)) {
+                            Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text("🏆", fontSize = 24.sp)
+                                Text("${winner.avatarUrl} ${winner.displayName}", style = MaterialTheme.typography.titleMedium, color = SandGold, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
-                }
-                HorizontalDivider(color = Surface2Dark)
-                Text("Gesamtpunkte", style = MaterialTheme.typography.labelMedium, color = TextMuted)
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                    st.players.sortedBy { it.totalScore }.forEach { p ->
-                        val isGameWinner = p.userId == st.gameWinnerId
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("${p.avatarUrl} ${p.displayName}${if (p.eliminated) " ❌" else ""}", style = MaterialTheme.typography.bodyMedium, color = if (isGameWinner) SandGold else TextPrimary)
-                            Text("${p.totalScore} P", style = MaterialTheme.typography.bodyMedium, color = if (p.totalScore >= 100) Danger else TextSub, fontWeight = if (isGameWinner) FontWeight.Bold else FontWeight.Normal)
+                    HorizontalDivider(color = Surface2Dark)
+                    Text("Gesamtpunkte", style = MaterialTheme.typography.labelMedium, color = TextMuted)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                        st.players.sortedBy { it.totalScore }.forEach { p ->
+                            val isGameWinner = p.userId == st.gameWinnerId
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("${p.avatarUrl} ${p.displayName}${if (p.eliminated) " ❌" else ""}", style = MaterialTheme.typography.bodyMedium, color = if (isGameWinner) SandGold else TextPrimary)
+                                Text("${p.totalScore} P", style = MaterialTheme.typography.bodyMedium, color = if (p.totalScore >= 100) Danger else TextSub, fontWeight = if (isGameWinner) FontWeight.Bold else FontWeight.Normal)
+                            }
                         }
                     }
-                }
-                if (st.phase == "ROUND_END") {
-                    if (mode == "online") {
-                        Text(
-                            if (uid == adminId) "Neue Runde wird gestartet…" else "Warte auf Host…",
-                            color = TextMuted, style = MaterialTheme.typography.bodyMedium,
-                            textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
-                        )
+                    if (st.phase == "ROUND_END") {
+                        if (mode == "online") {
+                            Text(
+                                if (uid == adminId) "Neue Runde wird gestartet…" else "Warte auf Host…",
+                                color = TextMuted, style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
+                            )
+                        } else {
+                            Button(
+                                onClick = { localState = mmStartNewRound(st); selectedCardId = null },
+                                modifier = Modifier.fillMaxWidth().height(52.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MeermauViolet),
+                                shape = RoundedCornerShape(12.dp),
+                            ) { Text("Nächste Runde 🂠", fontWeight = FontWeight.Bold) }
+                        }
                     } else {
                         Button(
-                            onClick = { localState = mmStartNewRound(st); selectedCardId = null; scope.launch { sheetState.hide() } },
+                            onClick = onNavigateBack,
                             modifier = Modifier.fillMaxWidth().height(52.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MeermauViolet),
                             shape = RoundedCornerShape(12.dp),
-                        ) { Text("Nächste Runde 🂠", fontWeight = FontWeight.Bold) }
+                        ) { Text("Zur Lobby", fontWeight = FontWeight.Bold) }
                     }
-                } else {
-                    Button(
-                        onClick = onNavigateBack,
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MeermauViolet),
-                        shape = RoundedCornerShape(12.dp),
-                    ) { Text("Zur Lobby", fontWeight = FontWeight.Bold) }
                 }
-                Spacer(Modifier.height(16.dp))
             }
         }
     }
