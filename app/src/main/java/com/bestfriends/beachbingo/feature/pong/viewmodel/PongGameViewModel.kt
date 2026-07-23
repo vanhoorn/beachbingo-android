@@ -94,12 +94,16 @@ class PongGameViewModel @Inject constructor(
     private var gameId: String? = null
     private var isHost: Boolean = false
     private var mySide: String = "left"
+    private var guestSides: List<String> = emptyList()
     private var totalPaddles: Int = 2
     private var humanCount: Int = 1
     private var scoreLimit: Int = 7
     private var difficulty: PongDifficulty = PongDifficulty.ROOKIE
     private var firestoreListenerRemover: (() -> Unit)? = null
     private var aiResultWritten = false
+
+    private val _isGameActive = MutableStateFlow(false)
+    val isGameActive: StateFlow<Boolean> = _isGameActive.asStateFlow()
 
     val aiSpeed get() = when (difficulty) {
         PongDifficulty.ROOKIE -> 2.8
@@ -133,7 +137,11 @@ class PongGameViewModel @Inject constructor(
         val is2P = totalPaddles == 2
         val cw = if (is2P) W2.toDouble() else SQ.toDouble()
         val ch = if (is2P) H2.toDouble() else SQ.toDouble()
-        val wall = if (totalPaddles == 3) listOf("left", "right", "top", "bottom").random() else null
+        // Wall must not be a human-assigned side (left/right are always the first two human sides)
+        val humanSides = sidesForPaddles(totalPaddles, null).take(humanCount)
+        val wall = if (totalPaddles == 3) {
+            listOf("left", "right", "top", "bottom").filter { it !in humanSides }.random()
+        } else null
         val angle = Math.random() * Math.PI * 2
         _gs.value = PongGS(
             bx = cw / 2, by = ch / 2,
@@ -143,6 +151,8 @@ class PongGameViewModel @Inject constructor(
             paddleTop = cw / 2, paddleBottom = cw / 2,
             wallSide = wall,
         )
+        // Guests start inactive; they wait until host writes IN_PROGRESS
+        _isGameActive.value = isHost || gameId == null
 
         aiResultWritten = false
         viewModelScope.launch {
@@ -153,6 +163,18 @@ class PongGameViewModel @Inject constructor(
         }
 
         if (gameId != null) observeGame(gameId)
+
+        // Host immediately marks the game as running
+        if (isHost && gameId != null) {
+            viewModelScope.launch {
+                try {
+                    db.collection("pongGames").document(gameId).update(
+                        "status", "IN_PROGRESS",
+                        "wallSide", wall,
+                    ).await()
+                } catch (_: Exception) {}
+            }
+        }
     }
 
     private fun observeGame(gameId: String) {
@@ -162,7 +184,7 @@ class PongGameViewModel @Inject constructor(
                 if (snap == null || !snap.exists()) return@addSnapshotListener
                 val data = snap.data ?: return@addSnapshotListener
 
-                // Build opponent names
+                // Build opponent names and track guest sides for AI logic
                 val players = (data["players"] as? List<*>)?.mapNotNull { p ->
                     (p as? Map<*, *>)?.let { m ->
                         PongPlayer(
@@ -176,6 +198,18 @@ class PongGameViewModel @Inject constructor(
                 val names = players.filter { it.userId != currentUid }
                     .associate { it.side to it.displayName }
                 _opponentNames.value = names
+                guestSides = players.filter { it.userId != currentUid }.map { it.side }
+
+                // Guest activates once host sets IN_PROGRESS
+                if (!isHost) {
+                    val status = data["status"] as? String
+                    if (status == "IN_PROGRESS") _isGameActive.value = true
+                    // Sync wallSide from host
+                    val remoteWall = data["wallSide"] as? String
+                    if (remoteWall != null && _gs.value.wallSide != remoteWall) {
+                        _gs.update { it.copy(wallSide = remoteWall) }
+                    }
+                }
 
                 val winnerIdVal = data["winnerId"] as? String
                 if (winnerIdVal != null) {
@@ -250,11 +284,11 @@ class PongGameViewModel @Inject constructor(
             return null
         }
 
-        // Move AI paddles
+        // Move AI paddles — skip own side and actual human guest sides
         val activeSides = sidesForPaddles(totalPaddles, g.wallSide)
         activeSides.forEach { side ->
             val isMyHumanSide = side == mySide
-            val isGuestSide = humanCount > 1 && side != mySide
+            val isGuestSide = guestSides.contains(side)
             if (!isMyHumanSide && !isGuestSide) {
                 val target = if (side == "left" || side == "right") g.by else g.bx
                 val size = if (side == "left" || side == "right") ch else cw
@@ -328,22 +362,23 @@ class PongGameViewModel @Inject constructor(
         return null
     }
 
-    fun applyRemoteInterpolation() {
+    fun applyRemoteInterpolation(frameCount: Int) {
         val r = remoteState ?: return
         _gs.update { gs ->
             gs.copy(
                 bx = lerp(gs.bx, r.bx, 0.3),
                 by = lerp(gs.by, r.by, 0.3),
-                paddleLeft = lerp(gs.paddleLeft, r.paddleLeft, 0.4),
-                paddleRight = lerp(gs.paddleRight, r.paddleRight, 0.4),
-                paddleTop = lerp(gs.paddleTop, r.paddleTop, 0.4),
-                paddleBottom = lerp(gs.paddleBottom, r.paddleBottom, 0.4),
+                // Never lerp own paddle — user input must win
+                paddleLeft   = if (mySide != "left")   lerp(gs.paddleLeft,   r.paddleLeft,   0.4) else gs.paddleLeft,
+                paddleRight  = if (mySide != "right")  lerp(gs.paddleRight,  r.paddleRight,  0.4) else gs.paddleRight,
+                paddleTop    = if (mySide != "top")    lerp(gs.paddleTop,    r.paddleTop,    0.4) else gs.paddleTop,
+                paddleBottom = if (mySide != "bottom") lerp(gs.paddleBottom, r.paddleBottom, 0.4) else gs.paddleBottom,
                 paused = r.paused,
                 pauseTimer = r.pauseTimer,
             )
         }
-        if (gameId != null) {
-            // Guest writes own paddle to Firestore
+        // Throttle Firestore writes to every 4 frames (same as host)
+        if (gameId != null && frameCount % 4 == 0) {
             val gs = _gs.value
             val paddleVal = paddleOf(gs, mySide)
             viewModelScope.launch {

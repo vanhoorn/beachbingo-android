@@ -52,24 +52,29 @@ class PongLobbyViewModel @Inject constructor(
         }
     }
 
+    private var lobbyObserveJob: kotlinx.coroutines.Job? = null
+
     fun observeLobbyGames(uid: String, humanCount: Int) {
+        lobbyObserveJob?.cancel()
         if (humanCount < 2) {
             _activeGame.value = null
             return
         }
-        viewModelScope.launch {
+        lobbyObserveJob = viewModelScope.launch {
             callbackFlow {
                 val q = db.collection("pongGames")
                     .whereArrayContains("playerIds", uid)
-                    .whereEqualTo("status", "LOBBY")
+                    .whereIn("status", listOf("LOBBY", "IN_PROGRESS"))
                 val reg = q.addSnapshotListener { snap, _ ->
                     if (snap == null) return@addSnapshotListener
                     val games = snap.documents.mapNotNull { doc ->
                         val data = doc.data ?: return@mapNotNull null
+                        val rawStatus = data["status"] as? String ?: "LOBBY"
+                        val status = runCatching { PongStatus.valueOf(rawStatus) }.getOrDefault(PongStatus.LOBBY)
                         PongGame(
                             gameId = doc.id,
                             adminId = data["adminId"] as? String ?: "",
-                            status = PongStatus.LOBBY,
+                            status = status,
                             totalPaddles = (data["totalPaddles"] as? Long)?.toInt() ?: 2,
                             humanCount = (data["humanCount"] as? Long)?.toInt() ?: 1,
                             difficulty = runCatching { PongDifficulty.valueOf(data["difficulty"] as? String ?: "ROOKIE") }.getOrDefault(PongDifficulty.ROOKIE),

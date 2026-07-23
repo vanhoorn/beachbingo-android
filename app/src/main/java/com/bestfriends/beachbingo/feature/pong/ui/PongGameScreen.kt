@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
@@ -101,6 +103,7 @@ fun PongGameScreen(
     val gs by viewModel.gs.collectAsStateWithLifecycle()
     val loserSide by viewModel.loserSide.collectAsStateWithLifecycle()
     val opponentNames by viewModel.opponentNames.collectAsStateWithLifecycle()
+    val isGameActive by viewModel.isGameActive.collectAsStateWithLifecycle()
 
     val is2P = totalPaddles == 2
     val cw = if (is2P) W2 else SQ
@@ -164,9 +167,9 @@ fun PongGameScreen(
         }
     }
 
-    // Game loop — runs on physics owner, or applies remote state for guests
-    LaunchedEffect(loserSide, isPhysicsOwner) {
-        if (loserSide != null) return@LaunchedEffect
+    // Game loop — only runs once the game is active (host set IN_PROGRESS)
+    LaunchedEffect(loserSide, isPhysicsOwner, isGameActive) {
+        if (loserSide != null || !isGameActive) return@LaunchedEffect
         while (true) {
             delay(16L)
             frameCount++
@@ -174,7 +177,7 @@ fun PongGameScreen(
             if (isPhysicsOwner) {
                 viewModel.tick(frameCount)
             } else {
-                viewModel.applyRemoteInterpolation()
+                viewModel.applyRemoteInterpolation(frameCount)
             }
         }
     }
@@ -356,6 +359,42 @@ fun PongGameScreen(
                 onConfirm = { onNavigateToLobby() },
                 onDismiss = { showQuitDialog = false; manualPaused = false },
             )
+        }
+
+        // ── Waiting-for-host overlay (guest only, before IN_PROGRESS) ────────
+        if (!isGameActive && !isHost && gameId != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(BgDark.copy(alpha = 0.93f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.padding(32.dp)
+                ) {
+                    Text("🏓", fontSize = 56.sp)
+                    Text(
+                        "Warte auf Host...",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = TextPrimary,
+                    )
+                    Text(
+                        "Das Spiel beginnt, sobald der Host startet.",
+                        fontSize = 13.sp,
+                        color = TextMuted,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Button(
+                        onClick = onNavigateToLobby,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Surface2Dark)
+                    ) { Text("Zurück zur Lobby", color = TextPrimary) }
+                }
+            }
         }
 
         // ── Winner/Loser overlay ──────────────────────────────────────────────

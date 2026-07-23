@@ -37,6 +37,6 @@ data class PongPlayer(
     val side: String = "left",
 )
 
-enum class PongStatus { LOBBY, RUNNING, FINISHED }
+enum class PongStatus { LOBBY, RUNNING, IN_PROGRESS, FINISHED }
 
 enum class PongDifficulty { ROOKIE, SNIPER, BOSS_LEVEL }
