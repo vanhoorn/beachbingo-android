@@ -116,4 +116,36 @@ sealed interface Screen {
     ) : Screen
     @Serializable object StrandraeuberSettings : Screen
     @Serializable object StrandraeuberResults : Screen
+    // Rätsel-Rubrik
+    @Serializable object DuenenschattenLobby : Screen
+    @Serializable data class DuenenschattenGame(
+        val difficulty: String,
+        val seed: Long,
+        val saveId: String? = null,
+    ) : Screen
+    @Serializable object InselbrueckeLobby : Screen
+    @Serializable data class InselbrueckeGame(
+        val difficulty: String,
+        val seed: Long,
+        val saveId: String? = null,
+    ) : Screen
+    @Serializable object StrandokuLobby : Screen
+    @Serializable data class StrandokuGame(
+        val variant: String,
+        val difficulty: String,
+        val seed: Long,
+        val saveId: String? = null,
+    ) : Screen
+    @Serializable object WellensummeLobby : Screen
+    @Serializable data class WellensummeGame(
+        val difficulty: String,
+        val seed: Long,
+        val saveId: String? = null,
+    ) : Screen
+    @Serializable object KuestenkriegLobby : Screen
+    @Serializable data class KuestenkriegGame(
+        val difficulty: String,
+        val seed: Long,
+        val saveId: String? = null,
+    ) : Screen
 }

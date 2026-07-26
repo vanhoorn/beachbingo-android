@@ -50,8 +50,20 @@ import com.bestfriends.beachbingo.ui.theme.TextSub
 @Composable
 fun RaetselScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToDuenenschattenLobby: () -> Unit = {},
+    onNavigateToInselbrueckeLobby: () -> Unit = {},
+    onNavigateToStrandokuLobby: () -> Unit = {},
+    onNavigateToWellensummeLobby: () -> Unit = {},
+    onNavigateToKuestenkriegLobby: () -> Unit = {},
 ) {
     val games = RIDDLE_GAMES.sortedBy { it.title }
+    val gameNavMap = mapOf(
+        "duenenschatten" to onNavigateToDuenenschattenLobby,
+        "inselbruecke"   to onNavigateToInselbrueckeLobby,
+        "strandoku"      to onNavigateToStrandokuLobby,
+        "wellensumme"    to onNavigateToWellensummeLobby,
+        "kuestenkrieg"   to onNavigateToKuestenkriegLobby,
+    )
     var rulesGameId by remember { mutableStateOf<String?>(null) }
     val activeRule = rulesGameId?.let { ALL_GAME_RULES[it] }
 
@@ -115,8 +127,7 @@ fun RaetselScreen(
                 .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
         ) {
             Text(
-                text = "🧠 Logik-Rätsel für Solo-Spieler — von Sudoku bis Schiffe Versenken. " +
-                        "Tippe auf ℹ für die Anleitung. Die Spiele werden in den nächsten Updates freigeschaltet.",
+                text = "🧠 Logik-Rätsel für Solo-Spieler — von Sudoku bis Schiffe Versenken. Tippe auf ℹ für die Anleitung.",
                 fontSize = 13.sp, color = TextMuted, lineHeight = 20.sp,
                 modifier = Modifier.padding(14.dp),
             )
@@ -129,84 +140,38 @@ fun RaetselScreen(
         ) {
             games.forEach { game ->
                 val accentColor = Color(game.color)
+                val onNavigate = gameNavMap[game.id]
                 Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = SurfaceDark,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(
-                            width = 1.5.dp,
-                            color = accentColor.copy(alpha = 0.35f),
-                            shape = RoundedCornerShape(16.dp)
-                        )
+                        .border(width = 1.5.dp, color = accentColor.copy(alpha = 0.35f), shape = RoundedCornerShape(16.dp))
+                        .then(if (onNavigate != null) Modifier.clickable { onNavigate() } else Modifier)
                 ) {
                     Row(
                         modifier = Modifier.padding(20.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Emoji icon
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = accentColor.copy(alpha = 0.15f),
-                            modifier = Modifier.size(64.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(text = game.emoji, fontSize = 30.sp)
-                            }
+                        Surface(shape = RoundedCornerShape(14.dp), color = accentColor.copy(alpha = 0.15f), modifier = Modifier.size(64.dp)) {
+                            Box(contentAlignment = Alignment.Center) { Text(text = game.emoji, fontSize = 30.sp) }
                         }
-
                         Spacer(Modifier.width(16.dp))
-
                         Column(modifier = Modifier.weight(1f)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = game.title,
-                                    fontSize = 17.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
-                                )
-                                // "Bald verfügbar" badge
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = accentColor.copy(alpha = 0.15f),
-                                    modifier = Modifier.border(
-                                        1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(6.dp)
-                                    )
-                                ) {
-                                    Text(
-                                        text = "BALD",
-                                        fontSize = 9.sp, fontWeight = FontWeight.Bold,
-                                        color = accentColor, letterSpacing = 1.sp,
-                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
-                                    )
-                                }
-                            }
+                            Text(text = game.title, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                             Spacer(Modifier.height(4.dp))
-                            Text(
-                                text = game.description,
-                                fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp,
-                            )
+                            Text(text = game.description, fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
                         }
-
                         Spacer(Modifier.width(8.dp))
-
-                        // Info button
                         Surface(
                             shape = RoundedCornerShape(10.dp),
                             color = accentColor.copy(alpha = 0.12f),
-                            modifier = Modifier
-                                .size(34.dp)
+                            modifier = Modifier.size(34.dp)
                                 .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                                 .clickable { rulesGameId = game.id }
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.Info,
-                                    contentDescription = "Anleitung",
-                                    tint = accentColor,
-                                    modifier = Modifier.size(18.dp)
-                                )
+                                Icon(imageVector = Icons.Default.Info, contentDescription = "Anleitung", tint = accentColor, modifier = Modifier.size(18.dp))
                             }
                         }
                     }

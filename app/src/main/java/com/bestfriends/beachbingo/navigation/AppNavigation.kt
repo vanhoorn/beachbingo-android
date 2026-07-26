@@ -63,6 +63,16 @@ import com.bestfriends.beachbingo.feature.strandraeuber.ui.StrandraeuberLobbyScr
 import com.bestfriends.beachbingo.feature.strandraeuber.ui.StrandraeuberGameScreen
 import com.bestfriends.beachbingo.feature.strandraeuber.ui.StrandraeuberSettingsScreen
 import com.bestfriends.beachbingo.feature.strandraeuber.ui.StrandraeuberResultsScreen
+import com.bestfriends.beachbingo.feature.raetsel.ui.DuenenschattenLobbyScreen
+import com.bestfriends.beachbingo.feature.raetsel.ui.DuenenschattenGameScreen
+import com.bestfriends.beachbingo.feature.raetsel.ui.InselbrueckeLobbyScreen
+import com.bestfriends.beachbingo.feature.raetsel.ui.InselbrueckeGameScreen
+import com.bestfriends.beachbingo.feature.raetsel.ui.StrandokuLobbyScreen
+import com.bestfriends.beachbingo.feature.raetsel.ui.StrandokuGameScreen
+import com.bestfriends.beachbingo.feature.raetsel.ui.WellensummeLobbyScreen
+import com.bestfriends.beachbingo.feature.raetsel.ui.WellensummeGameScreen
+import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegLobbyScreen
+import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegGameScreen
 
 @Composable
 fun AppNavigation() {
@@ -176,6 +186,88 @@ fun AppNavigation() {
         composable<Screen.Raetsel> {
             RaetselScreen(
                 onNavigateBack = { navController.popBackStack() },
+                onNavigateToDuenenschattenLobby = { navController.navigate(Screen.DuenenschattenLobby) },
+                onNavigateToInselbrueckeLobby = { navController.navigate(Screen.InselbrueckeLobby) },
+                onNavigateToStrandokuLobby = { navController.navigate(Screen.StrandokuLobby) },
+                onNavigateToWellensummeLobby = { navController.navigate(Screen.WellensummeLobby) },
+                onNavigateToKuestenkriegLobby = { navController.navigate(Screen.KuestenkriegLobby) },
+            )
+        }
+
+        // ── Rätsel-Rubrik ──────────────────────────────────────────────────────
+        composable<Screen.DuenenschattenLobby> {
+            DuenenschattenLobbyScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToGame = { diff, seed, saveId ->
+                    navController.navigate(Screen.DuenenschattenGame(diff, seed, saveId)) { popUpTo(Screen.DuenenschattenLobby) }
+                }
+            )
+        }
+        composable<Screen.DuenenschattenGame> { backStack ->
+            val route: Screen.DuenenschattenGame = backStack.toRoute()
+            DuenenschattenGameScreen(
+                difficulty = route.difficulty, seed = route.seed, saveId = route.saveId,
+                onNavigateBack = { navController.navigate(Screen.DuenenschattenLobby) { popUpTo(Screen.DuenenschattenLobby) { inclusive = true } } }
+            )
+        }
+        composable<Screen.InselbrueckeLobby> {
+            InselbrueckeLobbyScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToGame = { diff, seed, saveId ->
+                    navController.navigate(Screen.InselbrueckeGame(diff, seed, saveId)) { popUpTo(Screen.InselbrueckeLobby) }
+                }
+            )
+        }
+        composable<Screen.InselbrueckeGame> { backStack ->
+            val route: Screen.InselbrueckeGame = backStack.toRoute()
+            InselbrueckeGameScreen(
+                difficulty = route.difficulty, seed = route.seed, saveId = route.saveId,
+                onNavigateBack = { navController.navigate(Screen.InselbrueckeLobby) { popUpTo(Screen.InselbrueckeLobby) { inclusive = true } } }
+            )
+        }
+        composable<Screen.StrandokuLobby> {
+            StrandokuLobbyScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToGame = { variant, diff, seed, saveId ->
+                    navController.navigate(Screen.StrandokuGame(variant, diff, seed, saveId)) { popUpTo(Screen.StrandokuLobby) }
+                }
+            )
+        }
+        composable<Screen.StrandokuGame> { backStack ->
+            val route: Screen.StrandokuGame = backStack.toRoute()
+            StrandokuGameScreen(
+                variant = route.variant, difficulty = route.difficulty, seed = route.seed, saveId = route.saveId,
+                onNavigateBack = { navController.navigate(Screen.StrandokuLobby) { popUpTo(Screen.StrandokuLobby) { inclusive = true } } }
+            )
+        }
+        composable<Screen.WellensummeLobby> {
+            WellensummeLobbyScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToGame = { diff, seed, saveId ->
+                    navController.navigate(Screen.WellensummeGame(diff, seed, saveId)) { popUpTo(Screen.WellensummeLobby) }
+                }
+            )
+        }
+        composable<Screen.WellensummeGame> { backStack ->
+            val route: Screen.WellensummeGame = backStack.toRoute()
+            WellensummeGameScreen(
+                difficulty = route.difficulty, seed = route.seed, saveId = route.saveId,
+                onNavigateBack = { navController.navigate(Screen.WellensummeLobby) { popUpTo(Screen.WellensummeLobby) { inclusive = true } } }
+            )
+        }
+        composable<Screen.KuestenkriegLobby> {
+            KuestenkriegLobbyScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToGame = { diff, seed, saveId ->
+                    navController.navigate(Screen.KuestenkriegGame(diff, seed, saveId)) { popUpTo(Screen.KuestenkriegLobby) }
+                }
+            )
+        }
+        composable<Screen.KuestenkriegGame> { backStack ->
+            val route: Screen.KuestenkriegGame = backStack.toRoute()
+            KuestenkriegGameScreen(
+                difficulty = route.difficulty, seed = route.seed, saveId = route.saveId,
+                onNavigateBack = { navController.navigate(Screen.KuestenkriegLobby) { popUpTo(Screen.KuestenkriegLobby) { inclusive = true } } }
             )
         }
 
