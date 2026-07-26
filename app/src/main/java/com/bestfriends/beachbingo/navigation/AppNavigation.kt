@@ -132,6 +132,14 @@ fun AppNavigation() {
                 onNavigateToCategory = { playerCount -> navController.navigate(Screen.Category(playerCount)) },
                 onNavigateToCardGames = { navController.navigate(Screen.CardGames) },
                 onNavigateToAllGames = { navController.navigate(Screen.AllGames) },
+                onRejoinGame = { type, gameId ->
+                    when (type) {
+                        "strandraeuber" -> navController.navigate(Screen.StrandraeuberGame("ONLINE", gameId, 0, "SNIPER", 3))
+                        "meermau"       -> navController.navigate(Screen.MeermauGame("online", gameId, 0, "SNIPER"))
+                        "brandung"      -> navController.navigate(Screen.BrandungGame("online", gameId, 0, "SNIPER"))
+                        "bingo"         -> navController.navigate(Screen.Game(gameId))
+                    }
+                },
                 viewModel = authViewModel
             )
         }

@@ -39,6 +39,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -733,6 +734,43 @@ fun StrandraeuberGameScreen(
     }
 
     var startingGame by remember { mutableStateOf(false) }
+    var showQuitDialog by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = mode == "ONLINE") { showQuitDialog = true }
+
+    if (showQuitDialog) {
+        Dialog(onDismissRequest = { showQuitDialog = false }) {
+            androidx.compose.material3.Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = SurfaceDark,
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text("🏳️", fontSize = 36.sp)
+                    Text("Spiel verlassen?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                    Text(
+                        "Du kannst über den Code wieder beitreten.",
+                        fontSize = 13.sp, color = TextMuted, textAlign = TextAlign.Center,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedButton(
+                            onClick = { showQuitDialog = false },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                        ) { Text("Bleiben", color = TextPrimary) }
+                        Button(
+                            onClick = { showQuitDialog = false; onNavigateBack() },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = SpCrimson),
+                            shape = RoundedCornerShape(10.dp),
+                        ) { Text("Verlassen", color = Color.White) }
+                    }
+                }
+            }
+        }
+    }
 
     Scaffold(
         containerColor = BgDark,
@@ -753,7 +791,7 @@ fun StrandraeuberGameScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { if (mode == "ONLINE") showQuitDialog = true else onNavigateBack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Zurück", tint = TextPrimary)
                     }
                 },

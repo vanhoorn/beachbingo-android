@@ -26,7 +26,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -75,6 +78,13 @@ private val PLAYER_COUNT_LIST = listOf(
     PlayerCountEntry(PlayerCount.FOUR_PLUS, "4+ Spieler",  "🎉"),
 )
 
+private data class ActiveGameInfo(
+    val type: String,
+    val gameId: String,
+    val gameName: String,
+    val emoji: String,
+)
+
 @Composable
 fun HomeScreen(
     onNavigateToBingoLobby: () -> Unit,
@@ -91,11 +101,13 @@ fun HomeScreen(
     onNavigateToCategory: (String) -> Unit,
     onNavigateToCardGames: () -> Unit,
     onNavigateToAllGames: () -> Unit,
+    onRejoinGame: (type: String, gameId: String) -> Unit = { _, _ -> },
     viewModel: AuthViewModel = hiltViewModel(),
 ) {
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
 
     var favoriteIds by remember { mutableStateOf<List<String>>(emptyList()) }
+    var activeGame by remember { mutableStateOf<ActiveGameInfo?>(null) }
 
     val auth = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
@@ -107,6 +119,30 @@ fun HomeScreen(
             val snap = firestore.collection("users").document(uid).get().await()
             @Suppress("UNCHECKED_CAST")
             favoriteIds = (snap.get("favoriteGames") as? List<String>) ?: emptyList()
+        } catch (_: Exception) {}
+    }
+
+    LaunchedEffect(uid) {
+        if (uid == null) return@LaunchedEffect
+        try {
+            val collections = listOf(
+                Triple("strandraeuber", "strandraeuberGames", "🦹 Strandräuber"),
+                Triple("meermau",       "meermauGames",       "🃏 MeerMau"),
+                Triple("brandung",      "brandungGames",      "🌊 Brandung"),
+                Triple("bingo",         "games",              "🎱 Bingo"),
+            )
+            for ((type, collection, displayName) in collections) {
+                val snap = firestore.collection(collection)
+                    .whereEqualTo("status", "RUNNING")
+                    .whereArrayContains("playerIds", uid)
+                    .get().await()
+                if (!snap.isEmpty) {
+                    val doc = snap.documents.first()
+                    val parts = displayName.split(" ", limit = 2)
+                    activeGame = ActiveGameInfo(type, doc.id, parts.getOrElse(1) { displayName }, parts[0])
+                    return@LaunchedEffect
+                }
+            }
         } catch (_: Exception) {}
     }
 
@@ -185,6 +221,16 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+
+        // ── Aktives Spiel ─────────────────────────────────────────────────────────
+        if (activeGame != null) {
+            ActiveGameBanner(
+                game = activeGame!!,
+                onResume = { onRejoinGame(activeGame!!.type, activeGame!!.gameId) },
+                onDismiss = { activeGame = null },
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+            )
         }
 
         // ── Favoriten ─────────────────────────────────────────────────────────────
@@ -370,6 +416,58 @@ private fun MiniGameCard(game: GameMetadata, onClick: () -> Unit) {
                 fontSize = 11.sp, fontWeight = FontWeight.Bold,
                 color = TextPrimary, lineHeight = 14.sp,
             )
+        }
+    }
+}
+
+@Composable
+private fun ActiveGameBanner(
+    game: ActiveGameInfo,
+    onResume: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val accentColor = Color(0xFF0EA5E9)
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = Surface2Dark,
+        modifier = modifier
+            .fillMaxWidth()
+            .border(1.5.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(game.emoji, fontSize = 22.sp)
+                Spacer(Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "AKTIVES SPIEL",
+                        fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                        color = accentColor, letterSpacing = 1.sp,
+                    )
+                    Text(
+                        game.gameName,
+                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
+                    )
+                    Text(
+                        "Code: ${game.gameId}",
+                        fontSize = 12.sp, color = TextMuted,
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f).height(40.dp),
+                ) { Text("Ignorieren", color = TextMuted, fontSize = 13.sp) }
+                Button(
+                    onClick = onResume,
+                    modifier = Modifier.weight(1f).height(40.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                    shape = RoundedCornerShape(10.dp),
+                ) { Text("Weiterspielen →", color = Color.White, fontSize = 13.sp) }
+            }
         }
     }
 }

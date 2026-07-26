@@ -239,11 +239,12 @@ class JoinViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = false, error = "Dieses Spiel ist bereits beendet.") }
             return null
         }
+        val playerIds = (data["playerIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
         if (status == "RUNNING") {
+            if (playerIds.contains(uid)) return JoinDestination.MeerMau(docId)
             _uiState.update { it.copy(isLoading = false, error = "Das Spiel läuft bereits.") }
             return null
         }
-        val playerIds = (data["playerIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
         if (!playerIds.contains(uid)) {
             if (playerIds.size >= 4) {
                 _uiState.update { it.copy(isLoading = false, error = "Das Spiel ist voll (max. 4 Spieler).") }
@@ -270,11 +271,12 @@ class JoinViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = false, error = "Dieses Spiel ist bereits beendet.") }
             return null
         }
+        val playerIds = (data["playerIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
         if (status == "RUNNING") {
+            if (playerIds.contains(uid)) return JoinDestination.Strandraeuber(docId)
             _uiState.update { it.copy(isLoading = false, error = "Das Spiel läuft bereits.") }
             return null
         }
-        val playerIds = (data["playerIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
         if (!playerIds.contains(uid)) {
             if (playerIds.size >= 6) {
                 _uiState.update { it.copy(isLoading = false, error = "Das Spiel ist voll (max. 6 Spieler).") }

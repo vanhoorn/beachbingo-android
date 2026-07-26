@@ -36,6 +36,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -822,6 +823,43 @@ fun BrandungGameScreen(
 
     var selectedHandIdx by remember { mutableStateOf<Int?>(null) }
     var selectedTableIdx by remember { mutableStateOf<Int?>(null) }
+    var showQuitDialog by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = mode == "online") { showQuitDialog = true }
+
+    if (showQuitDialog) {
+        Dialog(onDismissRequest = { showQuitDialog = false }) {
+            androidx.compose.material3.Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = SurfaceDark,
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text("🏳️", fontSize = 36.sp)
+                    Text("Spiel verlassen?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                    Text(
+                        "Du kannst über den Code wieder beitreten.",
+                        fontSize = 13.sp, color = TextMuted, textAlign = TextAlign.Center,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedButton(
+                            onClick = { showQuitDialog = false },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                        ) { Text("Bleiben", color = TextPrimary) }
+                        Button(
+                            onClick = { showQuitDialog = false; onNavigateBack() },
+                            modifier = Modifier.weight(1f).height(44.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = BrandungTeal),
+                            shape = RoundedCornerShape(10.dp),
+                        ) { Text("Verlassen", color = Color.White) }
+                    }
+                }
+            }
+        }
+    }
 
     LaunchedEffect(uid) {
         if (uid.isBlank()) return@LaunchedEffect
@@ -1005,7 +1043,7 @@ fun BrandungGameScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { if (mode == "online") showQuitDialog = true else onNavigateBack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Zurück", tint = TextPrimary)
                     }
                 },
