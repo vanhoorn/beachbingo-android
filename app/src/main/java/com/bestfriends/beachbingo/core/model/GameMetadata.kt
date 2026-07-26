@@ -108,6 +108,53 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         playerCounts = listOf(PlayerCount.ONE_TWO, PlayerCount.TWO_FOUR),
         genres = listOf(GameGenre.PARTY, GameGenre.CARD),
     ),
+    // ── Rätsel-Spiele ──────────────────────────────────────────────────────────
+    GameMetadata(
+        id = "strandoku",
+        emoji = "🔢",
+        title = "Strandoku",
+        description = "Das meistgespielte Logikrätsel der Welt — 6 Varianten von Classic bis Samurai.",
+        color = 0xFF38BDF8,
+        playerCounts = listOf(PlayerCount.ONE),
+        genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
+    ),
+    GameMetadata(
+        id = "wellensumme",
+        emoji = "➕",
+        title = "WellenSumme",
+        description = "Kreuzworträtsel mit Zahlen — Blöcke addieren sich zur angegebenen Summe.",
+        color = 0xFFC084FC,
+        playerCounts = listOf(PlayerCount.ONE),
+        genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
+    ),
+    GameMetadata(
+        id = "kuestenkrieg",
+        emoji = "⚓",
+        title = "Küstenkrieg",
+        description = "Solo-Logik-Rätsel oder klassisches 2-Spieler-Duell — Flotten versenken!",
+        color = 0xFFFB7185,
+        playerCounts = listOf(PlayerCount.ONE, PlayerCount.ONE_TWO),
+        genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
+    ),
+    GameMetadata(
+        id = "duenenschatten",
+        emoji = "◼",
+        title = "DünenSchatten",
+        description = "Schwärze Felder ein — das japanische Zahlen-Ausschluss-Rätsel.",
+        color = 0xFFFBBF24,
+        playerCounts = listOf(PlayerCount.ONE),
+        genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
+    ),
+    GameMetadata(
+        id = "inselbruecke",
+        emoji = "🌉",
+        title = "Inselbrücke",
+        description = "Verbinde alle Inseln mit Brücken — das japanische Hashi-Rätsel.",
+        color = 0xFF4ADE80,
+        playerCounts = listOf(PlayerCount.ONE),
+        genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
+    ),
 )
 
 val CARD_GAMES: List<GameMetadata> = ALL_GAMES.filter { GameGenre.CARD in it.genres }
+val RIDDLE_GAMES: List<GameMetadata> = ALL_GAMES.filter { GameGenre.RIDDLE in it.genres }

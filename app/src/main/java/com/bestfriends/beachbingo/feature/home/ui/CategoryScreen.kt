@@ -78,6 +78,7 @@ fun CategoryScreen(
     onNavigateToBrandungLobby: () -> Unit,
     onNavigateToMeermauLobby: () -> Unit,
     onNavigateToStrandraeuberLobby: () -> Unit,
+    onNavigateToRaetsel: () -> Unit = {},
 ) {
     val playerCount = runCatching { PlayerCount.valueOf(playerCountName) }.getOrNull()
         ?: return
@@ -207,6 +208,8 @@ fun CategoryScreen(
                                             "brandung"      -> onNavigateToBrandungLobby()
                                             "meermau"       -> onNavigateToMeermauLobby()
                                             "strandraeuber" -> onNavigateToStrandraeuberLobby()
+                                            "strandoku", "wellensumme", "kuestenkrieg",
+                                            "duenenschatten", "inselbruecke" -> onNavigateToRaetsel()
                                         }
                                     }
                                 }

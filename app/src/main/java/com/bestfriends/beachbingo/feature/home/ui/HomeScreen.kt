@@ -47,11 +47,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.platform.LocalContext
 import com.bestfriends.beachbingo.core.model.ALL_GAMES
 import com.bestfriends.beachbingo.core.model.CARD_GAMES
 import com.bestfriends.beachbingo.core.model.GameGenre
 import com.bestfriends.beachbingo.core.model.GameMetadata
 import com.bestfriends.beachbingo.core.model.PlayerCount
+import com.bestfriends.beachbingo.core.model.RIDDLE_GAMES
+import com.bestfriends.beachbingo.feature.raetsel.PUZZLE_DIFFICULTY_LABELS
+import com.bestfriends.beachbingo.feature.raetsel.PUZZLE_GAME_INFO
+import com.bestfriends.beachbingo.feature.raetsel.PuzzleSave
+import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
 import com.bestfriends.beachbingo.feature.auth.viewmodel.AuthViewModel
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.BorderColor
@@ -101,17 +107,24 @@ fun HomeScreen(
     onNavigateToCategory: (String) -> Unit,
     onNavigateToCardGames: () -> Unit,
     onNavigateToAllGames: () -> Unit,
+    onNavigateToRaetsel: () -> Unit,
     onRejoinGame: (type: String, gameId: String) -> Unit = { _, _ -> },
     viewModel: AuthViewModel = hiltViewModel(),
 ) {
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     var favoriteIds by remember { mutableStateOf<List<String>>(emptyList()) }
     var activeGame by remember { mutableStateOf<ActiveGameInfo?>(null) }
+    var savedPuzzles by remember { mutableStateOf<List<PuzzleSave>>(emptyList()) }
 
     val auth = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid
+
+    LaunchedEffect(Unit) {
+        savedPuzzles = PuzzleSaveManager.getSaves(context)
+    }
 
     LaunchedEffect(uid) {
         if (uid == null) return@LaunchedEffect
@@ -297,6 +310,40 @@ fun HomeScreen(
             }
         }
 
+        // ── Rätsel ────────────────────────────────────────────────────────────────
+        SectionHeader(
+            title = "RÄTSEL", emoji = "🧩",
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp)
+        )
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = SurfaceDark,
+            modifier = Modifier
+                .padding(horizontal = 20.dp)
+                .fillMaxWidth()
+                .border(1.5.dp, Color(0xFF38BDF8).copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                .clickable { onNavigateToRaetsel() }
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(text = "🧩", fontSize = 28.sp)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Rätsel",
+                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
+                    )
+                    Text(
+                        text = "${RIDDLE_GAMES.size} Rätsel · Strandoku, WellenSumme & mehr",
+                        fontSize = 12.sp, color = TextMuted,
+                    )
+                }
+                Text(text = "›", fontSize = 22.sp, color = Color(0xFF38BDF8))
+            }
+        }
+
         // ── Kartenspiele ──────────────────────────────────────────────────────────
         SectionHeader(
             title = "KARTENSPIELE", emoji = "🃏",
@@ -328,6 +375,27 @@ fun HomeScreen(
                     )
                 }
                 Text(text = "›", fontSize = 22.sp, color = Color(0xFF7C3AED))
+            }
+        }
+
+        // ── Gespeicherte Spiele ───────────────────────────────────────────────────
+        if (savedPuzzles.isNotEmpty()) {
+            SectionHeader(
+                title = "GESPEICHERTE SPIELE", emoji = "💾",
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp)
+            )
+            Row(
+                modifier = Modifier
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                savedPuzzles.forEach { save ->
+                    val info = PUZZLE_GAME_INFO[save.gameType]
+                    if (info != null) {
+                        SavedPuzzleCard(save = save, info = info, onClick = { onNavigateToRaetsel() })
+                    }
+                }
             }
         }
 
@@ -500,6 +568,46 @@ private fun CategoryTile(
             Spacer(Modifier.height(3.dp))
             Text(
                 text = "$gameCount ${if (gameCount == 1) "Spiel" else "Spiele"}",
+                fontSize = 10.sp, color = TextMuted,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SavedPuzzleCard(
+    save: PuzzleSave,
+    info: Triple<String, String, Long>,
+    onClick: () -> Unit,
+) {
+    val accentColor = Color(info.third)
+    val diffLabel = PUZZLE_DIFFICULTY_LABELS[save.difficulty] ?: save.difficulty
+    val elapsed = PuzzleSaveManager.formatElapsed(save.elapsedSeconds)
+
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = SurfaceDark,
+        modifier = Modifier
+            .width(140.dp)
+            .border(1.5.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+            .clickable { onClick() }
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Text(text = info.second, fontSize = 26.sp)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = info.first,
+                fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                color = TextPrimary, lineHeight = 15.sp,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = "$diffLabel · ${save.variant}",
+                fontSize = 10.sp, fontWeight = FontWeight.Bold, color = accentColor,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "⏱ $elapsed",
                 fontSize = 10.sp, color = TextMuted,
             )
         }

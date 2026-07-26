@@ -16,13 +16,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -36,14 +34,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bestfriends.beachbingo.R
-import com.bestfriends.beachbingo.core.model.ALL_GAMES
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.core.model.RIDDLE_GAMES
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.BorderColor
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
@@ -53,20 +48,10 @@ import com.bestfriends.beachbingo.ui.theme.TextPrimary
 import com.bestfriends.beachbingo.ui.theme.TextSub
 
 @Composable
-fun AllGamesScreen(
+fun RaetselScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToBingoLobby: () -> Unit,
-    onNavigateToPongLobby: () -> Unit,
-    onNavigateToVierLobby: () -> Unit,
-    onNavigateToPiratesLobby: () -> Unit,
-    onNavigateToWormLobby: () -> Unit,
-    onNavigateToStrandturmLobby: () -> Unit,
-    onNavigateToBrandungLobby: () -> Unit,
-    onNavigateToMeermauLobby: () -> Unit,
-    onNavigateToStrandraeuberLobby: () -> Unit,
-    onNavigateToRaetsel: () -> Unit = {},
 ) {
-    val games = ALL_GAMES.sortedBy { it.title }
+    val games = RIDDLE_GAMES.sortedBy { it.title }
     var rulesGameId by remember { mutableStateOf<String?>(null) }
     val activeRule = rulesGameId?.let { ALL_GAME_RULES[it] }
 
@@ -78,7 +63,7 @@ fun AllGamesScreen(
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
-        // Header
+        // ── Header ────────────────────────────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -103,34 +88,43 @@ fun AllGamesScreen(
                         )
                     }
                 }
-
                 Spacer(Modifier.width(14.dp))
-
-                Text(text = "🎮", fontSize = 32.sp)
-
+                Text(text = "🧩", fontSize = 32.sp)
                 Spacer(Modifier.width(14.dp))
-
                 Column {
                     Text(
-                        text = "ÜBERSICHT",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextMuted,
-                        letterSpacing = 1.5.sp,
+                        text = "KATEGORIE",
+                        fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                        color = TextMuted, letterSpacing = 1.5.sp,
                     )
                     Text(
-                        text = "Alle Spiele",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = TextPrimary,
+                        text = "Rätsel",
+                        fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
                     )
                 }
             }
         }
 
-        // Game list (alphabetically sorted)
+        // ── Intro-Banner ──────────────────────────────────────────────────────
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = SurfaceDark,
+            modifier = Modifier
+                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .fillMaxWidth()
+                .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
+        ) {
+            Text(
+                text = "🧠 Logik-Rätsel für Solo-Spieler — von Sudoku bis Schiffe Versenken. " +
+                        "Tippe auf ℹ für die Anleitung. Die Spiele werden in den nächsten Updates freigeschaltet.",
+                fontSize = 13.sp, color = TextMuted, lineHeight = 20.sp,
+                modifier = Modifier.padding(14.dp),
+            )
+        }
+
+        // ── Spiele-Liste ──────────────────────────────────────────────────────
         Column(
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp),
+            modifier = Modifier.padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             games.forEach { game ->
@@ -147,59 +141,51 @@ fun AllGamesScreen(
                         )
                 ) {
                     Row(
-                        modifier = Modifier
-                            .clickable {
-                                when (game.id) {
-                                    "bingo"      -> onNavigateToBingoLobby()
-                                    "pong"       -> onNavigateToPongLobby()
-                                    "vier"       -> onNavigateToVierLobby()
-                                    "pirates"    -> onNavigateToPiratesLobby()
-                                    "worm"       -> onNavigateToWormLobby()
-                                    "strandturm" -> onNavigateToStrandturmLobby()
-                                    "brandung"      -> onNavigateToBrandungLobby()
-                                    "meermau"       -> onNavigateToMeermauLobby()
-                                    "strandraeuber" -> onNavigateToStrandraeuberLobby()
-                                    "strandoku", "wellensumme", "kuestenkrieg",
-                                    "duenenschatten", "inselbruecke" -> onNavigateToRaetsel()
-                                }
-                            }
-                            .padding(20.dp),
+                        modifier = Modifier.padding(20.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // Emoji icon
                         Surface(
                             shape = RoundedCornerShape(14.dp),
                             color = accentColor.copy(alpha = 0.15f),
                             modifier = Modifier.size(64.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                if (game.id == "meermau") {
-                                    Image(
-                                        painter = painterResource(R.drawable.ic_meermau_logo),
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier.size(44.dp)
-                                    )
-                                } else {
-                                    Text(text = game.emoji, fontSize = 32.sp)
-                                }
+                                Text(text = game.emoji, fontSize = 30.sp)
                             }
                         }
 
                         Spacer(Modifier.width(16.dp))
 
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = game.title,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary,
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = game.title,
+                                    fontSize = 17.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
+                                )
+                                // "Bald verfügbar" badge
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = accentColor.copy(alpha = 0.15f),
+                                    modifier = Modifier.border(
+                                        1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(6.dp)
+                                    )
+                                ) {
+                                    Text(
+                                        text = "BALD",
+                                        fontSize = 9.sp, fontWeight = FontWeight.Bold,
+                                        color = accentColor, letterSpacing = 1.sp,
+                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                                    )
+                                }
+                            }
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 text = game.description,
-                                fontSize = 13.sp,
-                                color = TextMuted,
-                                lineHeight = 18.sp,
+                                fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp,
                             )
                         }
 
@@ -223,21 +209,12 @@ fun AllGamesScreen(
                                 )
                             }
                         }
-
-                        Spacer(Modifier.width(8.dp))
-
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            tint = TextMuted,
-                            modifier = Modifier.size(24.dp)
-                        )
                     }
                 }
             }
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(32.dp))
     }
 
     if (activeRule != null) {

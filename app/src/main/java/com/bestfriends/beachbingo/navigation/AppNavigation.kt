@@ -27,6 +27,7 @@ import com.bestfriends.beachbingo.feature.home.ui.AllGamesScreen
 import com.bestfriends.beachbingo.feature.home.ui.CardGamesScreen
 import com.bestfriends.beachbingo.feature.home.ui.CategoryScreen
 import com.bestfriends.beachbingo.feature.home.ui.HomeScreen
+import com.bestfriends.beachbingo.feature.home.ui.RaetselScreen
 import com.bestfriends.beachbingo.feature.pong.ui.PongGameScreen
 import com.bestfriends.beachbingo.feature.pong.ui.PongLobbyScreen
 import com.bestfriends.beachbingo.feature.pong.ui.PongResultsScreen
@@ -132,6 +133,7 @@ fun AppNavigation() {
                 onNavigateToCategory = { playerCount -> navController.navigate(Screen.Category(playerCount)) },
                 onNavigateToCardGames = { navController.navigate(Screen.CardGames) },
                 onNavigateToAllGames = { navController.navigate(Screen.AllGames) },
+                onNavigateToRaetsel = { navController.navigate(Screen.Raetsel) },
                 onRejoinGame = { type, gameId ->
                     when (type) {
                         "strandraeuber" -> navController.navigate(Screen.StrandraeuberGame("ONLINE", gameId, 0, "SNIPER", 3))
@@ -158,6 +160,7 @@ fun AppNavigation() {
                 onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
                 onNavigateToMeermauLobby = { navController.navigate(Screen.MeermauLobby) },
                 onNavigateToStrandraeuberLobby = { navController.navigate(Screen.StrandraeuberLobby) },
+                onNavigateToRaetsel = { navController.navigate(Screen.Raetsel) },
             )
         }
 
@@ -167,6 +170,12 @@ fun AppNavigation() {
                 onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
                 onNavigateToMeermauLobby = { navController.navigate(Screen.MeermauLobby) },
                 onNavigateToStrandraeuberLobby = { navController.navigate(Screen.StrandraeuberLobby) },
+            )
+        }
+
+        composable<Screen.Raetsel> {
+            RaetselScreen(
+                onNavigateBack = { navController.popBackStack() },
             )
         }
 
@@ -182,6 +191,7 @@ fun AppNavigation() {
                 onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
                 onNavigateToMeermauLobby = { navController.navigate(Screen.MeermauLobby) },
                 onNavigateToStrandraeuberLobby = { navController.navigate(Screen.StrandraeuberLobby) },
+                onNavigateToRaetsel = { navController.navigate(Screen.Raetsel) },
             )
         }
 
