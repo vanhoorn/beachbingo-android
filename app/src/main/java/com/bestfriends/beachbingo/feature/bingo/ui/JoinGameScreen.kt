@@ -58,6 +58,7 @@ fun JoinGameScreen(
     onNavigateToVier: (String, String) -> Unit,
     onNavigateToBrandung: (String) -> Unit,
     onNavigateToMeermau: (String) -> Unit,
+    onNavigateToStrandraeuber: (String) -> Unit,
     onNavigateBack: () -> Unit,
     viewModel: JoinViewModel = hiltViewModel()
 ) {
@@ -108,8 +109,9 @@ fun JoinGameScreen(
                     dest.difficulty, dest.scoreLimit, dest.isHost, dest.mySide
                 )
                 is JoinDestination.Vier     -> onNavigateToVier(dest.gameId, dest.myDrinkId)
-                is JoinDestination.Brandung -> onNavigateToBrandung(dest.gameId)
-                is JoinDestination.MeerMau  -> onNavigateToMeermau(dest.gameId)
+                is JoinDestination.Brandung     -> onNavigateToBrandung(dest.gameId)
+                is JoinDestination.MeerMau      -> onNavigateToMeermau(dest.gameId)
+                is JoinDestination.Strandraeuber -> onNavigateToStrandraeuber(dest.gameId)
             }
         }
     }
@@ -147,7 +149,7 @@ fun JoinGameScreen(
 
             Spacer(Modifier.height(8.dp))
             Text(
-                "BeachBingo · BeachPong · Vier4Bier · Brandung · MeerMau",
+                "BeachBingo · BeachPong · Vier4Bier · Brandung · MeerMau · Strandräuber",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

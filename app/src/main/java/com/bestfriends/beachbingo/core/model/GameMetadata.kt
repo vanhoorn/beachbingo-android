@@ -99,6 +99,15 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         playerCounts = listOf(PlayerCount.ONE_TWO, PlayerCount.TWO_FOUR),
         genres = listOf(GameGenre.PARTY, GameGenre.LOGICAL, GameGenre.CARD),
     ),
+    GameMetadata(
+        id = "strandraeuber",
+        emoji = "🦹",
+        title = "Strandräuber",
+        description = "Karten ziehen & Paare ablegen. Wer hält am Ende den Strandräuber?",
+        color = 0xFFE11D48,
+        playerCounts = listOf(PlayerCount.ONE_TWO, PlayerCount.TWO_FOUR),
+        genres = listOf(GameGenre.PARTY, GameGenre.CARD),
+    ),
 )
 
 val CARD_GAMES: List<GameMetadata> = ALL_GAMES.filter { GameGenre.CARD in it.genres }

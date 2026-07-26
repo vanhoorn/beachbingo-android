@@ -30,6 +30,7 @@ sealed class JoinDestination {
     data class Vier(val gameId: String, val myDrinkId: String) : JoinDestination()
     data class Brandung(val gameId: String) : JoinDestination()
     data class MeerMau(val gameId: String) : JoinDestination()
+    data class Strandraeuber(val gameId: String) : JoinDestination()
 }
 
 data class JoinUiState(
@@ -54,24 +55,27 @@ class JoinViewModel @Inject constructor(
             val user = authRepository.currentUser.first { it != null } ?: return@launch
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                val bingoDeferred    = async { firestore.collection("games").document(code).get().await() }
-                val pongDeferred     = async { firestore.collection("pongGames").document(code).get().await() }
-                val vierDeferred     = async { firestore.collection("vierGames").document(code).get().await() }
-                val brandungDeferred = async { firestore.collection("brandungGames").document(code).get().await() }
-                val meermauDeferred  = async { firestore.collection("meermauGames").document(code).get().await() }
+                val bingoDeferred         = async { firestore.collection("games").document(code).get().await() }
+                val pongDeferred          = async { firestore.collection("pongGames").document(code).get().await() }
+                val vierDeferred          = async { firestore.collection("vierGames").document(code).get().await() }
+                val brandungDeferred      = async { firestore.collection("brandungGames").document(code).get().await() }
+                val meermauDeferred       = async { firestore.collection("meermauGames").document(code).get().await() }
+                val strandraeuberDeferred = async { firestore.collection("strandraeuberGames").document(code).get().await() }
 
-                val bingoSnap    = bingoDeferred.await()
-                val pongSnap     = pongDeferred.await()
-                val vierSnap     = vierDeferred.await()
-                val brandungSnap = brandungDeferred.await()
-                val meermauSnap  = meermauDeferred.await()
+                val bingoSnap         = bingoDeferred.await()
+                val pongSnap          = pongDeferred.await()
+                val vierSnap          = vierDeferred.await()
+                val brandungSnap      = brandungDeferred.await()
+                val meermauSnap       = meermauDeferred.await()
+                val strandraeuberSnap = strandraeuberDeferred.await()
 
                 val destination: JoinDestination? = when {
-                    bingoSnap.exists()    -> joinBingo(code, bingoSnap.data!!, user.uid, user.displayName, user.avatarUrl)
-                    pongSnap.exists()     -> joinPong(code, pongSnap.data!!, user.uid, user.displayName, user.avatarUrl)
-                    vierSnap.exists()     -> joinVier(code, vierSnap.data!!, user.uid, user.displayName, user.avatarUrl, user.preferredVierDrinkId ?: "lager")
-                    brandungSnap.exists() -> joinBrandung(code, brandungSnap.data!!, user.uid, user.displayName, user.avatarUrl)
-                    meermauSnap.exists()  -> joinMeerMau(code, meermauSnap.data!!, user.uid, user.displayName, user.avatarUrl)
+                    bingoSnap.exists()         -> joinBingo(code, bingoSnap.data!!, user.uid, user.displayName, user.avatarUrl)
+                    pongSnap.exists()          -> joinPong(code, pongSnap.data!!, user.uid, user.displayName, user.avatarUrl)
+                    vierSnap.exists()          -> joinVier(code, vierSnap.data!!, user.uid, user.displayName, user.avatarUrl, user.preferredVierDrinkId ?: "lager")
+                    brandungSnap.exists()      -> joinBrandung(code, brandungSnap.data!!, user.uid, user.displayName, user.avatarUrl)
+                    meermauSnap.exists()       -> joinMeerMau(code, meermauSnap.data!!, user.uid, user.displayName, user.avatarUrl)
+                    strandraeuberSnap.exists() -> joinStrandraeuber(code, strandraeuberSnap.data!!, user.uid, user.displayName, user.avatarUrl)
                     else -> { _uiState.update { it.copy(isLoading = false, error = "Kein Spiel mit diesem Code gefunden.") }; null }
                 }
                 if (destination != null) {
@@ -255,6 +259,36 @@ class JoinViewModel @Inject constructor(
             ).await()
         }
         return JoinDestination.MeerMau(docId)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private suspend fun joinStrandraeuber(
+        docId: String, data: Map<String, Any>, uid: String, displayName: String, avatarUrl: String
+    ): JoinDestination? {
+        val status = data["status"] as? String ?: ""
+        if (status == "FINISHED") {
+            _uiState.update { it.copy(isLoading = false, error = "Dieses Spiel ist bereits beendet.") }
+            return null
+        }
+        if (status == "RUNNING") {
+            _uiState.update { it.copy(isLoading = false, error = "Das Spiel läuft bereits.") }
+            return null
+        }
+        val playerIds = (data["playerIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+        if (!playerIds.contains(uid)) {
+            if (playerIds.size >= 6) {
+                _uiState.update { it.copy(isLoading = false, error = "Das Spiel ist voll (max. 6 Spieler).") }
+                return null
+            }
+            val newPlayer = mapOf(
+                "userId" to uid, "displayName" to displayName, "avatarUrl" to avatarUrl,
+                "hand" to emptyList<Any>(), "cardCount" to 0L, "isAI" to false,
+            )
+            firestore.collection("strandraeuberGames").document(docId).update(
+                mapOf("playerIds" to FieldValue.arrayUnion(uid), "players.$uid" to newPlayer)
+            ).await()
+        }
+        return JoinDestination.Strandraeuber(docId)
     }
 
     fun clearNavigate() = _uiState.update { it.copy(destination = null, error = null) }

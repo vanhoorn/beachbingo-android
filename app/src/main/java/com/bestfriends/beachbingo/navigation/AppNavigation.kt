@@ -58,6 +58,10 @@ import com.bestfriends.beachbingo.feature.meermau.ui.MeermauLobbyScreen
 import com.bestfriends.beachbingo.feature.meermau.ui.MeermauGameScreen
 import com.bestfriends.beachbingo.feature.meermau.ui.MeermauSettingsScreen
 import com.bestfriends.beachbingo.feature.meermau.ui.MeermauResultsScreen
+import com.bestfriends.beachbingo.feature.strandraeuber.ui.StrandraeuberLobbyScreen
+import com.bestfriends.beachbingo.feature.strandraeuber.ui.StrandraeuberGameScreen
+import com.bestfriends.beachbingo.feature.strandraeuber.ui.StrandraeuberSettingsScreen
+import com.bestfriends.beachbingo.feature.strandraeuber.ui.StrandraeuberResultsScreen
 
 @Composable
 fun AppNavigation() {
@@ -122,6 +126,7 @@ fun AppNavigation() {
                 onNavigateToStrandturmLobby = { navController.navigate(Screen.StrandturmLobby) },
                 onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
                 onNavigateToMeermauLobby = { navController.navigate(Screen.MeermauLobby) },
+                onNavigateToStrandraeuberLobby = { navController.navigate(Screen.StrandraeuberLobby) },
                 onNavigateToProfile = { navController.navigate(Screen.Profile) },
                 onNavigateToJoin = { navController.navigate(Screen.JoinGame) },
                 onNavigateToCategory = { playerCount -> navController.navigate(Screen.Category(playerCount)) },
@@ -144,6 +149,7 @@ fun AppNavigation() {
                 onNavigateToStrandturmLobby = { navController.navigate(Screen.StrandturmLobby) },
                 onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
                 onNavigateToMeermauLobby = { navController.navigate(Screen.MeermauLobby) },
+                onNavigateToStrandraeuberLobby = { navController.navigate(Screen.StrandraeuberLobby) },
             )
         }
 
@@ -152,6 +158,7 @@ fun AppNavigation() {
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
                 onNavigateToMeermauLobby = { navController.navigate(Screen.MeermauLobby) },
+                onNavigateToStrandraeuberLobby = { navController.navigate(Screen.StrandraeuberLobby) },
             )
         }
 
@@ -166,6 +173,7 @@ fun AppNavigation() {
                 onNavigateToStrandturmLobby = { navController.navigate(Screen.StrandturmLobby) },
                 onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
                 onNavigateToMeermauLobby = { navController.navigate(Screen.MeermauLobby) },
+                onNavigateToStrandraeuberLobby = { navController.navigate(Screen.StrandraeuberLobby) },
             )
         }
 
@@ -200,6 +208,9 @@ fun AppNavigation() {
                 },
                 onNavigateToMeermau = { gameId ->
                     navController.navigate(Screen.MeermauGame("online", gameId, 0, "SNIPER")) { popUpTo(Screen.Home) }
+                },
+                onNavigateToStrandraeuber = { gameId ->
+                    navController.navigate(Screen.StrandraeuberGame("ONLINE", gameId, 0, "SNIPER", 3)) { popUpTo(Screen.Home) }
                 },
                 onNavigateBack = { navController.popBackStack() }
             )
@@ -624,6 +635,51 @@ fun AppNavigation() {
 
         composable<Screen.MeermauResults> {
             MeermauResultsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        // ── Strandräuber ───────────────────────────────────────────────────────
+        composable<Screen.StrandraeuberLobby> {
+            StrandraeuberLobbyScreen(
+                onNavigateBack = {
+                    navController.navigate(Screen.Home) {
+                        popUpTo(Screen.Home) { inclusive = false }
+                    }
+                },
+                onNavigateToGame = { mode, gameId, aiCount, difficulty, totalRounds ->
+                    navController.navigate(Screen.StrandraeuberGame(mode, gameId, aiCount, difficulty, totalRounds)) {
+                        popUpTo(Screen.StrandraeuberLobby)
+                    }
+                },
+                onNavigateToResults = { navController.navigate(Screen.StrandraeuberResults) },
+                onNavigateToSettings = { navController.navigate(Screen.StrandraeuberSettings) },
+            )
+        }
+
+        composable<Screen.StrandraeuberGame> { backStack ->
+            val route: Screen.StrandraeuberGame = backStack.toRoute()
+            StrandraeuberGameScreen(
+                mode = route.mode,
+                gameId = route.gameId,
+                aiCount = route.aiCount,
+                difficulty = route.difficulty,
+                totalRounds = route.totalRounds,
+                onNavigateBack = {
+                    navController.navigate(Screen.StrandraeuberLobby) {
+                        popUpTo(Screen.StrandraeuberLobby) { inclusive = true }
+                    }
+                },
+            )
+        }
+
+        composable<Screen.StrandraeuberSettings> {
+            StrandraeuberSettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToProfile = { navController.navigate(Screen.Profile) },
+            )
+        }
+
+        composable<Screen.StrandraeuberResults> {
+            StrandraeuberResultsScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
 }

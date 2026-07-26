@@ -85,6 +85,7 @@ fun HomeScreen(
     onNavigateToStrandturmLobby: () -> Unit,
     onNavigateToBrandungLobby: () -> Unit,
     onNavigateToMeermauLobby: () -> Unit,
+    onNavigateToStrandraeuberLobby: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToJoin: () -> Unit,
     onNavigateToCategory: (String) -> Unit,
@@ -207,8 +208,9 @@ fun HomeScreen(
                             "pirates"    -> onNavigateToPiratesLobby()
                             "worm"       -> onNavigateToWormLobby()
                             "strandturm" -> onNavigateToStrandturmLobby()
-                            "brandung"   -> onNavigateToBrandungLobby()
-                            "meermau"    -> onNavigateToMeermauLobby()
+                            "brandung"       -> onNavigateToBrandungLobby()
+                            "meermau"        -> onNavigateToMeermauLobby()
+                            "strandraeuber"  -> onNavigateToStrandraeuberLobby()
                         }
                     })
                 }

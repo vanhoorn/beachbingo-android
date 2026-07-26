@@ -57,6 +57,7 @@ fun CardGamesScreen(
     onNavigateBack: () -> Unit,
     onNavigateToBrandungLobby: () -> Unit,
     onNavigateToMeermauLobby: () -> Unit,
+    onNavigateToStrandraeuberLobby: () -> Unit,
 ) {
     val games = CARD_GAMES.sortedBy { it.title }
     var rulesGameId by remember { mutableStateOf<String?>(null) }
@@ -142,8 +143,9 @@ fun CardGamesScreen(
                         modifier = Modifier
                             .clickable {
                                 when (game.id) {
-                                    "brandung" -> onNavigateToBrandungLobby()
-                                    "meermau"  -> onNavigateToMeermauLobby()
+                                    "brandung"      -> onNavigateToBrandungLobby()
+                                    "meermau"       -> onNavigateToMeermauLobby()
+                                    "strandraeuber" -> onNavigateToStrandraeuberLobby()
                                 }
                             }
                             .padding(20.dp),

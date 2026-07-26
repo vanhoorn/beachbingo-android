@@ -141,4 +141,23 @@ val ALL_GAME_RULES: Map<String, GameRule> = mapOf(
         ),
         proTip = "Den Buben (J) aufheben für kritische Momente. Nichts ist befriedigender, als im richtigen Moment die Farbe zu wechseln.",
     ),
+    "strandraeuber" to GameRule(
+        id = "strandraeuber",
+        title = "Strandräuber",
+        emoji = "🦹",
+        color = 0xFFE11D48,
+        tagline = "Halte bloß nicht den Strandräuber — oder doch?",
+        goal = "Nicht der letzte Spieler sein, der noch Karten hält. Wer den Strandräuber am Ende hat, verliert!",
+        rules = listOf(
+            "37 Karten: 18 Paare und 1 Strandräuber-Karte ohne Gegenstück.",
+            "Alle Karten werden ausgeteilt. Jeder legt sofort alle Paare ab.",
+            "Reihum zieht jeder Spieler blind eine Karte vom linken Nachbarn.",
+            "Neue Paare werden sofort abgelegt.",
+            "Spieler ohne Karten scheiden aus dem Ziehkreis aus — sie haben gewonnen!",
+            "Das Spiel endet, wenn ein Spieler allein mit dem Strandräuber übrig bleibt.",
+            "Dieser Spieler verliert die Runde und erhält einen Strandräuber-Punkt.",
+            "Mehrere Runden möglich — wer am Ende die meisten Punkte hat, verliert das Gesamtspiel.",
+        ),
+        proTip = "Pokern hilft! Verstecke den Strandräuber in deiner Hand — zeige keine Reaktion, wenn der Gegner daneben greift.",
+    ),
 )

@@ -104,4 +104,15 @@ sealed interface Screen {
         val highScore: Int,
         val newHighScore: Boolean,
     ) : Screen
+    // Strandräuber
+    @Serializable object StrandraeuberLobby : Screen
+    @Serializable data class StrandraeuberGame(
+        val mode: String,
+        val gameId: String? = null,
+        val aiCount: Int = 2,
+        val difficulty: String = "SNIPER",
+        val totalRounds: Int = 3,
+    ) : Screen
+    @Serializable object StrandraeuberSettings : Screen
+    @Serializable object StrandraeuberResults : Screen
 }
