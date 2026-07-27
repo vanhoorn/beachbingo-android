@@ -5,7 +5,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -158,24 +160,28 @@ fun InselbrueckeGameScreen(
                                             )
                                         }
                                     }
-                                    .pointerInput(state) {
+                                    .pointerInput(Unit) {
                                         detectTapGestures(
                                             onDoubleTap = {
                                                 zoomScale = 1f
                                                 panOffset = Offset.Zero
                                             },
                                             onTap = { rawOffset ->
+                                                // Read gs/puzzleWithSol directly (not captured local vals)
+                                                // so this coroutine never needs to restart on state change.
+                                                val currentState = gs ?: return@detectTapGestures
+                                                val currentPuzzle = puzzleWithSol?.puzzle ?: return@detectTapGestures
                                                 val col = ((rawOffset.x - panOffset.x) / zoomScale / boxPx).toInt()
                                                 val row = ((rawOffset.y - panOffset.y) / zoomScale / boxPx).toInt()
-                                                val tapped = puzzle.islands.find { it.row == row && it.col == col }
+                                                val tapped = currentPuzzle.islands.find { it.row == row && it.col == col }
                                                 if (tapped != null) {
                                                     val sel = selectedIslandId
                                                     if (sel == null || sel == tapped.id) {
                                                         selectedIslandId = if (sel == tapped.id) null else tapped.id
                                                     } else {
-                                                        val neighbors = getNeighborIslands(puzzle, puzzle.islands.find { it.id == sel }!!, state.bridges)
+                                                        val neighbors = getNeighborIslands(currentPuzzle, currentPuzzle.islands.find { it.id == sel }!!, currentState.bridges)
                                                         if (neighbors.any { it.id == tapped.id }) {
-                                                            gs = toggleHashiBridge(state, sel, tapped.id)
+                                                            gs = toggleHashiBridge(currentState, sel, tapped.id)
                                                         }
                                                         selectedIslandId = null
                                                     }
@@ -229,15 +235,20 @@ fun InselbrueckeGameScreen(
                     }
 
                     Spacer(Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    ) {
                         OutlinedButton(
                             onClick = { running = !running },
                             border = BorderStroke(1.dp, OceanBlue.copy(alpha = 0.5f)),
                         ) { Text(if (running) "⏸" else "▶", color = OceanBlue, fontWeight = FontWeight.Bold) }
                         OutlinedButton(
                             onClick = {
-                                val hint = getHashiHint(state, ps.solution)
-                                if (hint != null) gs = toggleHashiBridge(state, hint.first, hint.second)
+                                val currentState = gs ?: return@OutlinedButton
+                                val currentPs = puzzleWithSol ?: return@OutlinedButton
+                                val hint = getHashiHint(currentState, currentPs.solution)
+                                if (hint != null) gs = toggleHashiBridge(currentState, hint.first, hint.second)
                             },
                             border = BorderStroke(1.dp, IbAccent.copy(alpha = 0.5f)),
                         ) { Text("💡 Hinweis", color = IbAccent, fontWeight = FontWeight.Bold) }
