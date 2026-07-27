@@ -73,6 +73,8 @@ import com.bestfriends.beachbingo.feature.raetsel.ui.WellensummeLobbyScreen
 import com.bestfriends.beachbingo.feature.raetsel.ui.WellensummeGameScreen
 import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegLobbyScreen
 import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegGameScreen
+import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegPlacementScreen
+import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegBattleScreen
 
 @Composable
 fun AppNavigation() {
@@ -260,6 +262,9 @@ fun AppNavigation() {
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToGame = { diff, seed, saveId ->
                     navController.navigate(Screen.KuestenkriegGame(diff, seed, saveId)) { popUpTo(Screen.KuestenkriegLobby) }
+                },
+                onNavigateToPlacement = { aiMode ->
+                    navController.navigate(Screen.KuestenkriegPlacement(aiMode))
                 }
             )
         }
@@ -268,6 +273,24 @@ fun AppNavigation() {
             KuestenkriegGameScreen(
                 difficulty = route.difficulty, seed = route.seed, saveId = route.saveId,
                 onNavigateBack = { navController.navigate(Screen.KuestenkriegLobby) { popUpTo(Screen.KuestenkriegLobby) { inclusive = true } } }
+            )
+        }
+        composable<Screen.KuestenkriegPlacement> { backStack ->
+            val route: Screen.KuestenkriegPlacement = backStack.toRoute()
+            KuestenkriegPlacementScreen(
+                aiMode = route.aiMode,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToBattle = {
+                    navController.navigate(Screen.KuestenkriegBattle) { popUpTo(Screen.KuestenkriegPlacement(route.aiMode)) }
+                }
+            )
+        }
+        composable<Screen.KuestenkriegBattle> {
+            KuestenkriegBattleScreen(
+                onNavigateBack = { navController.navigate(Screen.KuestenkriegLobby) { popUpTo(Screen.KuestenkriegLobby) { inclusive = true } } },
+                onNavigateToPlacement = { aiMode ->
+                    navController.navigate(Screen.KuestenkriegPlacement(aiMode)) { popUpTo(Screen.KuestenkriegLobby) }
+                }
             )
         }
 

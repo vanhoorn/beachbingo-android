@@ -148,4 +148,6 @@ sealed interface Screen {
         val seed: Long,
         val saveId: String? = null,
     ) : Screen
+    @Serializable data class KuestenkriegPlacement(val aiMode: String) : Screen
+    @Serializable object KuestenkriegBattle : Screen
 }
