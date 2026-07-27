@@ -75,6 +75,9 @@ import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegLobbyScreen
 import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegGameScreen
 import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegPlacementScreen
 import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegBattleScreen
+import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegOnlineLobbyScreen
+import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegOnlinePlacementScreen
+import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegOnlineBattleScreen
 
 @Composable
 fun AppNavigation() {
@@ -265,7 +268,41 @@ fun AppNavigation() {
                 },
                 onNavigateToPlacement = { aiMode ->
                     navController.navigate(Screen.KuestenkriegPlacement(aiMode))
-                }
+                },
+                onNavigateToOnlineLobby = { code ->
+                    navController.navigate(Screen.KuestenkriegOnlineLobby(code))
+                },
+            )
+        }
+        composable<Screen.KuestenkriegOnlineLobby> { backStack ->
+            val route: Screen.KuestenkriegOnlineLobby = backStack.toRoute()
+            KuestenkriegOnlineLobbyScreen(
+                gameCode = route.joinCode,
+                onNavigateBack = { navController.navigate(Screen.KuestenkriegLobby) { popUpTo(Screen.KuestenkriegLobby) { inclusive = true } } },
+                onNavigateToPlacement = { code ->
+                    navController.navigate(Screen.KuestenkriegOnlinePlacement(code)) {
+                        popUpTo(Screen.KuestenkriegOnlineLobby(code)) { inclusive = true }
+                    }
+                },
+            )
+        }
+        composable<Screen.KuestenkriegOnlinePlacement> { backStack ->
+            val route: Screen.KuestenkriegOnlinePlacement = backStack.toRoute()
+            KuestenkriegOnlinePlacementScreen(
+                gameCode = route.gameCode,
+                onNavigateBack = { navController.navigate(Screen.KuestenkriegLobby) { popUpTo(Screen.KuestenkriegLobby) { inclusive = true } } },
+                onNavigateToBattle = { code ->
+                    navController.navigate(Screen.KuestenkriegOnlineBattle(code)) {
+                        popUpTo(Screen.KuestenkriegOnlinePlacement(code)) { inclusive = true }
+                    }
+                },
+            )
+        }
+        composable<Screen.KuestenkriegOnlineBattle> { backStack ->
+            val route: Screen.KuestenkriegOnlineBattle = backStack.toRoute()
+            KuestenkriegOnlineBattleScreen(
+                gameCode = route.gameCode,
+                onNavigateBack = { navController.navigate(Screen.KuestenkriegLobby) { popUpTo(Screen.KuestenkriegLobby) { inclusive = true } } },
             )
         }
         composable<Screen.KuestenkriegGame> { backStack ->
@@ -344,6 +381,9 @@ fun AppNavigation() {
                 },
                 onNavigateToStrandraeuber = { gameId ->
                     navController.navigate(Screen.StrandraeuberGame("ONLINE", gameId, 0, "SNIPER", 3)) { popUpTo(Screen.Home) }
+                },
+                onNavigateToKuestenkrieg = { code ->
+                    navController.navigate(Screen.KuestenkriegOnlineLobby(code)) { popUpTo(Screen.Home) }
                 },
                 onNavigateBack = { navController.popBackStack() }
             )

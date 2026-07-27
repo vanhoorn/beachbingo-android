@@ -59,6 +59,7 @@ fun JoinGameScreen(
     onNavigateToBrandung: (String) -> Unit,
     onNavigateToMeermau: (String) -> Unit,
     onNavigateToStrandraeuber: (String) -> Unit,
+    onNavigateToKuestenkrieg: (String) -> Unit = {},
     onNavigateBack: () -> Unit,
     viewModel: JoinViewModel = hiltViewModel()
 ) {
@@ -112,6 +113,7 @@ fun JoinGameScreen(
                 is JoinDestination.Brandung     -> onNavigateToBrandung(dest.gameId)
                 is JoinDestination.MeerMau      -> onNavigateToMeermau(dest.gameId)
                 is JoinDestination.Strandraeuber -> onNavigateToStrandraeuber(dest.gameId)
+                is JoinDestination.Kuestenkrieg -> onNavigateToKuestenkrieg(dest.gameCode)
             }
         }
     }
