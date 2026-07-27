@@ -3,7 +3,6 @@ package com.bestfriends.beachbingo.feature.raetsel.ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,8 +13,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -127,65 +126,82 @@ fun DuenenschattenGameScreen(
                     val conflicts = computeConflicts(state)
                     val size = p.size
 
-                    // ── Grid with border + background ──────────────────────────
-                    Surface(
-                        color = Color(0xFF0A1929),
-                        border = BorderStroke(2.dp, TextMuted.copy(alpha = 0.6f)),
-                        shape = RoundedCornerShape(4.dp),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(4.dp),
-                            verticalArrangement = Arrangement.spacedBy(2.dp),
-                        ) {
-                            for (r in 0 until size) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    for (c in 0 until size) {
-                                        val mark = state.marks[r][c]
-                                        val isBlack = mark == CellMark.BLACK
-                                        val isDot = mark == CellMark.DOT
-                                        val isConflict = (r to c) in conflicts.adjacentBlacks || (r to c) in conflicts.duplicateWhites
-                                        val bgColor = when {
-                                            isBlack    -> Color(0xFF111827)
-                                            isConflict -> Danger.copy(alpha = 0.15f)
-                                            else       -> SurfaceDark
-                                        }
-                                        val borderCol = when {
-                                            isConflict -> Danger
-                                            else       -> BorderColor
-                                        }
+                    val density = LocalDensity.current
+                    val cellPx = with(density) { cellDp.toPx() }
+                    val padPx = with(density) { 4.dp.toPx() }
+                    val gapPx = with(density) { 2.dp.toPx() }
+                    val pitchPx = cellPx + gapPx
 
-                                        Box(
-                                            modifier = Modifier
-                                                .size(cellDp)
-                                                .background(bgColor, RoundedCornerShape(4.dp))
-                                                .border(1.dp, borderCol, RoundedCornerShape(4.dp))
-                                                .pointerInput(r, c) {
-                                                    detectTapGestures(
-                                                        onTap = { gs = toggleMark(state, r, c) },
-                                                        onLongPress = {
-                                                            val newMark = if (state.marks[r][c] == CellMark.DOT) CellMark.WHITE else CellMark.DOT
-                                                            gs = setMark(state, r, c, newMark)
-                                                        },
-                                                    )
-                                                },
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            if (!isBlack) {
-                                                Text(
-                                                    p.grid[r][c].toString(),
-                                                    fontSize = (cellDp.value * 0.42f).sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = if (isConflict) Danger else TextSub,
-                                                )
+                    // ── Grid with border + background ──────────────────────────
+                    ZoomableGrid(
+                        onTap = tap@{ gx, gy ->
+                            if (gx < padPx || gy < padPx) return@tap
+                            val currentState = gs ?: return@tap
+                            val row = ((gy - padPx) / pitchPx).toInt()
+                            val col = ((gx - padPx) / pitchPx).toInt()
+                            if (row !in 0 until size || col !in 0 until size) return@tap
+                            gs = toggleMark(currentState, row, col)
+                        },
+                        onLongPress = lp@{ gx, gy ->
+                            if (gx < padPx || gy < padPx) return@lp
+                            val currentState = gs ?: return@lp
+                            val row = ((gy - padPx) / pitchPx).toInt()
+                            val col = ((gx - padPx) / pitchPx).toInt()
+                            if (row !in 0 until size || col !in 0 until size) return@lp
+                            val newMark = if (currentState.marks[row][col] == CellMark.DOT) CellMark.WHITE else CellMark.DOT
+                            gs = setMark(currentState, row, col, newMark)
+                        },
+                    ) {
+                        Surface(
+                            color = Color(0xFF0A1929),
+                            border = BorderStroke(2.dp, TextMuted.copy(alpha = 0.6f)),
+                            shape = RoundedCornerShape(4.dp),
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(4.dp),
+                                verticalArrangement = Arrangement.spacedBy(2.dp),
+                            ) {
+                                for (r in 0 until size) {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        for (c in 0 until size) {
+                                            val mark = state.marks[r][c]
+                                            val isBlack = mark == CellMark.BLACK
+                                            val isDot = mark == CellMark.DOT
+                                            val isConflict = (r to c) in conflicts.adjacentBlacks || (r to c) in conflicts.duplicateWhites
+                                            val bgColor = when {
+                                                isBlack    -> Color(0xFF111827)
+                                                isConflict -> Danger.copy(alpha = 0.15f)
+                                                else       -> SurfaceDark
                                             }
-                                            if (isDot) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(cellDp * 0.28f)
-                                                        .align(Alignment.BottomEnd)
-                                                        .offset((-3).dp, (-3).dp)
-                                                        .background(DsAccent, CircleShape),
-                                                )
+                                            val borderCol = when {
+                                                isConflict -> Danger
+                                                else       -> BorderColor
+                                            }
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(cellDp)
+                                                    .background(bgColor, RoundedCornerShape(4.dp))
+                                                    .border(1.dp, borderCol, RoundedCornerShape(4.dp)),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                if (!isBlack) {
+                                                    Text(
+                                                        p.grid[r][c].toString(),
+                                                        fontSize = (cellDp.value * 0.42f).sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (isConflict) Danger else TextSub,
+                                                    )
+                                                }
+                                                if (isDot) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(cellDp * 0.28f)
+                                                            .align(Alignment.BottomEnd)
+                                                            .offset((-3).dp, (-3).dp)
+                                                            .background(DsAccent, CircleShape),
+                                                    )
+                                                }
                                             }
                                         }
                                     }

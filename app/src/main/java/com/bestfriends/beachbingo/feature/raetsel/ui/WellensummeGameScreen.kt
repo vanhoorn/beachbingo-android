@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -120,75 +121,92 @@ fun WellensummeGameScreen(
                 } else {
                     val size = p.size
 
+                    val density = LocalDensity.current
+                    val cellPx = with(density) { cellDp.toPx() }
+                    val padPx = with(density) { 2.dp.toPx() }
+                    val gapPx = with(density) { 1.dp.toPx() }
+                    val pitchPx = cellPx + gapPx
+
                     // ── Grid with border + background ──────────────────────────
-                    Surface(
-                        color = Color(0xFF0A1929),
-                        border = BorderStroke(2.dp, TextMuted.copy(alpha = 0.6f)),
-                        shape = RoundedCornerShape(4.dp),
+                    ZoomableGrid(
+                        onTap = tap@{ gx, gy ->
+                            if (gx < padPx || gy < padPx) return@tap
+                            val currentState = gs ?: return@tap
+                            val row = ((gy - padPx) / pitchPx).toInt()
+                            val col = ((gx - padPx) / pitchPx).toInt()
+                            if (row !in 0 until size || col !in 0 until size) return@tap
+                            if (p.cells[row][col].isBlack) return@tap
+                            gs = selectKakuroCell(currentState, row, col)
+                        },
                     ) {
-                        Column(
-                            modifier = Modifier.padding(2.dp),
-                            verticalArrangement = Arrangement.spacedBy(1.dp),
+                        Surface(
+                            color = Color(0xFF0A1929),
+                            border = BorderStroke(2.dp, TextMuted.copy(alpha = 0.6f)),
+                            shape = RoundedCornerShape(4.dp),
                         ) {
-                            for (r in 0 until size) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-                                    for (c in 0 until size) {
-                                        val cell = p.cells[r][c]
-                                        val isSelected = state.selected == r to c
-                                        val hasErr = state.errors[r][c]
-                                        if (cell.isBlack) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(cellDp)
-                                                    .background(KakuroBg, RoundedCornerShape(2.dp))
-                                                    .border(1.dp, Color(0xFF333333), RoundedCornerShape(2.dp)),
-                                                contentAlignment = Alignment.Center,
-                                            ) {
-                                                cell.downClue?.let { clue ->
-                                                    Text(
-                                                        clue.toString(),
-                                                        fontSize = (cellDp.value * 0.28f).sp,
+                            Column(
+                                modifier = Modifier.padding(2.dp),
+                                verticalArrangement = Arrangement.spacedBy(1.dp),
+                            ) {
+                                for (r in 0 until size) {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+                                        for (c in 0 until size) {
+                                            val cell = p.cells[r][c]
+                                            val isSelected = state.selected == r to c
+                                            val hasErr = state.errors[r][c]
+                                            if (cell.isBlack) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(cellDp)
+                                                        .background(KakuroBg, RoundedCornerShape(2.dp))
+                                                        .border(1.dp, Color(0xFF333333), RoundedCornerShape(2.dp)),
+                                                    contentAlignment = Alignment.Center,
+                                                ) {
+                                                    cell.downClue?.let { clue ->
+                                                        Text(
+                                                            clue.toString(),
+                                                            fontSize = (cellDp.value * 0.28f).sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = TextSub,
+                                                            modifier = Modifier.align(Alignment.TopEnd).padding(2.dp),
+                                                        )
+                                                    }
+                                                    cell.rightClue?.let { clue ->
+                                                        Text(
+                                                            clue.toString(),
+                                                            fontSize = (cellDp.value * 0.28f).sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = TextSub,
+                                                            modifier = Modifier.align(Alignment.BottomStart).padding(2.dp),
+                                                        )
+                                                    }
+                                                }
+                                            } else {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(cellDp)
+                                                        .background(
+                                                            if (isSelected) WsAccent.copy(alpha = 0.25f)
+                                                            else if (hasErr) Danger.copy(alpha = 0.15f)
+                                                            else SurfaceDark,
+                                                            RoundedCornerShape(2.dp),
+                                                        )
+                                                        .border(
+                                                            1.dp,
+                                                            if (isSelected) WsAccent else if (hasErr) Danger else BorderColor,
+                                                            RoundedCornerShape(2.dp),
+                                                        ),
+                                                    contentAlignment = Alignment.Center,
+                                                ) {
+                                                    val v = state.board[r][c]
+                                                    if (v != 0) Text(
+                                                        v.toString(),
+                                                        fontSize = (cellDp.value * 0.45f).sp,
                                                         fontWeight = FontWeight.Bold,
-                                                        color = TextSub,
-                                                        modifier = Modifier.align(Alignment.TopEnd).padding(2.dp),
+                                                        color = if (hasErr) Danger else TextPrimary,
+                                                        textAlign = TextAlign.Center,
                                                     )
                                                 }
-                                                cell.rightClue?.let { clue ->
-                                                    Text(
-                                                        clue.toString(),
-                                                        fontSize = (cellDp.value * 0.28f).sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = TextSub,
-                                                        modifier = Modifier.align(Alignment.BottomStart).padding(2.dp),
-                                                    )
-                                                }
-                                            }
-                                        } else {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(cellDp)
-                                                    .background(
-                                                        if (isSelected) WsAccent.copy(alpha = 0.25f)
-                                                        else if (hasErr) Danger.copy(alpha = 0.15f)
-                                                        else SurfaceDark,
-                                                        RoundedCornerShape(2.dp),
-                                                    )
-                                                    .border(
-                                                        1.dp,
-                                                        if (isSelected) WsAccent else if (hasErr) Danger else BorderColor,
-                                                        RoundedCornerShape(2.dp),
-                                                    )
-                                                    .clickable { gs = selectKakuroCell(state, r, c) },
-                                                contentAlignment = Alignment.Center,
-                                            ) {
-                                                val v = state.board[r][c]
-                                                if (v != 0) Text(
-                                                    v.toString(),
-                                                    fontSize = (cellDp.value * 0.45f).sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = if (hasErr) Danger else TextPrimary,
-                                                    textAlign = TextAlign.Center,
-                                                )
                                             }
                                         }
                                     }

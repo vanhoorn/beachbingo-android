@@ -5,9 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -16,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -127,9 +126,7 @@ fun StrandokuGameScreen(
             val cellDp = (minOf(availW, availForGrid) / gridSize).coerceIn(minCellDp, 90f).dp
 
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
+                modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 if (p == null || state == null) {
@@ -139,15 +136,36 @@ fun StrandokuGameScreen(
                 } else {
                     Spacer(Modifier.height(8.dp))
 
+                    val density = LocalDensity.current
+                    val cellPx = with(density) { cellDp.toPx() }
+                    val gapPx = with(density) { 1.dp.toPx() }
+                    val boxGapPx = with(density) { 2.dp.toPx() }
+                    val (rowStarts, colStarts) = remember(p, cellPx) {
+                        computeStrandokuOffsets(p, cellPx, gapPx, boxGapPx)
+                    }
+
                     // ── Grid with border + background ──────────────────────────
-                    Surface(
-                        color = Color(0xFF0A1929),
-                        border = BorderStroke(2.dp, TextMuted.copy(alpha = 0.6f)),
-                        shape = RoundedCornerShape(4.dp),
+                    ZoomableGrid(
+                        onTap = tap@{ gx, gy ->
+                            val currentState = gs ?: return@tap
+                            val rows = rowStarts
+                            val cols = colStarts
+                            if (rows.isEmpty() || cols.isEmpty()) return@tap
+                            val gridH = rows.last() + cellPx
+                            val gridW = cols.last() + cellPx
+                            if (gy < 0f || gy > gridH || gx < 0f || gx > gridW) return@tap
+                            val row = rows.indexOfLast { it <= gy }.coerceIn(0, rows.size - 1)
+                            val col = cols.indexOfLast { it <= gx }.coerceIn(0, cols.size - 1)
+                            gs = selectStrandokuCell(currentState, row, col)
+                        },
                     ) {
-                        StrandokuGrid(puzzle = p, state = state, cellDp = cellDp, onCellTap = { r, c ->
-                            gs = selectStrandokuCell(state, r, c)
-                        })
+                        Surface(
+                            color = Color(0xFF0A1929),
+                            border = BorderStroke(2.dp, TextMuted.copy(alpha = 0.6f)),
+                            shape = RoundedCornerShape(4.dp),
+                        ) {
+                            StrandokuGrid(puzzle = p, state = state, cellDp = cellDp)
+                        }
                     }
 
                     Spacer(Modifier.height(8.dp))
@@ -355,7 +373,6 @@ private fun StrandokuGrid(
     puzzle: StrandokuPuzzle,
     state: StrandokuState,
     cellDp: Dp,
-    onCellTap: (Int, Int) -> Unit,
 ) {
     val size = puzzle.size
     val isSamurai = puzzle.isSamurai
@@ -398,7 +415,6 @@ private fun StrandokuGrid(
                         cellDp = cellDp,
                         fontSp = fontSp,
                         sel = sel,
-                        onTap = { onCellTap(r, c) },
                     )
                 }
             }
@@ -414,7 +430,6 @@ private fun StrandokuCell(
     cellDp: Dp,
     fontSp: androidx.compose.ui.unit.TextUnit,
     sel: Pair<Int, Int>?,
-    onTap: () -> Unit,
 ) {
     val sol = puzzle.solution[r][c]
     val isInactive = sol == -1
@@ -465,8 +480,7 @@ private fun StrandokuCell(
     Box(
         modifier = Modifier
             .size(cellDp)
-            .background(bg)
-            .clickable(enabled = !isGiven || true) { onTap() },
+            .background(bg),
         contentAlignment = Alignment.Center,
     ) {
         if (killerCage != null) {
@@ -501,4 +515,40 @@ private fun StrandokuCell(
             )
         }
     }
+}
+
+// ── Zoom support ───────────────────────────────────────────────────────────────
+
+private fun computeStrandokuOffsets(
+    puzzle: StrandokuPuzzle,
+    cellPx: Float,
+    gapPx: Float,
+    boxGapPx: Float,
+): Pair<FloatArray, FloatArray> {
+    val size = puzzle.size
+    val isSamurai = puzzle.isSamurai
+    val isIrregularOrKiller = puzzle.variant in listOf("irregular", "killer")
+    val (bw, bh) = getBoxDimensions(if (isSamurai) 9 else size)
+
+    val rowStarts = FloatArray(size)
+    var y = 0f
+    for (r in 0 until size) {
+        rowStarts[r] = y
+        if (r < size - 1) {
+            val spacer = if (!isSamurai && !isIrregularOrKiller && (r + 1) % bh == 0) boxGapPx else gapPx
+            y += cellPx + spacer
+        }
+    }
+
+    val colStarts = FloatArray(size)
+    var x = 0f
+    for (c in 0 until size) {
+        colStarts[c] = x
+        if (c < size - 1) {
+            val spacer = if (!isSamurai && !isIrregularOrKiller && (c + 1) % bw == 0) boxGapPx else gapPx
+            x += cellPx + spacer
+        }
+    }
+
+    return rowStarts to colStarts
 }

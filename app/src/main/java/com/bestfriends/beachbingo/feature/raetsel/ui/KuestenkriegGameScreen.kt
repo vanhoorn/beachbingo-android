@@ -3,7 +3,6 @@ package com.bestfriends.beachbingo.feature.raetsel.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,8 +13,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -106,53 +105,73 @@ fun KuestenkriegGameScreen(
                 val cellDp: Dp = ((maxW - labelDp.value.toInt()) / size).coerceIn(22, 36).dp
                 val errors = computeKriegErrors(state)
 
-                // Col clues row
-                Row(modifier = Modifier.padding(start = labelDp)) {
-                    (0 until size).forEach { c ->
-                        Box(modifier = Modifier.size(width = cellDp, height = labelDp), contentAlignment = Alignment.Center) {
-                            Text(p.colClues[c].toString(), fontSize = (cellDp.value * 0.38f).sp, fontWeight = FontWeight.ExtraBold,
-                                color = if (errors.cols[c]) Danger else TextPrimary)
-                        }
-                    }
-                }
+                val density = LocalDensity.current
+                val labelPx = with(density) { labelDp.toPx() }
+                val cellPx = with(density) { cellDp.toPx() }
 
-                // Grid rows
-                (0 until size).forEach { r ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Row clue
-                        Box(modifier = Modifier.size(width = labelDp, height = cellDp), contentAlignment = Alignment.Center) {
-                            Text(p.rowClues[r].toString(), fontSize = (cellDp.value * 0.38f).sp, fontWeight = FontWeight.ExtraBold,
-                                color = if (errors.rows[r]) Danger else TextPrimary)
-                        }
-                        // Cells
-                        (0 until size).forEach { c ->
-                            val mark = state.marks[r][c]
-                            val isGivenShip = p.givenShip[r][c]
-                            val isGivenWater = p.givenWater[r][c]
-                            val isGiven = isGivenShip || isGivenWater
-                            val bgColor = when {
-                                isGivenShip || mark == ShipMark.SHIP -> KkAccent.copy(alpha = 0.25f)
-                                isGivenWater || mark == ShipMark.WATER -> Surface2Dark
-                                else -> SurfaceDark
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .size(cellDp)
-                                    .background(bgColor, RoundedCornerShape(2.dp))
-                                    .border(1.dp, BorderColor, RoundedCornerShape(2.dp))
-                                    .pointerInput(r, c, state) {
-                                        detectTapGestures(
-                                            onTap = { if (!isGiven) gs = setKriegMark(state, r, c, activeTool) },
-                                            onLongPress = { if (!isGiven) gs = setKriegMark(state, r, c, ShipMark.WATER) }
-                                        )
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (mark == ShipMark.SHIP || isGivenShip) {
-                                    Box(Modifier.size(cellDp * 0.55f).background(if (isGivenShip) KkAccent else KkAccent.copy(alpha = 0.8f), CircleShape))
+                ZoomableGrid(
+                    onTap = tap@{ gx, gy ->
+                        if (gx < labelPx || gy < labelPx) return@tap
+                        val currentState = gs ?: return@tap
+                        val row = ((gy - labelPx) / cellPx).toInt()
+                        val col = ((gx - labelPx) / cellPx).toInt()
+                        if (row !in 0 until size || col !in 0 until size) return@tap
+                        val isGiven = p.givenShip[row][col] || p.givenWater[row][col]
+                        if (!isGiven) gs = setKriegMark(currentState, row, col, activeTool)
+                    },
+                    onLongPress = lp@{ gx, gy ->
+                        if (gx < labelPx || gy < labelPx) return@lp
+                        val currentState = gs ?: return@lp
+                        val row = ((gy - labelPx) / cellPx).toInt()
+                        val col = ((gx - labelPx) / cellPx).toInt()
+                        if (row !in 0 until size || col !in 0 until size) return@lp
+                        val isGiven = p.givenShip[row][col] || p.givenWater[row][col]
+                        if (!isGiven) gs = setKriegMark(currentState, row, col, ShipMark.WATER)
+                    },
+                ) {
+                    Column {
+                        // Col clues row
+                        Row(modifier = Modifier.padding(start = labelDp)) {
+                            (0 until size).forEach { c ->
+                                Box(modifier = Modifier.size(width = cellDp, height = labelDp), contentAlignment = Alignment.Center) {
+                                    Text(p.colClues[c].toString(), fontSize = (cellDp.value * 0.38f).sp, fontWeight = FontWeight.ExtraBold,
+                                        color = if (errors.cols[c]) Danger else TextPrimary)
                                 }
-                                if (mark == ShipMark.WATER || isGivenWater) {
-                                    Text("~", fontSize = (cellDp.value * 0.4f).sp, color = KkWater.copy(alpha = if (isGivenWater) 1f else 0.5f))
+                            }
+                        }
+
+                        // Grid rows
+                        (0 until size).forEach { r ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                // Row clue
+                                Box(modifier = Modifier.size(width = labelDp, height = cellDp), contentAlignment = Alignment.Center) {
+                                    Text(p.rowClues[r].toString(), fontSize = (cellDp.value * 0.38f).sp, fontWeight = FontWeight.ExtraBold,
+                                        color = if (errors.rows[r]) Danger else TextPrimary)
+                                }
+                                // Cells
+                                (0 until size).forEach { c ->
+                                    val mark = state.marks[r][c]
+                                    val isGivenShip = p.givenShip[r][c]
+                                    val isGivenWater = p.givenWater[r][c]
+                                    val bgColor = when {
+                                        isGivenShip || mark == ShipMark.SHIP -> KkAccent.copy(alpha = 0.25f)
+                                        isGivenWater || mark == ShipMark.WATER -> Surface2Dark
+                                        else -> SurfaceDark
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .size(cellDp)
+                                            .background(bgColor, RoundedCornerShape(2.dp))
+                                            .border(1.dp, BorderColor, RoundedCornerShape(2.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (mark == ShipMark.SHIP || isGivenShip) {
+                                            Box(Modifier.size(cellDp * 0.55f).background(if (isGivenShip) KkAccent else KkAccent.copy(alpha = 0.8f), CircleShape))
+                                        }
+                                        if (mark == ShipMark.WATER || isGivenWater) {
+                                            Text("~", fontSize = (cellDp.value * 0.4f).sp, color = KkWater.copy(alpha = if (isGivenWater) 1f else 0.5f))
+                                        }
+                                    }
                                 }
                             }
                         }
