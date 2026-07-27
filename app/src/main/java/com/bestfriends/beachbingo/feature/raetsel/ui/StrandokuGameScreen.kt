@@ -1,5 +1,6 @@
 package com.bestfriends.beachbingo.feature.raetsel.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -46,6 +46,7 @@ fun StrandokuGameScreen(
     var running by remember { mutableStateOf(false) }
     var showWin by remember { mutableStateOf(false) }
     var showQuit by remember { mutableStateOf(false) }
+    var showHelp by remember { mutableStateOf(false) }
     val saveIdRef = remember { saveId ?: PuzzleSaveManager.generateId() }
 
     LaunchedEffect(seed) {
@@ -107,111 +108,140 @@ fun StrandokuGameScreen(
         },
         containerColor = BgDark,
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (p == null || state == null) {
-                Box(Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = SdAccent)
-                }
-            } else {
-                Spacer(Modifier.height(8.dp))
+        BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(padding)) {
+            val isSam = p?.isSamurai ?: false
+            val gridSize = p?.size ?: 9
+            val numPadRows = if (gridSize > 9) 2 else 1
 
-                // ── Grid ──────────────────────────────────────────────────────
-                StrandokuGrid(puzzle = p, state = state, onCellTap = { r, c ->
-                    gs = selectStrandokuCell(state, r, c)
-                })
+            // Estimate controls height: note-switch + numpad rows + controls row + spacers
+            val controlsH = (60f + numPadRows * 44f + 48f + 40f).coerceAtMost(maxHeight.value * 0.38f)
+            val availForGrid = (maxHeight.value - controlsH - 32f).coerceAtLeast(150f)
+            val availW = (maxWidth.value - 24f).coerceAtLeast(150f)
 
-                Spacer(Modifier.height(8.dp))
+            val minCellDp = when {
+                isSam -> 16f
+                gridSize == 16 -> 22f
+                gridSize == 12 -> 28f
+                else -> 32f
+            }
+            val cellDp = (minOf(availW, availForGrid) / gridSize).coerceIn(minCellDp, 90f).dp
 
-                // ── Note mode ─────────────────────────────────────────────────
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                ) {
-                    Text("Notizen", fontSize = 13.sp, color = TextMuted)
-                    Switch(
-                        checked = state.noteMode,
-                        onCheckedChange = { gs = state.copy(noteMode = it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = SdAccent,
-                            checkedTrackColor = SdAccent.copy(alpha = 0.4f),
-                        ),
-                    )
-                }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                if (p == null || state == null) {
+                    Box(Modifier.fillMaxWidth().height(300.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = SdAccent)
+                    }
+                } else {
+                    Spacer(Modifier.height(8.dp))
 
-                Spacer(Modifier.height(6.dp))
-
-                // ── Number pad ────────────────────────────────────────────────
-                val numPad = when {
-                    p.isSamurai || p.size == 9 -> (1..9).toList()
-                    p.size == 12 -> (1..12).toList()
-                    else -> (1..16).toList()
-                }
-                numPad.chunked(9).forEach { row ->
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.padding(horizontal = 4.dp),
+                    // ── Grid with border + background ──────────────────────────
+                    Surface(
+                        color = Color(0xFF0A1929),
+                        border = BorderStroke(2.dp, TextMuted.copy(alpha = 0.6f)),
+                        shape = RoundedCornerShape(4.dp),
                     ) {
-                        row.forEach { n ->
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = Surface2Dark,
-                                modifier = Modifier.size(36.dp).clickable { gs = enterStrandokuNumber(state, n) },
-                            ) {
-                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Text(
-                                        if (n > 9) ('A' + n - 10).toString() else n.toString(),
-                                        fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
-                                    )
+                        StrandokuGrid(puzzle = p, state = state, cellDp = cellDp, onCellTap = { r, c ->
+                            gs = selectStrandokuCell(state, r, c)
+                        })
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // ── Note mode ──────────────────────────────────────────────
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    ) {
+                        Text("Notizen", fontSize = 13.sp, color = TextMuted)
+                        Switch(
+                            checked = state.noteMode,
+                            onCheckedChange = { gs = state.copy(noteMode = it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = SdAccent,
+                                checkedTrackColor = SdAccent.copy(alpha = 0.4f),
+                            ),
+                        )
+                    }
+
+                    Spacer(Modifier.height(6.dp))
+
+                    // ── Number pad ─────────────────────────────────────────────
+                    val numPad = when {
+                        p.isSamurai || p.size == 9 -> (1..9).toList()
+                        p.size == 12 -> (1..12).toList()
+                        else -> (1..16).toList()
+                    }
+                    numPad.chunked(9).forEach { row ->
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(horizontal = 4.dp),
+                        ) {
+                            row.forEach { n ->
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Surface2Dark,
+                                    modifier = Modifier.size(36.dp).clickable { gs = enterStrandokuNumber(state, n) },
+                                ) {
+                                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Text(
+                                            if (n > 9) ('A' + n - 10).toString() else n.toString(),
+                                            fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
+                                        )
+                                    }
                                 }
                             }
                         }
+                        Spacer(Modifier.height(4.dp))
                     }
+
                     Spacer(Modifier.height(4.dp))
+
+                    // ── Controls ───────────────────────────────────────────────
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    ) {
+                        OutlinedButton(
+                            onClick = { gs = eraseStrandokuCell(state) },
+                            border = BorderStroke(1.dp, TextMuted.copy(alpha = 0.4f)),
+                        ) { Text("⌫", color = TextSub, fontWeight = FontWeight.Bold) }
+                        OutlinedButton(
+                            onClick = {
+                                val hint = getStrandokuHint(state)
+                                if (hint != null) {
+                                    val s1 = selectStrandokuCell(state, hint.first, hint.second)
+                                    gs = enterStrandokuNumber(s1.copy(noteMode = false), p.solution[hint.first][hint.second])
+                                }
+                            },
+                            border = BorderStroke(1.dp, SdAccent.copy(alpha = 0.5f)),
+                        ) { Text("💡", color = SdAccent, fontWeight = FontWeight.Bold) }
+                        OutlinedButton(
+                            onClick = { running = false; showHelp = true },
+                            border = BorderStroke(1.dp, TextSub.copy(alpha = 0.5f)),
+                        ) { Text("? Regeln", color = TextSub, fontWeight = FontWeight.Bold) }
+                        OutlinedButton(
+                            onClick = { running = !running },
+                            border = BorderStroke(1.dp, OceanBlue.copy(alpha = 0.5f)),
+                        ) { Text(if (running) "⏸" else "▶", color = OceanBlue, fontWeight = FontWeight.Bold) }
+                        OutlinedButton(
+                            onClick = { running = false; showQuit = true },
+                            border = BorderStroke(1.dp, Danger.copy(alpha = 0.5f)),
+                        ) { Text("✕", color = Danger, fontWeight = FontWeight.Bold) }
+                    }
+
+                    Spacer(Modifier.height(24.dp))
                 }
-
-                Spacer(Modifier.height(4.dp))
-
-                // ── Controls ──────────────────────────────────────────────────
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                ) {
-                    OutlinedButton(
-                        onClick = { gs = eraseStrandokuCell(state) },
-                        border = androidx.compose.foundation.BorderStroke(1.dp, TextMuted.copy(alpha = 0.4f)),
-                    ) { Text("⌫", color = TextSub, fontWeight = FontWeight.Bold) }
-                    OutlinedButton(
-                        onClick = {
-                            val hint = getStrandokuHint(state)
-                            if (hint != null) {
-                                val s1 = selectStrandokuCell(state, hint.first, hint.second)
-                                gs = enterStrandokuNumber(s1.copy(noteMode = false), p.solution[hint.first][hint.second])
-                            }
-                        },
-                        border = androidx.compose.foundation.BorderStroke(1.dp, SdAccent.copy(alpha = 0.5f)),
-                    ) { Text("💡", color = SdAccent, fontWeight = FontWeight.Bold) }
-                    OutlinedButton(
-                        onClick = { running = !running },
-                        border = androidx.compose.foundation.BorderStroke(1.dp, OceanBlue.copy(alpha = 0.5f)),
-                    ) { Text(if (running) "⏸" else "▶", color = OceanBlue, fontWeight = FontWeight.Bold) }
-                    OutlinedButton(
-                        onClick = { running = false; showQuit = true },
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Danger.copy(alpha = 0.5f)),
-                    ) { Text("✕", color = Danger, fontWeight = FontWeight.Bold) }
-                }
-
-                Spacer(Modifier.height(24.dp))
             }
         }
     }
 
+    // ── Win dialog ──────────────────────────────────────────────────────────────
     if (showWin) {
         Dialog(onDismissRequest = {}) {
             Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
@@ -234,19 +264,87 @@ fun StrandokuGameScreen(
         }
     }
 
+    // ── Rules dialog ────────────────────────────────────────────────────────────
+    if (showHelp) {
+        val variantLabel = when (variant) {
+            "classic" -> "9×9 Classic"
+            "mega12" -> "12×12 Mega"
+            "mega16" -> "16×16 Mega"
+            "diagonal" -> "Diagonal"
+            "irregular" -> "Irregular"
+            "killer" -> "Killer"
+            "samurai" -> "Samurai"
+            else -> variant
+        }
+        Dialog(onDismissRequest = { showHelp = false; running = true }) {
+            Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
+                Column(modifier = Modifier.padding(24.dp)) {
+                    Text(
+                        "🔢 Strandoku",
+                        fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
+                        modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        variantLabel,
+                        fontSize = 13.sp, fontWeight = FontWeight.Bold, color = SdAccent,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 16.dp),
+                        textAlign = TextAlign.Center,
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "🔢 Fülle das Gitter so, dass jede Zeile, Spalte ${when (variant) { "mega12" -> "und jedes 3×4-Feld"; "mega16" -> "und jedes 4×4-Feld"; "samurai" -> "und jedes Sub-Gitter"; else -> "und jedes 3×3-Feld" }} jede Zahl genau einmal enthält.",
+                            fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp,
+                        )
+                        if (variant == "killer") Text("➕ Die Zahlen in jedem Käfig müssen die angegebene Summe ergeben. Keine Zahl darf sich im Käfig wiederholen.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
+                        if (variant == "diagonal") Text("↗ Zusätzlich müssen auch beide Hauptdiagonalen jede Zahl einmal enthalten.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
+                        if (variant == "irregular") Text("🔷 Statt quadratischer Boxen gibt es unregelmäßig geformte Regionen — jede Region muss jede Zahl einmal enthalten.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
+                        if (variant == "samurai") Text("🏯 Fünf überlappende 9×9-Sudokus. Die Ecken teilen sich gemeinsame 3×3-Felder.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
+                        Spacer(Modifier.fillMaxWidth().height(1.dp).background(BorderColor))
+                        Text("Tippe eine Zelle → dann eine Zahl. Notiz-Modus: Mehrere Kandidaten eintragen.", fontSize = 12.sp, color = TextMuted, lineHeight = 16.sp)
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = { showHelp = false; running = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = SdAccent),
+                    ) { Text("Verstanden!", fontWeight = FontWeight.Bold, color = BgDark) }
+                }
+            }
+        }
+    }
+
+    // ── Quit dialog (3 options, same as web) ───────────────────────────────────
     if (showQuit) {
-        AlertDialog(
-            onDismissRequest = { running = true; showQuit = false },
-            title = { Text("Spiel beenden?", color = TextPrimary) },
-            text = { Text("Fortschritt wird gespeichert.", color = TextMuted) },
-            confirmButton = {
-                TextButton(onClick = onNavigateBack) { Text("Beenden", color = Danger, fontWeight = FontWeight.Bold) }
-            },
-            dismissButton = {
-                TextButton(onClick = { running = true; showQuit = false }) { Text("Weiterspielen", color = TextSub) }
-            },
-            containerColor = SurfaceDark,
-        )
+        Dialog(onDismissRequest = { running = true; showQuit = false }) {
+            Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text("🏖️", fontSize = 36.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Spiel beenden?", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Spacer(Modifier.height(20.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = { running = true; showQuit = false },
+                            modifier = Modifier.fillMaxWidth(),
+                            border = BorderStroke(1.dp, TextSub.copy(alpha = 0.4f)),
+                        ) { Text("Weiterspielen", color = TextSub, fontWeight = FontWeight.Bold) }
+                        Button(
+                            onClick = onNavigateBack,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = OceanBlue),
+                        ) { Text("💾 Speichern & Beenden", fontWeight = FontWeight.Bold) }
+                        OutlinedButton(
+                            onClick = { PuzzleSaveManager.deleteSave(context, saveIdRef); onNavigateBack() },
+                            modifier = Modifier.fillMaxWidth(),
+                            border = BorderStroke(1.dp, Danger.copy(alpha = 0.5f)),
+                        ) { Text("✕ Beenden ohne Speichern", color = Danger, fontWeight = FontWeight.Bold) }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -256,31 +354,17 @@ fun StrandokuGameScreen(
 private fun StrandokuGrid(
     puzzle: StrandokuPuzzle,
     state: StrandokuState,
+    cellDp: Dp,
     onCellTap: (Int, Int) -> Unit,
 ) {
     val size = puzzle.size
     val isSamurai = puzzle.isSamurai
-
-    // Cell size: Samurai needs small cells; mega16 also smaller
-    val cellDp: Dp = when {
-        isSamurai -> 16.dp
-        size == 16 -> 20.dp
-        size == 12 -> 26.dp
-        else -> 36.dp
-    }
-    val fontSp = when {
-        isSamurai -> 7.sp
-        size == 16 -> 9.sp
-        size == 12 -> 11.sp
-        else -> 15.sp
-    }
+    val fontSp = (cellDp.value * 0.50f).sp
     val (bw, bh) = getBoxDimensions(if (isSamurai) 9 else size)
-
     val sel = state.selected
 
     Column {
         for (r in 0 until size) {
-            // Thick separator before box rows (not for samurai/irregular)
             if (r > 0 && !isSamurai && puzzle.variant !in listOf("irregular", "killer")) {
                 val isBoxBoundary = r % bh == 0
                 Spacer(
@@ -295,7 +379,6 @@ private fun StrandokuGrid(
 
             Row {
                 for (c in 0 until size) {
-                    // Thick separator before box cols
                     if (c > 0 && !isSamurai && puzzle.variant !in listOf("irregular", "killer")) {
                         val isBoxBoundary = c % bw == 0
                         Spacer(
@@ -336,7 +419,6 @@ private fun StrandokuCell(
     val sol = puzzle.solution[r][c]
     val isInactive = sol == -1
 
-    // Inactive cell (Samurai gap)
     if (isInactive) {
         Box(Modifier.size(cellDp).background(BgDark))
         return
@@ -348,11 +430,9 @@ private fun StrandokuCell(
     val valN = state.board[r][c]
     val notes = state.notes[r][c]
 
-    // Determine highlight (same row/col)
     val isHighlighted = sel != null && (r == sel.first || c == sel.second) && !isSelected
     val isSameNum = sel != null && valN != 0 && state.board[sel.first][sel.second] == valN && !isSelected
 
-    // Background color
     val baseBg: Color = when (puzzle.variant) {
         "irregular" -> {
             val regionId = puzzle.regions!![r][c]
@@ -374,13 +454,12 @@ private fun StrandokuCell(
     }
 
     val bg = when {
-        isSelected -> SdAccent.copy(alpha = 0.28f)
-        isSameNum  -> SdAccent.copy(alpha = 0.14f)
+        isSelected   -> SdAccent.copy(alpha = 0.28f)
+        isSameNum    -> SdAccent.copy(alpha = 0.14f)
         isHighlighted -> Surface2Dark
-        else -> baseBg
+        else         -> baseBg
     }
 
-    // Killer cage sum overlay
     val killerCage = isCageTopLeft(puzzle, r, c)
 
     Box(
@@ -390,7 +469,6 @@ private fun StrandokuCell(
             .clickable(enabled = !isGiven || true) { onTap() },
         contentAlignment = Alignment.Center,
     ) {
-        // Cage sum (Killer)
         if (killerCage != null) {
             Text(
                 killerCage.sum.toString(),

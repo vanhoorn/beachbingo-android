@@ -1,5 +1,6 @@
 package com.bestfriends.beachbingo.feature.raetsel.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -44,9 +45,9 @@ fun DuenenschattenGameScreen(
     var running by remember { mutableStateOf(false) }
     var showWin by remember { mutableStateOf(false) }
     var showQuit by remember { mutableStateOf(false) }
+    var showHelp by remember { mutableStateOf(false) }
     val saveIdRef = remember { saveId ?: PuzzleSaveManager.generateId() }
 
-    // Generate puzzle in background
     LaunchedEffect(seed) {
         val p = withContext(Dispatchers.Default) { generateHitori(difficulty, seed.toInt()) }
         puzzle = p
@@ -57,26 +58,19 @@ fun DuenenschattenGameScreen(
         running = true
     }
 
-    // Timer
     LaunchedEffect(running, showWin) {
-        while (running && gs?.solved == false) {
-            delay(1000L)
-            elapsed++
-        }
+        while (running && gs?.solved == false) { delay(1000L); elapsed++ }
     }
 
-    // Win detection
     LaunchedEffect(gs?.solved) {
         if (gs?.solved == true && !showWin) {
             running = false
-            val best = PuzzleSaveManager.getBestTime(context, "duenenschatten", "standard", difficulty)
             PuzzleSaveManager.recordBestTime(context, "duenenschatten", "standard", difficulty, elapsed)
             PuzzleSaveManager.deleteSave(context, saveIdRef)
             showWin = true
         }
     }
 
-    // Auto-save
     LaunchedEffect(gs) {
         val state = gs ?: return@LaunchedEffect
         if (state.solved || showWin) return@LaunchedEffect
@@ -97,8 +91,10 @@ fun DuenenschattenGameScreen(
                 title = {
                     Column {
                         Text("DÜNENSC­HATTEN", style = MaterialTheme.typography.labelSmall, color = TextMuted)
-                        Text("${difficulty.replaceFirstChar { it.uppercase() }} · ${PuzzleSaveManager.formatElapsed(elapsed)}",
-                            style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.ExtraBold)
+                        Text(
+                            "${difficulty.replaceFirstChar { it.uppercase() }} · ${PuzzleSaveManager.formatElapsed(elapsed)}",
+                            style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.ExtraBold,
+                        )
                     }
                 },
                 navigationIcon = {
@@ -106,144 +102,220 @@ fun DuenenschattenGameScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück", tint = TextSub)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark),
             )
         },
-        containerColor = BgDark
+        containerColor = BgDark,
     ) { padding ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (p == null || state == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = DsAccent)
-                }
-            } else {
-                val conflicts = computeConflicts(state)
-                val size = p.size
-                val cellDp: Dp = ((350 - size * 2) / size).coerceIn(28, 52).dp
+        BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(padding)) {
+            val gridSize = p?.size ?: 8
+            // Reserve: hint text + spacer + controls row + bottom padding
+            val controlsH = 100f
+            val availForGrid = (maxHeight.value - controlsH - 32f).coerceAtLeast(150f)
+            val availW = (maxWidth.value - 24f).coerceAtLeast(150f)
+            val cellDp = (minOf(availW, availForGrid) / gridSize).coerceIn(28f, 80f).dp
 
-                // Grid
-                Column(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    for (r in 0 until size) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                            for (c in 0 until size) {
-                                val mark = state.marks[r][c]
-                                val isBlack = mark == CellMark.BLACK
-                                val isDot = mark == CellMark.DOT
-                                val isConflict = (r to c) in conflicts.adjacentBlacks || (r to c) in conflicts.duplicateWhites
-                                val bgColor = when {
-                                    isBlack -> Color(0xFF111827)
-                                    isConflict -> Danger.copy(alpha = 0.15f)
-                                    else -> SurfaceDark
-                                }
-                                val borderCol = when {
-                                    isConflict -> Danger
-                                    else -> BorderColor
-                                }
+            Column(
+                modifier = Modifier.fillMaxSize().padding(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                if (p == null || state == null) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = DsAccent)
+                    }
+                } else {
+                    val conflicts = computeConflicts(state)
+                    val size = p.size
 
-                                Box(
-                                    modifier = Modifier
-                                        .size(cellDp)
-                                        .background(bgColor, RoundedCornerShape(4.dp))
-                                        .border(1.dp, borderCol, RoundedCornerShape(4.dp))
-                                        .pointerInput(r, c) {
-                                            detectTapGestures(
-                                                onTap = { gs = toggleMark(state, r, c) },
-                                                onLongPress = {
-                                                    val newMark = if (state.marks[r][c] == CellMark.DOT) CellMark.WHITE else CellMark.DOT
-                                                    gs = setMark(state, r, c, newMark)
-                                                }
-                                            )
-                                        },
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    if (!isBlack) {
-                                        Text(
-                                            p.grid[r][c].toString(),
-                                            fontSize = (cellDp.value * 0.42f).sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isConflict) Danger else TextSub,
-                                        )
-                                    }
-                                    if (isDot) {
+                    // ── Grid with border + background ──────────────────────────
+                    Surface(
+                        color = Color(0xFF0A1929),
+                        border = BorderStroke(2.dp, TextMuted.copy(alpha = 0.6f)),
+                        shape = RoundedCornerShape(4.dp),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
+                            for (r in 0 until size) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    for (c in 0 until size) {
+                                        val mark = state.marks[r][c]
+                                        val isBlack = mark == CellMark.BLACK
+                                        val isDot = mark == CellMark.DOT
+                                        val isConflict = (r to c) in conflicts.adjacentBlacks || (r to c) in conflicts.duplicateWhites
+                                        val bgColor = when {
+                                            isBlack    -> Color(0xFF111827)
+                                            isConflict -> Danger.copy(alpha = 0.15f)
+                                            else       -> SurfaceDark
+                                        }
+                                        val borderCol = when {
+                                            isConflict -> Danger
+                                            else       -> BorderColor
+                                        }
+
                                         Box(
                                             modifier = Modifier
-                                                .size(cellDp * 0.28f)
-                                                .align(Alignment.BottomEnd)
-                                                .offset((-3).dp, (-3).dp)
-                                                .background(DsAccent, CircleShape)
-                                        )
+                                                .size(cellDp)
+                                                .background(bgColor, RoundedCornerShape(4.dp))
+                                                .border(1.dp, borderCol, RoundedCornerShape(4.dp))
+                                                .pointerInput(r, c) {
+                                                    detectTapGestures(
+                                                        onTap = { gs = toggleMark(state, r, c) },
+                                                        onLongPress = {
+                                                            val newMark = if (state.marks[r][c] == CellMark.DOT) CellMark.WHITE else CellMark.DOT
+                                                            gs = setMark(state, r, c, newMark)
+                                                        },
+                                                    )
+                                                },
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            if (!isBlack) {
+                                                Text(
+                                                    p.grid[r][c].toString(),
+                                                    fontSize = (cellDp.value * 0.42f).sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (isConflict) Danger else TextSub,
+                                                )
+                                            }
+                                            if (isDot) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(cellDp * 0.28f)
+                                                        .align(Alignment.BottomEnd)
+                                                        .offset((-3).dp, (-3).dp)
+                                                        .background(DsAccent, CircleShape),
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
 
-                Spacer(Modifier.height(8.dp))
-                Text("Tippen = schwarz/Punkt · Lang drücken = Punkt", fontSize = 11.sp, color = TextMuted, textAlign = TextAlign.Center)
-
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = {
-                            val hint = getHitoriHint(state)
-                            if (hint != null) {
-                                val correct = if (p.solution[hint.first][hint.second]) CellMark.BLACK else CellMark.WHITE
-                                gs = setMark(state, hint.first, hint.second, correct)
-                            }
-                        },
-                        border = androidx.compose.foundation.BorderStroke(1.dp, DsAccent.copy(alpha = 0.5f)),
-                    ) { Text("💡 Hinweis", color = DsAccent, fontWeight = FontWeight.Bold) }
-
-                    OutlinedButton(
-                        onClick = { running = !running },
-                        border = androidx.compose.foundation.BorderStroke(1.dp, OceanBlue.copy(alpha = 0.5f)),
-                    ) { Text(if (running) "⏸" else "▶", color = OceanBlue, fontWeight = FontWeight.Bold) }
-
-                    OutlinedButton(
-                        onClick = { running = false; showQuit = true },
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Danger.copy(alpha = 0.5f)),
-                    ) { Text("✕", color = Danger, fontWeight = FontWeight.Bold) }
-                }
-            }
-        }
-    }
-
-    if (showWin) {
-        Dialog(onDismissRequest = {}) {
-            Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
-                Column(
-                    modifier = Modifier.padding(28.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("🏆", fontSize = 48.sp)
                     Spacer(Modifier.height(8.dp))
-                    Text("Rätsel gelöst!", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-                    Text("Zeit: ${PuzzleSaveManager.formatElapsed(elapsed)}", fontSize = 14.sp, color = DsAccent, modifier = Modifier.padding(top = 4.dp))
-                    Spacer(Modifier.height(20.dp))
-                    Button(onClick = onNavigateBack, modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = OceanBlue)) {
-                        Text("Zurück zur Lobby", fontWeight = FontWeight.Bold, color = BgDark)
+                    Text(
+                        "Tippen = schwarz/Punkt · Lang drücken = Punkt",
+                        fontSize = 11.sp, color = TextMuted, textAlign = TextAlign.Center,
+                    )
+
+                    Spacer(Modifier.height(12.dp))
+
+                    // ── Controls ───────────────────────────────────────────────
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = { running = !running },
+                            border = BorderStroke(1.dp, OceanBlue.copy(alpha = 0.5f)),
+                        ) { Text(if (running) "⏸" else "▶", color = OceanBlue, fontWeight = FontWeight.Bold) }
+                        OutlinedButton(
+                            onClick = {
+                                val hint = getHitoriHint(state)
+                                if (hint != null) {
+                                    val correct = if (p.solution[hint.first][hint.second]) CellMark.BLACK else CellMark.WHITE
+                                    gs = setMark(state, hint.first, hint.second, correct)
+                                }
+                            },
+                            border = BorderStroke(1.dp, DsAccent.copy(alpha = 0.5f)),
+                        ) { Text("💡 Hinweis", color = DsAccent, fontWeight = FontWeight.Bold) }
+                        OutlinedButton(
+                            onClick = { running = false; showHelp = true },
+                            border = BorderStroke(1.dp, TextSub.copy(alpha = 0.5f)),
+                        ) { Text("? Regeln", color = TextSub, fontWeight = FontWeight.Bold) }
+                        OutlinedButton(
+                            onClick = { running = false; showQuit = true },
+                            border = BorderStroke(1.dp, Danger.copy(alpha = 0.5f)),
+                        ) { Text("✕ Abbruch", color = Danger, fontWeight = FontWeight.Bold) }
                     }
                 }
             }
         }
     }
 
+    // ── Win dialog ──────────────────────────────────────────────────────────────
+    if (showWin) {
+        Dialog(onDismissRequest = {}) {
+            Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
+                Column(modifier = Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("🏆", fontSize = 48.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Rätsel gelöst!", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Text("Zeit: ${PuzzleSaveManager.formatElapsed(elapsed)}", fontSize = 14.sp, color = DsAccent, modifier = Modifier.padding(top = 4.dp))
+                    Spacer(Modifier.height(20.dp))
+                    Button(
+                        onClick = onNavigateBack, modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = OceanBlue),
+                    ) { Text("Zurück zur Lobby", fontWeight = FontWeight.Bold, color = BgDark) }
+                }
+            }
+        }
+    }
+
+    // ── Rules dialog ────────────────────────────────────────────────────────────
+    if (showHelp) {
+        Dialog(onDismissRequest = { showHelp = false; running = true }) {
+            Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
+                Column(modifier = Modifier.padding(24.dp)) {
+                    Text(
+                        "🏖️ Hitori",
+                        fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
+                        modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        "Dünenschatten — Regeln",
+                        fontSize = 13.sp, fontWeight = FontWeight.Bold, color = DsAccent,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 16.dp),
+                        textAlign = TextAlign.Center,
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("⬛ Schwärze Zellen so, dass jede Zahl in jeder Zeile und Spalte maximal einmal vorkommt.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
+                        Text("🚫 Zwei schwarze Zellen dürfen nicht waagerecht oder senkrecht nebeneinander stehen.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
+                        Text("🔗 Alle weißen Zellen müssen ein zusammenhängendes Gebiet bilden.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
+                        Spacer(Modifier.fillMaxWidth().height(1.dp).background(BorderColor))
+                        Text("Tippen = schwärzen / weiß. Lang drücken = Kreis (sicher weiß).", fontSize = 12.sp, color = TextMuted, lineHeight = 16.sp)
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = { showHelp = false; running = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = DsAccent),
+                    ) { Text("Verstanden!", fontWeight = FontWeight.Bold, color = BgDark) }
+                }
+            }
+        }
+    }
+
+    // ── Quit dialog (3 options, same as web) ───────────────────────────────────
     if (showQuit) {
-        AlertDialog(
-            onDismissRequest = { running = true; showQuit = false },
-            title = { Text("Spiel beenden?", color = TextPrimary) },
-            text = { Text("Fortschritt wird gespeichert.", color = TextMuted) },
-            confirmButton = { TextButton(onClick = onNavigateBack) { Text("Beenden", color = Danger, fontWeight = FontWeight.Bold) } },
-            dismissButton = { TextButton(onClick = { running = true; showQuit = false }) { Text("Weiterspielen", color = TextSub) } },
-            containerColor = SurfaceDark,
-        )
+        Dialog(onDismissRequest = { running = true; showQuit = false }) {
+            Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text("🏖️", fontSize = 36.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Spiel beenden?", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Spacer(Modifier.height(20.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = { running = true; showQuit = false },
+                            modifier = Modifier.fillMaxWidth(),
+                            border = BorderStroke(1.dp, TextSub.copy(alpha = 0.4f)),
+                        ) { Text("Weiterspielen", color = TextSub, fontWeight = FontWeight.Bold) }
+                        Button(
+                            onClick = onNavigateBack,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = OceanBlue),
+                        ) { Text("💾 Speichern & Beenden", fontWeight = FontWeight.Bold) }
+                        OutlinedButton(
+                            onClick = { PuzzleSaveManager.deleteSave(context, saveIdRef); onNavigateBack() },
+                            modifier = Modifier.fillMaxWidth(),
+                            border = BorderStroke(1.dp, Danger.copy(alpha = 0.5f)),
+                        ) { Text("✕ Beenden ohne Speichern", color = Danger, fontWeight = FontWeight.Bold) }
+                    }
+                }
+            }
+        }
     }
 }

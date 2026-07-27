@@ -1,5 +1,6 @@
 package com.bestfriends.beachbingo.feature.raetsel.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -22,6 +23,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -48,6 +50,7 @@ fun InselbrueckeGameScreen(
     var running by remember { mutableStateOf(false) }
     var showWin by remember { mutableStateOf(false) }
     var showQuit by remember { mutableStateOf(false) }
+    var showHelp by remember { mutableStateOf(false) }
     var selectedIslandId by remember { mutableStateOf<Int?>(null) }
     var zoomScale by remember { mutableStateOf(1f) }
     var panOffset by remember { mutableStateOf(Offset.Zero) }
@@ -96,8 +99,10 @@ fun InselbrueckeGameScreen(
                 title = {
                     Column {
                         Text("INSELBRÜCKE", style = MaterialTheme.typography.labelSmall, color = TextMuted)
-                        Text("${difficulty.replaceFirstChar { it.uppercase() }} · ${PuzzleSaveManager.formatElapsed(elapsed)}",
-                            style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.ExtraBold)
+                        Text(
+                            "${difficulty.replaceFirstChar { it.uppercase() }} · ${PuzzleSaveManager.formatElapsed(elapsed)}",
+                            style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.ExtraBold,
+                        )
                     }
                 },
                 navigationIcon = {
@@ -105,132 +110,152 @@ fun InselbrueckeGameScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück", tint = TextSub)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark),
             )
         },
-        containerColor = BgDark
+        containerColor = BgDark,
     ) { padding ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (ps == null || state == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = IbAccent) }
-            } else {
-                val puzzle = ps.puzzle
-                val gridSize = puzzle.gridSize
-                val boxPx = with(LocalDensity.current) { 350.dp.toPx() / gridSize }
-                val canvasSize = 350.dp
+        BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(padding)) {
+            // Reserve space for button row + spacers
+            val controlsH = 76f
+            val canvasAreaSize = minOf(maxWidth.value - 24f, maxHeight.value - controlsH - 24f)
+                .coerceAtLeast(240f).dp
+            val innerCanvasSize = (canvasAreaSize.value - 24f).coerceAtLeast(200f).dp
 
-                Canvas(
-                    modifier = Modifier
-                        .size(canvasSize)
-                        .pointerInput(Unit) {
-                            val canvasSizePx = size.width.toFloat()
-                            detectTransformGestures { _, pan, zoom, _ ->
-                                val newScale = (zoomScale * zoom).coerceIn(1f, 4f)
-                                val minPan = canvasSizePx * (1f - newScale)
-                                zoomScale = newScale
-                                panOffset = Offset(
-                                    (panOffset.x + pan.x).coerceIn(minPan, 0f),
-                                    (panOffset.y + pan.y).coerceIn(minPan, 0f),
-                                )
-                            }
-                        }
-                        .pointerInput(state) {
-                            detectTapGestures(
-                                onDoubleTap = {
-                                    zoomScale = 1f
-                                    panOffset = Offset.Zero
-                                },
-                                onTap = { rawOffset ->
-                                    val col = ((rawOffset.x - panOffset.x) / zoomScale / boxPx).toInt()
-                                    val row = ((rawOffset.y - panOffset.y) / zoomScale / boxPx).toInt()
-                                    val tapped = puzzle.islands.find { it.row == row && it.col == col }
-                                    if (tapped != null) {
-                                        val sel = selectedIslandId
-                                        if (sel == null || sel == tapped.id) {
-                                            selectedIslandId = if (sel == tapped.id) null else tapped.id
-                                        } else {
-                                            val neighbors = getNeighborIslands(puzzle, puzzle.islands.find { it.id == sel }!!, state.bridges)
-                                            if (neighbors.any { it.id == tapped.id }) {
-                                                gs = toggleHashiBridge(state, sel, tapped.id)
-                                            }
-                                            selectedIslandId = null
+            Column(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                if (ps == null || state == null) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = IbAccent)
+                    }
+                } else {
+                    val puzzle = ps.puzzle
+                    val gridSize = puzzle.gridSize
+                    val boxPx = with(LocalDensity.current) { innerCanvasSize.toPx() / gridSize }
+
+                    // Game board with border and slightly lighter background
+                    Surface(
+                        modifier = Modifier.size(canvasAreaSize),
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF0D1B2E),
+                        border = BorderStroke(1.5.dp, BorderColor),
+                    ) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Canvas(
+                                modifier = Modifier
+                                    .size(innerCanvasSize)
+                                    .pointerInput(Unit) {
+                                        val canvasSizePx = size.width.toFloat()
+                                        detectTransformGestures { _, pan, zoom, _ ->
+                                            val newScale = (zoomScale * zoom).coerceIn(1f, 4f)
+                                            val minPan = canvasSizePx * (1f - newScale)
+                                            zoomScale = newScale
+                                            panOffset = Offset(
+                                                (panOffset.x + pan.x).coerceIn(minPan, 0f),
+                                                (panOffset.y + pan.y).coerceIn(minPan, 0f),
+                                            )
                                         }
                                     }
+                                    .pointerInput(state) {
+                                        detectTapGestures(
+                                            onDoubleTap = {
+                                                zoomScale = 1f
+                                                panOffset = Offset.Zero
+                                            },
+                                            onTap = { rawOffset ->
+                                                val col = ((rawOffset.x - panOffset.x) / zoomScale / boxPx).toInt()
+                                                val row = ((rawOffset.y - panOffset.y) / zoomScale / boxPx).toInt()
+                                                val tapped = puzzle.islands.find { it.row == row && it.col == col }
+                                                if (tapped != null) {
+                                                    val sel = selectedIslandId
+                                                    if (sel == null || sel == tapped.id) {
+                                                        selectedIslandId = if (sel == tapped.id) null else tapped.id
+                                                    } else {
+                                                        val neighbors = getNeighborIslands(puzzle, puzzle.islands.find { it.id == sel }!!, state.bridges)
+                                                        if (neighbors.any { it.id == tapped.id }) {
+                                                            gs = toggleHashiBridge(state, sel, tapped.id)
+                                                        }
+                                                        selectedIslandId = null
+                                                    }
+                                                }
+                                            },
+                                        )
+                                    },
+                            ) {
+                                withTransform({
+                                    translate(panOffset.x, panOffset.y)
+                                    scale(scaleX = zoomScale, scaleY = zoomScale, pivot = Offset.Zero)
+                                }) {
+                                    val dotPaint = Color(0xFF1E3050)
+                                    for (r in 0 until gridSize) for (c in 0 until gridSize) {
+                                        drawCircle(dotPaint, radius = 2f, center = Offset(c * boxPx + boxPx / 2, r * boxPx + boxPx / 2))
+                                    }
+                                    for (b in state.bridges) {
+                                        val a = puzzle.islands.find { it.id == b.from } ?: continue
+                                        val bb = puzzle.islands.find { it.id == b.to } ?: continue
+                                        val x1 = a.col * boxPx + boxPx / 2; val y1 = a.row * boxPx + boxPx / 2
+                                        val x2 = bb.col * boxPx + boxPx / 2; val y2 = bb.row * boxPx + boxPx / 2
+                                        val bridgeOffset = if (b.count == 2) 4f else 0f
+                                        val isHoriz = a.row == bb.row
+                                        for (i in 0 until b.count) {
+                                            val o = if (b.count == 1) 0f else (if (i == 0) -bridgeOffset else bridgeOffset)
+                                            drawLine(
+                                                Color(0xFF4ADE80),
+                                                start = if (isHoriz) Offset(x1, y1 + o) else Offset(x1 + o, y1),
+                                                end = if (isHoriz) Offset(x2, y2 + o) else Offset(x2 + o, y2),
+                                                strokeWidth = 3f,
+                                            )
+                                        }
+                                    }
+                                    for (isl in puzzle.islands) {
+                                        val cx = isl.col * boxPx + boxPx / 2
+                                        val cy = isl.row * boxPx + boxPx / 2
+                                        val sum = islandBridgeSum(isl, state.bridges)
+                                        val done = sum == isl.value
+                                        val over = sum > isl.value
+                                        val isSelected = selectedIslandId == isl.id
+                                        val fillColor = when { done -> IbAccent.copy(alpha = 0.3f); over -> Danger.copy(alpha = 0.3f); else -> Surface2Dark }
+                                        val strokeColor = when { isSelected -> IbAccent; done -> IbAccent; over -> Danger; else -> TextSub }
+                                        drawCircle(fillColor, radius = boxPx * 0.4f, center = Offset(cx, cy))
+                                        drawCircle(strokeColor, radius = boxPx * 0.4f, center = Offset(cx, cy), style = androidx.compose.ui.graphics.drawscope.Stroke(if (isSelected) 3f else 2f))
+                                        val txt = textMeasurer.measure(isl.value.toString(), TextStyle(fontSize = (boxPx * 0.3f).sp, fontWeight = FontWeight.Bold, color = TextPrimary))
+                                        drawText(txt, topLeft = Offset(cx - txt.size.width / 2, cy - txt.size.height / 2))
+                                    }
                                 }
-                            )
-                        }
-                ) {
-                    withTransform({
-                        translate(panOffset.x, panOffset.y)
-                        scale(scaleX = zoomScale, scaleY = zoomScale, pivot = Offset.Zero)
-                    }) {
-                        // Grid dots
-                        val dotPaint = Color(0xFF1E3050)
-                        for (r in 0 until gridSize) for (c in 0 until gridSize) {
-                            drawCircle(dotPaint, radius = 2f, center = Offset(c * boxPx + boxPx/2, r * boxPx + boxPx/2))
-                        }
-
-                        // Bridges
-                        for (b in state.bridges) {
-                            val a = puzzle.islands.find { it.id == b.from } ?: continue
-                            val bb = puzzle.islands.find { it.id == b.to } ?: continue
-                            val x1 = a.col * boxPx + boxPx/2; val y1 = a.row * boxPx + boxPx/2
-                            val x2 = bb.col * boxPx + boxPx/2; val y2 = bb.row * boxPx + boxPx/2
-                            val bridgeOffset = if (b.count == 2) 4f else 0f
-                            val isHoriz = a.row == bb.row
-                            for (i in 0 until b.count) {
-                                val o = if (b.count == 1) 0f else (if (i == 0) -bridgeOffset else bridgeOffset)
-                                drawLine(
-                                    Color(0xFF4ADE80),
-                                    start = if (isHoriz) Offset(x1, y1+o) else Offset(x1+o, y1),
-                                    end = if (isHoriz) Offset(x2, y2+o) else Offset(x2+o, y2),
-                                    strokeWidth = 3f
-                                )
                             }
                         }
-
-                        // Islands
-                        for (isl in puzzle.islands) {
-                            val cx = isl.col * boxPx + boxPx/2; val cy = isl.row * boxPx + boxPx/2
-                            val sum = islandBridgeSum(isl, state.bridges)
-                            val done = sum == isl.value
-                            val over = sum > isl.value
-                            val isSelected = selectedIslandId == isl.id
-                            val fillColor = when { done -> IbAccent.copy(alpha = 0.3f); over -> Danger.copy(alpha = 0.3f); else -> Surface2Dark }
-                            val strokeColor = when { isSelected -> IbAccent; done -> IbAccent; over -> Danger; else -> TextSub }
-                            drawCircle(fillColor, radius = boxPx * 0.4f, center = Offset(cx, cy))
-                            drawCircle(strokeColor, radius = boxPx * 0.4f, center = Offset(cx, cy), style = androidx.compose.ui.graphics.drawscope.Stroke(if (isSelected) 3f else 2f))
-                            val txt = textMeasurer.measure(isl.value.toString(), TextStyle(fontSize = (boxPx * 0.3f).sp, fontWeight = FontWeight.Bold, color = TextPrimary))
-                            drawText(txt, topLeft = Offset(cx - txt.size.width/2, cy - txt.size.height/2))
-                        }
                     }
-                }
 
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = {
-                            val hint = getHashiHint(state, ps.solution)
-                            if (hint != null) gs = toggleHashiBridge(state, hint.first, hint.second)
-                        },
-                        border = androidx.compose.foundation.BorderStroke(1.dp, IbAccent.copy(alpha = 0.5f)),
-                    ) { Text("💡 Hinweis", color = IbAccent, fontWeight = FontWeight.Bold) }
-                    OutlinedButton(
-                        onClick = { running = !running },
-                        border = androidx.compose.foundation.BorderStroke(1.dp, OceanBlue.copy(alpha = 0.5f)),
-                    ) { Text(if (running) "⏸" else "▶", color = OceanBlue, fontWeight = FontWeight.Bold) }
-                    OutlinedButton(
-                        onClick = { running = false; showQuit = true },
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Danger.copy(alpha = 0.5f)),
-                    ) { Text("✕", color = Danger, fontWeight = FontWeight.Bold) }
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = { running = !running },
+                            border = BorderStroke(1.dp, OceanBlue.copy(alpha = 0.5f)),
+                        ) { Text(if (running) "⏸" else "▶", color = OceanBlue, fontWeight = FontWeight.Bold) }
+                        OutlinedButton(
+                            onClick = {
+                                val hint = getHashiHint(state, ps.solution)
+                                if (hint != null) gs = toggleHashiBridge(state, hint.first, hint.second)
+                            },
+                            border = BorderStroke(1.dp, IbAccent.copy(alpha = 0.5f)),
+                        ) { Text("💡 Hinweis", color = IbAccent, fontWeight = FontWeight.Bold) }
+                        OutlinedButton(
+                            onClick = { running = false; showHelp = true },
+                            border = BorderStroke(1.dp, TextSub.copy(alpha = 0.5f)),
+                        ) { Text("? Regeln", color = TextSub, fontWeight = FontWeight.Bold) }
+                        OutlinedButton(
+                            onClick = { running = false; showQuit = true },
+                            border = BorderStroke(1.dp, Danger.copy(alpha = 0.5f)),
+                        ) { Text("✕ Abbruch", color = Danger, fontWeight = FontWeight.Bold) }
+                    }
                 }
             }
         }
     }
 
+    // ── Win dialog ──────────────────────────────────────────────────────────────
     if (showWin) {
         Dialog(onDismissRequest = {}) {
             Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
@@ -240,23 +265,81 @@ fun InselbrueckeGameScreen(
                     Text("Alle Inseln verbunden!", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
                     Text("Zeit: ${PuzzleSaveManager.formatElapsed(elapsed)}", fontSize = 14.sp, color = IbAccent, modifier = Modifier.padding(top = 4.dp))
                     Spacer(Modifier.height(20.dp))
-                    Button(onClick = onNavigateBack, modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = OceanBlue)) {
-                        Text("Zurück zur Lobby", fontWeight = FontWeight.Bold, color = BgDark)
-                    }
+                    Button(
+                        onClick = onNavigateBack, modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = OceanBlue),
+                    ) { Text("Zurück zur Lobby", fontWeight = FontWeight.Bold, color = BgDark) }
                 }
             }
         }
     }
 
+    // ── Rules dialog ────────────────────────────────────────────────────────────
+    if (showHelp) {
+        Dialog(onDismissRequest = { showHelp = false; running = true }) {
+            Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
+                Column(modifier = Modifier.padding(24.dp)) {
+                    Text(
+                        "🌉 Hashiwokakero",
+                        fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
+                        modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        "Inselbrücke — Regeln",
+                        fontSize = 13.sp, fontWeight = FontWeight.Bold, color = IbAccent,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 16.dp),
+                        textAlign = TextAlign.Center,
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("🏝️ Verbinde alle Inseln mit Brücken, sodass jede Insel genau so viele Brücken hat wie ihre Zahl anzeigt.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
+                        Text("🔀 Brücken verlaufen nur horizontal oder vertikal und dürfen sich nicht kreuzen.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
+                        Text("2️⃣ Zwischen zwei Inseln sind maximal 2 Brücken erlaubt.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
+                        Text("🔗 Am Ende müssen alle Inseln miteinander verbunden sein.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
+                        Spacer(Modifier.fillMaxWidth().height(1.dp).background(BorderColor))
+                        Text("Tippe eine Insel → dann eine zweite = 1 Brücke. Nochmals = 2 Brücken. Dreimal = entfernen.", fontSize = 12.sp, color = TextMuted, lineHeight = 16.sp)
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = { showHelp = false; running = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = IbAccent),
+                    ) { Text("Verstanden!", fontWeight = FontWeight.Bold, color = BgDark) }
+                }
+            }
+        }
+    }
+
+    // ── Quit dialog (3 options, same as web) ───────────────────────────────────
     if (showQuit) {
-        AlertDialog(
-            onDismissRequest = { running = true; showQuit = false },
-            title = { Text("Spiel beenden?", color = TextPrimary) },
-            text = { Text("Fortschritt wird gespeichert.", color = TextMuted) },
-            confirmButton = { TextButton(onClick = onNavigateBack) { Text("Beenden", color = Danger, fontWeight = FontWeight.Bold) } },
-            dismissButton = { TextButton(onClick = { running = true; showQuit = false }) { Text("Weiterspielen", color = TextSub) } },
-            containerColor = SurfaceDark,
-        )
+        Dialog(onDismissRequest = { running = true; showQuit = false }) {
+            Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text("🏖️", fontSize = 36.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Spiel beenden?", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Spacer(Modifier.height(20.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = { running = true; showQuit = false },
+                            modifier = Modifier.fillMaxWidth(),
+                            border = BorderStroke(1.dp, TextSub.copy(alpha = 0.4f)),
+                        ) { Text("Weiterspielen", color = TextSub, fontWeight = FontWeight.Bold) }
+                        Button(
+                            onClick = onNavigateBack,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = OceanBlue),
+                        ) { Text("💾 Speichern & Beenden", fontWeight = FontWeight.Bold) }
+                        OutlinedButton(
+                            onClick = { PuzzleSaveManager.deleteSave(context, saveIdRef); onNavigateBack() },
+                            modifier = Modifier.fillMaxWidth(),
+                            border = BorderStroke(1.dp, Danger.copy(alpha = 0.5f)),
+                        ) { Text("✕ Beenden ohne Speichern", color = Danger, fontWeight = FontWeight.Bold) }
+                    }
+                }
+            }
+        }
     }
 }
