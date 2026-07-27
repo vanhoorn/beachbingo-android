@@ -3,6 +3,7 @@ package com.bestfriends.beachbingo.feature.raetsel.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -13,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -47,6 +49,8 @@ fun InselbrueckeGameScreen(
     var showWin by remember { mutableStateOf(false) }
     var showQuit by remember { mutableStateOf(false) }
     var selectedIslandId by remember { mutableStateOf<Int?>(null) }
+    var zoomScale by remember { mutableStateOf(1f) }
+    var panOffset by remember { mutableStateOf(Offset.Zero) }
     val saveIdRef = remember { saveId ?: PuzzleSaveManager.generateId() }
 
     LaunchedEffect(seed) {
@@ -121,64 +125,87 @@ fun InselbrueckeGameScreen(
                 Canvas(
                     modifier = Modifier
                         .size(canvasSize)
-                        .pointerInput(state) {
-                            detectTapGestures { offset ->
-                                val col = (offset.x / boxPx).toInt()
-                                val row = (offset.y / boxPx).toInt()
-                                val tapped = puzzle.islands.find { it.row == row && it.col == col }
-                                if (tapped != null) {
-                                    val sel = selectedIslandId
-                                    if (sel == null || sel == tapped.id) {
-                                        selectedIslandId = if (sel == tapped.id) null else tapped.id
-                                    } else {
-                                        val neighbors = getNeighborIslands(puzzle, puzzle.islands.find { it.id == sel }!!, state.bridges)
-                                        if (neighbors.any { it.id == tapped.id }) {
-                                            gs = toggleHashiBridge(state, sel, tapped.id)
-                                        }
-                                        selectedIslandId = null
-                                    }
-                                }
+                        .pointerInput(Unit) {
+                            val canvasSizePx = size.width.toFloat()
+                            detectTransformGestures { _, pan, zoom, _ ->
+                                val newScale = (zoomScale * zoom).coerceIn(1f, 4f)
+                                val minPan = canvasSizePx * (1f - newScale)
+                                zoomScale = newScale
+                                panOffset = Offset(
+                                    (panOffset.x + pan.x).coerceIn(minPan, 0f),
+                                    (panOffset.y + pan.y).coerceIn(minPan, 0f),
+                                )
                             }
                         }
-                ) {
-                    // Grid dots
-                    val dotPaint = Color(0xFF1E3050)
-                    for (r in 0 until gridSize) for (c in 0 until gridSize) {
-                        drawCircle(dotPaint, radius = 2f, center = Offset(c * boxPx + boxPx/2, r * boxPx + boxPx/2))
-                    }
-
-                    // Bridges
-                    for (b in state.bridges) {
-                        val a = puzzle.islands.find { it.id == b.from } ?: continue
-                        val bb = puzzle.islands.find { it.id == b.to } ?: continue
-                        val x1 = a.col * boxPx + boxPx/2; val y1 = a.row * boxPx + boxPx/2
-                        val x2 = bb.col * boxPx + boxPx/2; val y2 = bb.row * boxPx + boxPx/2
-                        val offset = if (b.count == 2) 4f else 0f
-                        val horiz = a.row == bb.row
-                        for (i in 0 until b.count) {
-                            val o = if (b.count == 1) 0f else (if (i == 0) -offset else offset)
-                            drawLine(
-                                Color(0xFF4ADE80),
-                                start = if (horiz) Offset(x1, y1+o) else Offset(x1+o, y1),
-                                end = if (horiz) Offset(x2, y2+o) else Offset(x2+o, y2),
-                                strokeWidth = 3f
+                        .pointerInput(state) {
+                            detectTapGestures(
+                                onDoubleTap = {
+                                    zoomScale = 1f
+                                    panOffset = Offset.Zero
+                                },
+                                onTap = { rawOffset ->
+                                    val col = ((rawOffset.x - panOffset.x) / zoomScale / boxPx).toInt()
+                                    val row = ((rawOffset.y - panOffset.y) / zoomScale / boxPx).toInt()
+                                    val tapped = puzzle.islands.find { it.row == row && it.col == col }
+                                    if (tapped != null) {
+                                        val sel = selectedIslandId
+                                        if (sel == null || sel == tapped.id) {
+                                            selectedIslandId = if (sel == tapped.id) null else tapped.id
+                                        } else {
+                                            val neighbors = getNeighborIslands(puzzle, puzzle.islands.find { it.id == sel }!!, state.bridges)
+                                            if (neighbors.any { it.id == tapped.id }) {
+                                                gs = toggleHashiBridge(state, sel, tapped.id)
+                                            }
+                                            selectedIslandId = null
+                                        }
+                                    }
+                                }
                             )
                         }
-                    }
+                ) {
+                    withTransform({
+                        translate(panOffset.x, panOffset.y)
+                        scale(scaleX = zoomScale, scaleY = zoomScale, pivot = Offset.Zero)
+                    }) {
+                        // Grid dots
+                        val dotPaint = Color(0xFF1E3050)
+                        for (r in 0 until gridSize) for (c in 0 until gridSize) {
+                            drawCircle(dotPaint, radius = 2f, center = Offset(c * boxPx + boxPx/2, r * boxPx + boxPx/2))
+                        }
 
-                    // Islands
-                    for (isl in puzzle.islands) {
-                        val cx = isl.col * boxPx + boxPx/2; val cy = isl.row * boxPx + boxPx/2
-                        val sum = islandBridgeSum(isl, state.bridges)
-                        val done = sum == isl.value
-                        val over = sum > isl.value
-                        val isSelected = selectedIslandId == isl.id
-                        val fillColor = when { done -> IbAccent.copy(alpha = 0.3f); over -> Danger.copy(alpha = 0.3f); else -> Surface2Dark }
-                        val strokeColor = when { isSelected -> IbAccent; done -> IbAccent; over -> Danger; else -> TextSub }
-                        drawCircle(fillColor, radius = boxPx * 0.4f, center = Offset(cx, cy))
-                        drawCircle(strokeColor, radius = boxPx * 0.4f, center = Offset(cx, cy), style = androidx.compose.ui.graphics.drawscope.Stroke(if (isSelected) 3f else 2f))
-                        val txt = textMeasurer.measure(isl.value.toString(), TextStyle(fontSize = (boxPx * 0.3f).sp, fontWeight = FontWeight.Bold, color = TextPrimary))
-                        drawText(txt, topLeft = Offset(cx - txt.size.width/2, cy - txt.size.height/2))
+                        // Bridges
+                        for (b in state.bridges) {
+                            val a = puzzle.islands.find { it.id == b.from } ?: continue
+                            val bb = puzzle.islands.find { it.id == b.to } ?: continue
+                            val x1 = a.col * boxPx + boxPx/2; val y1 = a.row * boxPx + boxPx/2
+                            val x2 = bb.col * boxPx + boxPx/2; val y2 = bb.row * boxPx + boxPx/2
+                            val bridgeOffset = if (b.count == 2) 4f else 0f
+                            val isHoriz = a.row == bb.row
+                            for (i in 0 until b.count) {
+                                val o = if (b.count == 1) 0f else (if (i == 0) -bridgeOffset else bridgeOffset)
+                                drawLine(
+                                    Color(0xFF4ADE80),
+                                    start = if (isHoriz) Offset(x1, y1+o) else Offset(x1+o, y1),
+                                    end = if (isHoriz) Offset(x2, y2+o) else Offset(x2+o, y2),
+                                    strokeWidth = 3f
+                                )
+                            }
+                        }
+
+                        // Islands
+                        for (isl in puzzle.islands) {
+                            val cx = isl.col * boxPx + boxPx/2; val cy = isl.row * boxPx + boxPx/2
+                            val sum = islandBridgeSum(isl, state.bridges)
+                            val done = sum == isl.value
+                            val over = sum > isl.value
+                            val isSelected = selectedIslandId == isl.id
+                            val fillColor = when { done -> IbAccent.copy(alpha = 0.3f); over -> Danger.copy(alpha = 0.3f); else -> Surface2Dark }
+                            val strokeColor = when { isSelected -> IbAccent; done -> IbAccent; over -> Danger; else -> TextSub }
+                            drawCircle(fillColor, radius = boxPx * 0.4f, center = Offset(cx, cy))
+                            drawCircle(strokeColor, radius = boxPx * 0.4f, center = Offset(cx, cy), style = androidx.compose.ui.graphics.drawscope.Stroke(if (isSelected) 3f else 2f))
+                            val txt = textMeasurer.measure(isl.value.toString(), TextStyle(fontSize = (boxPx * 0.3f).sp, fontWeight = FontWeight.Bold, color = TextPrimary))
+                            drawText(txt, topLeft = Offset(cx - txt.size.width/2, cy - txt.size.height/2))
+                        }
                     }
                 }
 
