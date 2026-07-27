@@ -78,7 +78,6 @@ private data class PlayerCountEntry(
 )
 
 private val PLAYER_COUNT_LIST = listOf(
-    PlayerCountEntry(PlayerCount.ONE,       "1 Spieler",   "👤"),
     PlayerCountEntry(PlayerCount.ONE_TWO,   "1-2 Spieler", "🤝"),
     PlayerCountEntry(PlayerCount.TWO_FOUR,  "2-4 Spieler", "👥"),
     PlayerCountEntry(PlayerCount.FOUR_PLUS, "4+ Spieler",  "🎉"),
@@ -286,7 +285,7 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PLAYER_COUNT_LIST.take(3).forEach { entry ->
+                PLAYER_COUNT_LIST.forEach { entry ->
                     val gameCount = ALL_GAMES.count { entry.key in it.playerCounts }
                     CategoryTile(
                         entry = entry,
@@ -295,18 +294,6 @@ fun HomeScreen(
                         onClick = { onNavigateToCategory(entry.key.name) }
                     )
                 }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                val entry = PLAYER_COUNT_LIST[3]
-                val gameCount = ALL_GAMES.count { entry.key in it.playerCounts }
-                CategoryTile(
-                    entry = entry,
-                    gameCount = gameCount,
-                    modifier = Modifier.weight(1f),
-                    onClick = { onNavigateToCategory(entry.key.name) }
-                )
-                Spacer(Modifier.weight(1f))
-                Spacer(Modifier.weight(1f))
             }
         }
 

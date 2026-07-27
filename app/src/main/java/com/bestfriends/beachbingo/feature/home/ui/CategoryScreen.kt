@@ -59,7 +59,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 private val PLAYER_COUNT_INFO = mapOf(
-    PlayerCount.ONE       to Triple("👤", "1 Spieler",   "Solo"),
     PlayerCount.ONE_TWO   to Triple("🤝", "1-2 Spieler", "Solo oder zu zweit"),
     PlayerCount.TWO_FOUR  to Triple("👥", "2-4 Spieler", "Kleine Gruppe"),
     PlayerCount.FOUR_PLUS to Triple("🎉", "4+ Spieler",  "Große Runde"),

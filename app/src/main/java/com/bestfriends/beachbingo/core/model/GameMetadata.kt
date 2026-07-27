@@ -1,7 +1,6 @@
 package com.bestfriends.beachbingo.core.model
 
 enum class PlayerCount(val label: String) {
-    ONE("1 Spieler"),
     ONE_TWO("1-2 Spieler"),
     TWO_FOUR("2-4 Spieler"),
     FOUR_PLUS("4+ Spieler"),
@@ -51,7 +50,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "Vier4Bier",
         description = "Vier in einer Reihe mit Beach-Twist.",
         color = 0xFFF59E0B,
-        playerCounts = listOf(PlayerCount.ONE, PlayerCount.ONE_TWO),
+        playerCounts = listOf(PlayerCount.ONE_TWO),
         genres = listOf(GameGenre.LOGICAL),
     ),
     GameMetadata(
@@ -60,7 +59,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "BeachPirates",
         description = "Verteidige den Strand! Besiege Quallen, Muscheln und Fische.",
         color = 0xFFA855F7,
-        playerCounts = listOf(PlayerCount.ONE),
+        playerCounts = listOf(PlayerCount.ONE_TWO),
         genres = listOf(GameGenre.ACTION),
     ),
     GameMetadata(
@@ -69,7 +68,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "Wattwurm",
         description = "Frisst Krabben, Muscheln und Fische. Werde nie die Grenzen!",
         color = 0xFF22C55E,
-        playerCounts = listOf(PlayerCount.ONE),
+        playerCounts = listOf(PlayerCount.ONE_TWO),
         genres = listOf(GameGenre.ACTION),
     ),
     GameMetadata(
@@ -78,7 +77,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "Strandturm",
         description = "Klettere den Pier hoch, weiche Kokosnüssen aus — bis zum Gipfel!",
         color = 0xFFDC2626,
-        playerCounts = listOf(PlayerCount.ONE),
+        playerCounts = listOf(PlayerCount.ONE_TWO),
         genres = listOf(GameGenre.ACTION),
     ),
     GameMetadata(
@@ -115,7 +114,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "Strandoku",
         description = "Das meistgespielte Logikrätsel der Welt — 6 Varianten von Classic bis Samurai.",
         color = 0xFF38BDF8,
-        playerCounts = listOf(PlayerCount.ONE),
+        playerCounts = listOf(PlayerCount.ONE_TWO),
         genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
     ),
     GameMetadata(
@@ -124,7 +123,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "WellenSumme",
         description = "Kreuzworträtsel mit Zahlen — Blöcke addieren sich zur angegebenen Summe.",
         color = 0xFFC084FC,
-        playerCounts = listOf(PlayerCount.ONE),
+        playerCounts = listOf(PlayerCount.ONE_TWO),
         genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
     ),
     GameMetadata(
@@ -133,7 +132,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "Küstenkrieg",
         description = "Solo-Logik-Rätsel oder klassisches 2-Spieler-Duell — Flotten versenken!",
         color = 0xFFFB7185,
-        playerCounts = listOf(PlayerCount.ONE, PlayerCount.ONE_TWO),
+        playerCounts = listOf(PlayerCount.ONE_TWO),
         genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
     ),
     GameMetadata(
@@ -142,7 +141,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "DünenSchatten",
         description = "Schwärze Felder ein — das japanische Zahlen-Ausschluss-Rätsel.",
         color = 0xFFFBBF24,
-        playerCounts = listOf(PlayerCount.ONE),
+        playerCounts = listOf(PlayerCount.ONE_TWO),
         genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
     ),
     GameMetadata(
@@ -151,7 +150,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "Inselbrücke",
         description = "Verbinde alle Inseln mit Brücken — das japanische Hashi-Rätsel.",
         color = 0xFF4ADE80,
-        playerCounts = listOf(PlayerCount.ONE),
+        playerCounts = listOf(PlayerCount.ONE_TWO),
         genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
     ),
 )
