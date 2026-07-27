@@ -36,7 +36,7 @@ fun StrandokuLobbyScreen(
     var variant by remember { mutableStateOf("classic") }
     var difficulty by remember { mutableStateOf("mittel") }
     val saves = remember { PuzzleSaveManager.getSaves(context).filter { it.gameType == "strandoku" } }
-    val variants = listOf("classic", "mega12", "mega16")
+    val variants = listOf("classic", "mega12", "mega16", "irregular", "diagonal", "killer", "samurai")
     val difficulties = listOf("leicht", "mittel", "schwer", "experte")
     val diffLabels = mapOf("leicht" to "Leicht", "mittel" to "Mittel", "schwer" to "Schwer", "experte" to "Experte")
 
