@@ -162,10 +162,6 @@ fun InselbrueckeGameScreen(
                                     }
                                     .pointerInput(Unit) {
                                         detectTapGestures(
-                                            onDoubleTap = {
-                                                zoomScale = 1f
-                                                panOffset = Offset.Zero
-                                            },
                                             onTap = { rawOffset ->
                                                 // Read gs/puzzleWithSol directly (not captured local vals)
                                                 // so this coroutine never needs to restart on state change.
@@ -244,6 +240,10 @@ fun InselbrueckeGameScreen(
                             border = BorderStroke(1.dp, OceanBlue.copy(alpha = 0.5f)),
                         ) { Text(if (running) "⏸" else "▶", color = OceanBlue, fontWeight = FontWeight.Bold) }
                         OutlinedButton(
+                            onClick = { zoomScale = 1f; panOffset = Offset.Zero },
+                            border = BorderStroke(1.dp, TextSub.copy(alpha = 0.5f)),
+                        ) { Text("↺", color = TextSub, fontWeight = FontWeight.Bold) }
+                        OutlinedButton(
                             onClick = {
                                 val currentState = gs ?: return@OutlinedButton
                                 val currentPs = puzzleWithSol ?: return@OutlinedButton
@@ -255,7 +255,7 @@ fun InselbrueckeGameScreen(
                         OutlinedButton(
                             onClick = { running = false; showHelp = true },
                             border = BorderStroke(1.dp, TextSub.copy(alpha = 0.5f)),
-                        ) { Text("? Regeln", color = TextSub, fontWeight = FontWeight.Bold) }
+                        ) { Text("?", color = TextSub, fontWeight = FontWeight.Bold) }
                         OutlinedButton(
                             onClick = { running = false; showQuit = true },
                             border = BorderStroke(1.dp, Danger.copy(alpha = 0.5f)),

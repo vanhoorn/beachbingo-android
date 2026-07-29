@@ -19,9 +19,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.bestfriends.beachbingo.feature.raetsel.AiMode
 import com.bestfriends.beachbingo.feature.raetsel.KRIEG_FLEET
 import com.bestfriends.beachbingo.feature.raetsel.KRIEG_GRID_SIZES
+import com.bestfriends.beachbingo.feature.raetsel.KuestenkriegSession
 import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.deserializeBattleState
 import com.bestfriends.beachbingo.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -57,6 +60,7 @@ fun KuestenkriegLobbyScreen(
     onNavigateToGame: (difficulty: String, seed: Long, saveId: String?) -> Unit,
     onNavigateToPlacement: (aiMode: String) -> Unit,
     onNavigateToOnlineLobby: (code: String) -> Unit = {},
+    onNavigateToBattle: () -> Unit = {},
 ) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
@@ -67,7 +71,8 @@ fun KuestenkriegLobbyScreen(
     var mode by remember { mutableStateOf(KkMode.PUZZLE) }
     var selectedDiff by remember { mutableStateOf("mittel") }
     var selectedAi by remember { mutableStateOf("kapitaen") }
-    val saves = remember { PuzzleSaveManager.getSaves(context).filter { it.gameType == "kuestenkrieg" } }
+    var puzzleSaves by remember { mutableStateOf(PuzzleSaveManager.getSaves(context).filter { it.gameType == "kuestenkrieg" }) }
+    var kiSaves by remember { mutableStateOf(PuzzleSaveManager.getSaves(context).filter { it.gameType == "kuestenkrieg_ki" }) }
     val difficulties = listOf("leicht", "mittel", "schwer", "experte")
     val diffLabels = mapOf("leicht" to "Leicht", "mittel" to "Mittel", "schwer" to "Schwer", "experte" to "Experte")
 
@@ -246,9 +251,9 @@ fun KuestenkriegLobbyScreen(
                 ) { Text("Neues Rätsel", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = BgDark) }
 
                 // Saved puzzle games
-                if (saves.isNotEmpty()) {
+                if (puzzleSaves.isNotEmpty()) {
                     Text("GESPEICHERTE RÄTSEL", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
-                    saves.forEach { save ->
+                    puzzleSaves.forEach { save ->
                         Surface(shape = RoundedCornerShape(12.dp), color = SurfaceDark, modifier = Modifier.fillMaxWidth().border(1.dp, BorderColor, RoundedCornerShape(12.dp))) {
                             Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(modifier = Modifier.weight(1f)) {
@@ -259,6 +264,11 @@ fun KuestenkriegLobbyScreen(
                                 Surface(shape = RoundedCornerShape(8.dp), color = KkAccent.copy(alpha = 0.1f),
                                     modifier = Modifier.border(1.dp, KkAccent.copy(alpha = 0.4f), RoundedCornerShape(8.dp)).clickable { onNavigateToGame(save.difficulty, save.seed, save.id) }
                                 ) { Text("Fortsetzen", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = KkAccent, modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)) }
+                                Spacer(Modifier.width(8.dp))
+                                Surface(shape = RoundedCornerShape(8.dp), color = Danger.copy(alpha = 0.1f),
+                                    modifier = Modifier.border(1.dp, Danger.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                        .clickable { PuzzleSaveManager.deleteSave(context, save.id); puzzleSaves = puzzleSaves.filter { it.id != save.id } }
+                                ) { Text("✕", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Danger, modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)) }
                             }
                         }
                     }
@@ -343,6 +353,38 @@ fun KuestenkriegLobbyScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = KkAccent),
                     shape = RoundedCornerShape(14.dp)
                 ) { Text("Schiffe setzen →", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = BgDark) }
+
+                if (kiSaves.isNotEmpty()) {
+                    Text("LAUFENDE KI-GEFECHTE", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                    kiSaves.forEach { save ->
+                        val aiLabel = when (save.variant) { "matrose" -> "Matrose"; "admiral" -> "Admiral"; else -> "Kapitän" }
+                        Surface(shape = RoundedCornerShape(12.dp), color = SurfaceDark, modifier = Modifier.fillMaxWidth().border(1.dp, BorderColor, RoundedCornerShape(12.dp))) {
+                            Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("KI: $aiLabel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                    Text("Gefecht läuft", fontSize = 12.sp, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
+                                }
+                                Surface(shape = RoundedCornerShape(8.dp), color = KkAccent.copy(alpha = 0.1f),
+                                    modifier = Modifier.border(1.dp, KkAccent.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            val bs = deserializeBattleState(save.puzzleState ?: "")
+                                            if (bs != null) {
+                                                KuestenkriegSession.resumedState = bs
+                                                KuestenkriegSession.resumedSaveId = save.id
+                                                KuestenkriegSession.aiMode = when (save.variant) { "matrose" -> AiMode.MATROSE; "admiral" -> AiMode.ADMIRAL; else -> AiMode.KAPITAEN }
+                                                onNavigateToBattle()
+                                            }
+                                        }
+                                ) { Text("Fortsetzen", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = KkAccent, modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)) }
+                                Spacer(Modifier.width(8.dp))
+                                Surface(shape = RoundedCornerShape(8.dp), color = Danger.copy(alpha = 0.1f),
+                                    modifier = Modifier.border(1.dp, Danger.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                        .clickable { PuzzleSaveManager.deleteSave(context, save.id); kiSaves = kiSaves.filter { it.id != save.id } }
+                                ) { Text("✕", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Danger, modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)) }
+                            }
+                        }
+                    }
+                }
             }
         }
 

@@ -240,14 +240,14 @@ fun KuestenkriegPlacementScreen(
                 Row(modifier = Modifier.padding(start = 22.dp)) {
                     repeat(BATTLE_GRID) { c ->
                         Box(modifier = Modifier.size(cellDp), contentAlignment = Alignment.Center) {
-                            Text(('A' + c).toString(), fontSize = 9.sp, color = TextMuted, fontWeight = FontWeight.Bold)
+                            Text(('A' + c).toString(), fontSize = 9.sp, color = Color.Black, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
                 repeat(BATTLE_GRID) { r ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(modifier = Modifier.width(20.dp), contentAlignment = Alignment.CenterEnd) {
-                            Text("${r + 1}", fontSize = 9.sp, color = TextMuted, fontWeight = FontWeight.Bold,
+                            Text("${r + 1}", fontSize = 9.sp, color = Color.Black, fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(end = 2.dp))
                         }
                         repeat(BATTLE_GRID) { c ->
@@ -258,7 +258,7 @@ fun KuestenkriegPlacementScreen(
                                 isPreview && dragIsValid  -> KkAccent.copy(alpha = 0.8f)
                                 isPreview && !dragIsValid -> DragInvalidColor.copy(alpha = 0.5f)
                                 isOccupied               -> KkAccent.copy(alpha = 0.55f)
-                                else                     -> SurfaceDark
+                                else                     -> Color.White
                             }
                             Box(modifier = Modifier
                                 .size(cellDp)

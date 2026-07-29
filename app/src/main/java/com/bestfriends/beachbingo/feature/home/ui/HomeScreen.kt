@@ -137,6 +137,8 @@ fun HomeScreen(
     LaunchedEffect(uid) {
         if (uid == null) return@LaunchedEffect
         try {
+            val dismissedIds = context.getSharedPreferences("dismissed_games", 0)
+                .getStringSet("dismissed_game_ids", emptySet()) ?: emptySet()
             val collections = listOf(
                 Triple("strandraeuber", "strandraeuberGames", "🦹 Strandräuber"),
                 Triple("meermau",       "meermauGames",       "🃏 MeerMau"),
@@ -150,6 +152,7 @@ fun HomeScreen(
                     .get().await()
                 if (!snap.isEmpty) {
                     val doc = snap.documents.first()
+                    if (doc.id in dismissedIds) continue
                     val parts = displayName.split(" ", limit = 2)
                     activeGame = ActiveGameInfo(type, doc.id, parts.getOrElse(1) { displayName }, parts[0])
                     return@LaunchedEffect
@@ -240,7 +243,15 @@ fun HomeScreen(
             ActiveGameBanner(
                 game = activeGame!!,
                 onResume = { onRejoinGame(activeGame!!.type, activeGame!!.gameId) },
-                onDismiss = { activeGame = null },
+                onDismiss = {
+                    activeGame?.gameId?.let { id ->
+                        val prefs = context.getSharedPreferences("dismissed_games", 0)
+                        val current = prefs.getStringSet("dismissed_game_ids", emptySet())?.toMutableSet() ?: mutableSetOf()
+                        current.add(id)
+                        prefs.edit().putStringSet("dismissed_game_ids", current).apply()
+                    }
+                    activeGame = null
+                },
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
             )
         }

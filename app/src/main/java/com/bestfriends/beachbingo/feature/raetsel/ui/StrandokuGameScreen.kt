@@ -242,7 +242,7 @@ fun StrandokuGameScreen(
                         OutlinedButton(
                             onClick = { running = false; showHelp = true },
                             border = BorderStroke(1.dp, TextSub.copy(alpha = 0.5f)),
-                        ) { Text("? Regeln", color = TextSub, fontWeight = FontWeight.Bold) }
+                        ) { Text("?", color = TextSub, fontWeight = FontWeight.Bold) }
                         OutlinedButton(
                             onClick = { running = !running },
                             border = BorderStroke(1.dp, OceanBlue.copy(alpha = 0.5f)),
@@ -253,7 +253,7 @@ fun StrandokuGameScreen(
                         ) { Text("✕", color = Danger, fontWeight = FontWeight.Bold) }
                     }
 
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(4.dp))
                 }
             }
         }
@@ -506,13 +506,38 @@ private fun StrandokuCell(
                 },
                 textAlign = TextAlign.Center,
             )
-            notes.isNotEmpty() && !isGiven -> Text(
-                notes.sorted().joinToString(""),
-                fontSize = (fontSp.value * 0.48f).sp,
-                color = TextMuted,
-                textAlign = TextAlign.Center,
-                lineHeight = (fontSp.value * 0.55f).sp,
-            )
+            notes.isNotEmpty() && !isGiven -> {
+                val noteFontSp = (fontSp.value * 0.65f).sp
+                if (puzzle.size <= 9) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        for (subRow in 0..2) {
+                            Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                                for (subCol in 0..2) {
+                                    val digit = subRow * 3 + subCol + 1
+                                    Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                                        if (digit in notes) {
+                                            Text(
+                                                digit.toString(),
+                                                fontSize = noteFontSp,
+                                                color = TextMuted,
+                                                lineHeight = noteFontSp,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Text(
+                        notes.sorted().joinToString(""),
+                        fontSize = noteFontSp,
+                        color = TextMuted,
+                        textAlign = TextAlign.Center,
+                        lineHeight = (fontSp.value * 0.72f).sp,
+                    )
+                }
+            }
         }
     }
 }

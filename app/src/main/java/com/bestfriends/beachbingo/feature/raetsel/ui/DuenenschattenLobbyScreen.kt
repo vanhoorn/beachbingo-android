@@ -33,7 +33,7 @@ fun DuenenschattenLobbyScreen(
 ) {
     val context = LocalContext.current
     var selected by remember { mutableStateOf("mittel") }
-    val saves = remember { PuzzleSaveManager.getSaves(context).filter { it.gameType == "duenenschatten" } }
+    var saves by remember { mutableStateOf(PuzzleSaveManager.getSaves(context).filter { it.gameType == "duenenschatten" }) }
 
     val difficulties = listOf("leicht", "mittel", "schwer", "experte")
     val diffLabels = mapOf("leicht" to "Leicht", "mittel" to "Mittel", "schwer" to "Schwer", "experte" to "Experte")
@@ -137,6 +137,11 @@ fun DuenenschattenLobbyScreen(
                                 modifier = Modifier.border(1.dp, DsAccent.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                                     .clickable { onNavigateToGame(save.difficulty, save.seed, save.id) }
                             ) { Text("Fortsetzen", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = DsAccent, modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)) }
+                            Spacer(Modifier.width(8.dp))
+                            Surface(shape = RoundedCornerShape(8.dp), color = Danger.copy(alpha = 0.1f),
+                                modifier = Modifier.border(1.dp, Danger.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                    .clickable { PuzzleSaveManager.deleteSave(context, save.id); saves = saves.filter { it.id != save.id } }
+                            ) { Text("✕", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Danger, modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)) }
                         }
                     }
                 }

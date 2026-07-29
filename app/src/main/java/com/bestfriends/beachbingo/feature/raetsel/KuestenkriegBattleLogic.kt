@@ -136,7 +136,7 @@ fun playerShoot(state: BattleState, r: Int, c: Int): BattleState {
     val allSunk = aiFleet.all { it.sunk }
     return state.copy(
         aiGrid = aiGrid, aiFleet = aiFleet,
-        turn = if (allSunk) BattleTurn.PLAYER else BattleTurn.AI,
+        turn = if (allSunk) BattleTurn.PLAYER else if (hitShip != null) BattleTurn.PLAYER else BattleTurn.AI,
         gameOver = allSunk, winner = if (allSunk) BattleTurn.PLAYER else null,
     )
 }
@@ -176,7 +176,7 @@ fun aiShoot(state: BattleState, aiMode: AiMode): BattleState {
     val allSunk = playerFleet.all { it.sunk }
     return state.copy(
         playerGrid = playerGrid, playerFleet = playerFleet,
-        turn = if (allSunk) BattleTurn.AI else BattleTurn.PLAYER,
+        turn = if (allSunk) BattleTurn.AI else if (hitShip != null) BattleTurn.AI else BattleTurn.PLAYER,
         gameOver = allSunk, winner = if (allSunk) BattleTurn.AI else null,
         aiHits = aiHits, aiTargets = aiTargets,
     )
@@ -259,9 +259,61 @@ fun markShipOnGrid(grid: Array<BooleanArray>, r: Int, c: Int, size: Int, horiz: 
     }
 }
 
+// ── Battle state serialization ────────────────────────────────────────────────
+
+fun serializeBattleState(state: BattleState): String {
+    val sb = StringBuilder()
+    sb.append(if (state.turn == BattleTurn.PLAYER) "P" else "A")
+    sb.append("|")
+    for (r in 0 until BATTLE_GRID) for (c in 0 until BATTLE_GRID)
+        sb.append(when (state.playerGrid[r][c]) { ShotResult.MISS -> 'M'; ShotResult.HIT -> 'H'; ShotResult.SUNK -> 'S'; else -> 'U' })
+    sb.append("|")
+    for (r in 0 until BATTLE_GRID) for (c in 0 until BATTLE_GRID)
+        sb.append(when (state.aiGrid[r][c]) { ShotResult.MISS -> 'M'; ShotResult.HIT -> 'H'; ShotResult.SUNK -> 'S'; else -> 'U' })
+    sb.append("|")
+    sb.append(state.playerFleet.joinToString(";") { "${it.id},${it.size},${it.row},${it.col},${if (it.horiz) 1 else 0},${if (it.sunk) 1 else 0}" })
+    sb.append("|")
+    sb.append(state.aiFleet.joinToString(";") { "${it.id},${it.size},${it.row},${it.col},${if (it.horiz) 1 else 0},${if (it.sunk) 1 else 0}" })
+    sb.append("|")
+    sb.append(state.aiHits.joinToString(";") { "${it.first},${it.second}" })
+    sb.append("|")
+    sb.append(state.aiTargets.joinToString(";") { "${it.first},${it.second}" })
+    return sb.toString()
+}
+
+fun deserializeBattleState(s: String): BattleState? = try {
+    val p = s.split("|")
+    val turn = if (p[0] == "P") BattleTurn.PLAYER else BattleTurn.AI
+    fun parseGrid(str: String): Array<Array<ShotResult>> {
+        val g = Array(BATTLE_GRID) { Array(BATTLE_GRID) { ShotResult.UNKNOWN } }
+        str.forEachIndexed { i, ch ->
+            g[i / BATTLE_GRID][i % BATTLE_GRID] = when (ch) { 'M' -> ShotResult.MISS; 'H' -> ShotResult.HIT; 'S' -> ShotResult.SUNK; else -> ShotResult.UNKNOWN }
+        }
+        return g
+    }
+    fun parseFleet(str: String) = if (str.isBlank()) emptyList() else str.split(";").map { e ->
+        val v = e.split(","); PlacedShip(v[0].toInt(), v[1].toInt(), v[2].toInt(), v[3].toInt(), v[4] == "1", v[5] == "1")
+    }
+    fun parsePairs(str: String) = if (str.isBlank()) emptyList() else str.split(";").map { e ->
+        val v = e.split(","); v[0].toInt() to v[1].toInt()
+    }
+    BattleState(
+        turn = turn,
+        playerGrid = parseGrid(p[1]),
+        aiGrid = parseGrid(p[2]),
+        playerFleet = parseFleet(p[3]),
+        aiFleet = parseFleet(p[4]),
+        aiHits = parsePairs(p[5]),
+        aiTargets = parsePairs(p[6]),
+        gameOver = false,
+    )
+} catch (_: Exception) { null }
+
 // ── Session state (shared between Placement → Battle) ─────────────────────────
 
 object KuestenkriegSession {
     var playerFleet: List<PlacedShip> = emptyList()
     var aiMode: AiMode = AiMode.KAPITAEN
+    var resumedState: BattleState? = null
+    var resumedSaveId: String? = null
 }

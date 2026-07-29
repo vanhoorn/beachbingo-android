@@ -3,6 +3,8 @@ package com.bestfriends.beachbingo.feature.raetsel.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,9 +17,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.abs
 import com.bestfriends.beachbingo.feature.raetsel.*
 import com.bestfriends.beachbingo.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
@@ -27,6 +33,8 @@ import kotlinx.coroutines.tasks.await
 import kotlin.random.Random
 
 private val KkOnlinePlacementAccent = Color(0xFFFB7185)
+
+private data class DragState(val start: Pair<Int, Int>, val current: Pair<Int, Int>)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -149,6 +157,28 @@ fun KuestenkriegOnlinePlacementScreen(
     val occupied = buildOccupied()
     val currentDef = if (!allPlaced) FLEET_DEFS[activeIdx] else null
     val cellDp = 28.dp
+    val density = LocalDensity.current
+    val cellPxF = with(density) { cellDp.toPx() }
+    val labelColPxF = with(density) { 20.dp.toPx() }
+    var dragState by remember { mutableStateOf<DragState?>(null) }
+    var gridWidthPx by remember { mutableStateOf(0) }
+
+    val ds = dragState
+    val dragIsH: Boolean = if (ds != null) {
+        val (sr, sc) = ds.start; val (cr, cc) = ds.current
+        if (sr == cr && sc == cc) horiz else abs(cc - sc) >= abs(cr - sr)
+    } else horiz
+    val dragPreview: Set<Pair<Int, Int>> = if (ds != null && !allPlaced && currentDef != null) {
+        val (sr, sc) = ds.start
+        (0 until currentDef.size).mapNotNull { i ->
+            val r2 = if (dragIsH) sr else sr + i
+            val c2 = if (dragIsH) sc + i else sc
+            if (r2 in 0 until BATTLE_GRID && c2 in 0 until BATTLE_GRID) Pair(r2, c2) else null
+        }.toSet()
+    } else emptySet()
+    val dragIsValid: Boolean = if (ds != null && dragPreview.isNotEmpty() && !allPlaced && currentDef != null)
+        canPlaceShip(buildOccupied(), ds.start.first, ds.start.second, currentDef.size, dragIsH)
+    else false
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -212,26 +242,73 @@ fun KuestenkriegOnlinePlacementScreen(
                 }
 
                 // Grid
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onSizeChanged { gridWidthPx = it.width }
+                        .pointerInput(fleet.size) {
+                            if (fleet.size >= FLEET_DEFS.size || fleetReady) return@pointerInput
+                            awaitEachGesture {
+                                val gridTotalWidthF = labelColPxF + BATTLE_GRID * cellPxF
+                                val gridLeftF = (gridWidthPx - gridTotalWidthF) / 2f
+                                fun posToCell(x: Float, y: Float): Pair<Int, Int>? {
+                                    val c = ((x - gridLeftF - labelColPxF) / cellPxF).toInt()
+                                    val r = ((y - cellPxF) / cellPxF).toInt()
+                                    return if (r in 0 until BATTLE_GRID && c in 0 until BATTLE_GRID) Pair(r, c) else null
+                                }
+                                val down = awaitFirstDown(requireUnconsumed = false)
+                                val startCell = posToCell(down.position.x, down.position.y) ?: return@awaitEachGesture
+                                dragState = DragState(startCell, startCell)
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                    if (!change.pressed) break
+                                    change.consume()
+                                    val cell = posToCell(change.position.x, change.position.y)
+                                    if (cell != null) dragState = DragState(startCell, cell)
+                                }
+                                val gesture = dragState
+                                if (gesture != null && fleet.size < FLEET_DEFS.size) {
+                                    val (sr, sc) = gesture.start; val (cr, cc) = gesture.current
+                                    val isH = if (sr == cr && sc == cc) horiz else abs(cc - sc) >= abs(cr - sr)
+                                    val def = FLEET_DEFS[fleet.size]
+                                    val g = buildOccupied()
+                                    if (canPlaceShip(g, sr, sc, def.size, isH)) {
+                                        fleet = fleet + PlacedShip(fleet.size, def.size, sr, sc, isH)
+                                        horiz = isH
+                                    }
+                                }
+                                dragState = null
+                            }
+                        }
+                ) {
                     Row(modifier = Modifier.padding(start = 22.dp)) {
                         repeat(BATTLE_GRID) { c ->
                             Box(modifier = Modifier.size(cellDp), contentAlignment = Alignment.Center) {
-                                Text(('A' + c).toString(), fontSize = 9.sp, color = TextMuted, fontWeight = FontWeight.Bold)
+                                Text(('A' + c).toString(), fontSize = 9.sp, color = Color.Black, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
                     repeat(BATTLE_GRID) { r ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(modifier = Modifier.width(20.dp), contentAlignment = Alignment.CenterEnd) {
-                                Text("${r + 1}", fontSize = 9.sp, color = TextMuted, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 2.dp))
+                                Text("${r + 1}", fontSize = 9.sp, color = Color.Black, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 2.dp))
                             }
                             repeat(BATTLE_GRID) { c ->
-                                Box(
-                                    modifier = Modifier
-                                        .size(cellDp)
-                                        .background(if (occupied[r][c]) KkOnlinePlacementAccent.copy(alpha = 0.55f) else SurfaceDark)
-                                        .border(0.5.dp, BorderColor)
-                                        .let { if (!fleetReady) it.clickable { handleCellTap(r, c) } else it },
+                                val cellKey = Pair(r, c)
+                                val isOccupied = occupied[r][c]
+                                val isPreview = cellKey in dragPreview
+                                val cellBg = when {
+                                    isPreview && dragIsValid  -> KkOnlinePlacementAccent.copy(alpha = 0.8f)
+                                    isPreview && !dragIsValid -> Color(0xFFEF4444).copy(alpha = 0.5f)
+                                    isOccupied               -> KkOnlinePlacementAccent.copy(alpha = 0.55f)
+                                    else                     -> Color.White
+                                }
+                                Box(modifier = Modifier
+                                    .size(cellDp)
+                                    .background(cellBg)
+                                    .border(0.5.dp, BorderColor)
                                 )
                             }
                         }

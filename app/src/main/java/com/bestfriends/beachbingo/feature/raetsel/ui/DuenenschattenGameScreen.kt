@@ -237,7 +237,7 @@ fun DuenenschattenGameScreen(
                         OutlinedButton(
                             onClick = { running = false; showHelp = true },
                             border = BorderStroke(1.dp, TextSub.copy(alpha = 0.5f)),
-                        ) { Text("? Regeln", color = TextSub, fontWeight = FontWeight.Bold) }
+                        ) { Text("?", color = TextSub, fontWeight = FontWeight.Bold) }
                         OutlinedButton(
                             onClick = { running = false; showQuit = true },
                             border = BorderStroke(1.dp, Danger.copy(alpha = 0.5f)),

@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,7 +38,7 @@ private fun cellBg(v: CellView): Color = when (v) {
     CellView.HIT     -> RedBase.copy(alpha = 0.53f)
     CellView.SUNK    -> RedBase.copy(alpha = 0.80f)
     CellView.MYSHIP  -> KkAccent.copy(alpha = 0.53f)
-    CellView.UNKNOWN -> Color.Transparent
+    CellView.UNKNOWN -> Color.White
 }
 
 private fun cellLabel(v: CellView): String = when (v) {
@@ -52,9 +53,30 @@ fun KuestenkriegBattleScreen(
     onNavigateBack: () -> Unit,
     onNavigateToPlacement: (aiMode: String) -> Unit,
 ) {
+    val context = LocalContext.current
     val aiModeEnum = KuestenkriegSession.aiMode
-    var state by remember { mutableStateOf(createBattleState(KuestenkriegSession.playerFleet)) }
+    val saveIdRef = remember { KuestenkriegSession.resumedSaveId ?: PuzzleSaveManager.generateId() }
+    val startedAtRef = remember { System.currentTimeMillis() }
+    var state by remember { mutableStateOf(KuestenkriegSession.resumedState ?: createBattleState(KuestenkriegSession.playerFleet)) }
     var aiMsg by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        KuestenkriegSession.resumedState = null
+        KuestenkriegSession.resumedSaveId = null
+    }
+
+    LaunchedEffect(state) {
+        if (state.gameOver) {
+            PuzzleSaveManager.deleteSave(context, saveIdRef)
+        } else {
+            PuzzleSaveManager.savePuzzle(context, PuzzleSave(
+                id = saveIdRef, gameType = "kuestenkrieg_ki",
+                variant = aiModeEnum.name.lowercase(), difficulty = "ki", seed = 0L,
+                puzzleState = serializeBattleState(state),
+                startedAt = startedAtRef, elapsedSeconds = 0,
+            ))
+        }
+    }
 
     // AI turn handler
     LaunchedEffect(state.turn, state.gameOver) {
@@ -240,41 +262,43 @@ private fun BattleGridSection(
     grid: Array<Array<CellView>>,
     onCellTap: (Int, Int) -> Unit,
 ) {
-    val cellDp = 30.dp
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
-            Text(title, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
-            if (subtitle != null) {
-                Spacer(Modifier.width(6.dp))
-                Text(subtitle, fontSize = 12.sp, color = KkAccent)
-            }
-        }
-        Row(modifier = Modifier.padding(start = 22.dp)) {
-            repeat(BATTLE_GRID) { c ->
-                Box(modifier = Modifier.size(cellDp), contentAlignment = Alignment.Center) {
-                    Text(('A' + c).toString(), fontSize = 8.sp, color = TextMuted, fontWeight = FontWeight.Bold)
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val cellDp = maxWidth / (BATTLE_GRID + 1)
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
+                Text(title, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                if (subtitle != null) {
+                    Spacer(Modifier.width(6.dp))
+                    Text(subtitle, fontSize = 12.sp, color = KkAccent)
                 }
             }
-        }
-        repeat(BATTLE_GRID) { r ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.width(20.dp), contentAlignment = Alignment.CenterEnd) {
-                    Text("${r + 1}", fontSize = 8.sp, color = TextMuted, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 2.dp))
-                }
+            Row(modifier = Modifier.padding(start = 22.dp)) {
                 repeat(BATTLE_GRID) { c ->
-                    val v = grid[r][c]
-                    Box(
-                        modifier = Modifier
-                            .size(cellDp)
-                            .background(cellBg(v))
-                            .border(0.5.dp, BorderColor)
-                            .clickable { onCellTap(r, c) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val lbl = cellLabel(v)
-                        if (lbl.isNotEmpty()) {
-                            Text(lbl, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold,
-                                color = if (v == CellView.MISS) TextMuted else Color.White)
+                    Box(modifier = Modifier.size(cellDp), contentAlignment = Alignment.Center) {
+                        Text(('A' + c).toString(), fontSize = 8.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            repeat(BATTLE_GRID) { r ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.width(20.dp), contentAlignment = Alignment.CenterEnd) {
+                        Text("${r + 1}", fontSize = 8.sp, color = Color.Black, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 2.dp))
+                    }
+                    repeat(BATTLE_GRID) { c ->
+                        val v = grid[r][c]
+                        Box(
+                            modifier = Modifier
+                                .size(cellDp)
+                                .background(cellBg(v))
+                                .border(0.5.dp, BorderColor)
+                                .clickable { onCellTap(r, c) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val lbl = cellLabel(v)
+                            if (lbl.isNotEmpty()) {
+                                Text(lbl, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold,
+                                    color = if (v == CellView.MISS) TextMuted else Color.White)
+                            }
                         }
                     }
                 }

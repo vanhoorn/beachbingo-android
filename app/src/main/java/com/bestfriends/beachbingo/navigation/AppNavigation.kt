@@ -272,6 +272,9 @@ fun AppNavigation() {
                 onNavigateToOnlineLobby = { code ->
                     navController.navigate(Screen.KuestenkriegOnlineLobby(code))
                 },
+                onNavigateToBattle = {
+                    navController.navigate(Screen.KuestenkriegBattle)
+                },
             )
         }
         composable<Screen.KuestenkriegOnlineLobby> { backStack ->

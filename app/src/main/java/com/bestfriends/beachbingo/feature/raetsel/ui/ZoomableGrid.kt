@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 
@@ -66,6 +67,7 @@ fun ZoomableGrid(
                 scaleY = zoom
                 translationX = pan.x
                 translationY = pan.y
+                transformOrigin = TransformOrigin(0f, 0f)
             },
             content = content,
         )

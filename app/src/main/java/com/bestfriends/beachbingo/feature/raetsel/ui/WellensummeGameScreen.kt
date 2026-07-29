@@ -250,7 +250,7 @@ fun WellensummeGameScreen(
                         OutlinedButton(
                             onClick = { running = false; showHelp = true },
                             border = BorderStroke(1.dp, TextSub.copy(alpha = 0.5f)),
-                        ) { Text("? Regeln", color = TextSub, fontWeight = FontWeight.Bold) }
+                        ) { Text("?", color = TextSub, fontWeight = FontWeight.Bold) }
                         OutlinedButton(
                             onClick = { running = !running },
                             border = BorderStroke(1.dp, OceanBlue.copy(alpha = 0.5f)),
