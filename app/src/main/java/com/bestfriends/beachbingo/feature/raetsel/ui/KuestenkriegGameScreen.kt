@@ -95,20 +95,23 @@ fun KuestenkriegGameScreen(
         },
         containerColor = BgDark
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(padding)) {
+        val screenAvailW = maxWidth
+        Column(modifier = Modifier.fillMaxSize().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             if (p == null || state == null) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = KkAccent) }
             } else {
                 val size = p.size
                 val labelDp: Dp = 22.dp
-                val maxW = 360
-                val cellDp: Dp = ((maxW - labelDp.value.toInt()) / size).coerceIn(22, 36).dp
+                // Dynamic cell size: fills available width, capped so cells stay playable
+                val cellDp: Dp = ((screenAvailW - labelDp - 16.dp) / size).coerceIn(24.dp, 54.dp)
                 val errors = computeKriegErrors(state)
 
                 val density = LocalDensity.current
                 val labelPx = with(density) { labelDp.toPx() }
                 val cellPx = with(density) { cellDp.toPx() }
 
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 ZoomableGrid(
                     onTap = tap@{ gx, gy ->
                         if (gx < labelPx || gy < labelPx) return@tap
@@ -177,6 +180,7 @@ fun KuestenkriegGameScreen(
                         }
                     }
                 }
+                } // end centering Box
 
                 Spacer(Modifier.height(10.dp))
 
@@ -205,6 +209,7 @@ fun KuestenkriegGameScreen(
                 }
             }
         }
+        } // end BoxWithConstraints
     }
 
     if (showWin) {

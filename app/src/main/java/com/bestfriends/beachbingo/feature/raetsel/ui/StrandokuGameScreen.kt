@@ -123,6 +123,7 @@ fun StrandokuGameScreen(
                 gridSize == 12 -> 28f
                 else -> 32f
             }
+            // Use full available width as primary dimension; limit by height so controls fit
             val cellDp = (minOf(availW, availForGrid) / gridSize).coerceIn(minCellDp, 90f).dp
 
             Column(
@@ -145,28 +146,31 @@ fun StrandokuGameScreen(
                     }
 
                     // ── Grid with border + background ──────────────────────────
-                    ZoomableGrid(
-                        onTap = tap@{ gx, gy ->
-                            val currentState = gs ?: return@tap
-                            val rows = rowStarts
-                            val cols = colStarts
-                            if (rows.isEmpty() || cols.isEmpty()) return@tap
-                            val gridH = rows.last() + cellPx
-                            val gridW = cols.last() + cellPx
-                            if (gy < 0f || gy > gridH || gx < 0f || gx > gridW) return@tap
-                            val row = rows.indexOfLast { it <= gy }.coerceIn(0, rows.size - 1)
-                            val col = cols.indexOfLast { it <= gx }.coerceIn(0, cols.size - 1)
-                            gs = selectStrandokuCell(currentState, row, col)
-                        },
-                    ) {
-                        Surface(
-                            color = Color(0xFF0A1929),
-                            border = BorderStroke(2.dp, TextMuted.copy(alpha = 0.6f)),
-                            shape = RoundedCornerShape(4.dp),
+                    // Outer Box forces full-width constraint so the grid is always centered
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        ZoomableGrid(
+                            onTap = tap@{ gx, gy ->
+                                val currentState = gs ?: return@tap
+                                val rows = rowStarts
+                                val cols = colStarts
+                                if (rows.isEmpty() || cols.isEmpty()) return@tap
+                                val gridH = rows.last() + cellPx
+                                val gridW = cols.last() + cellPx
+                                if (gy < 0f || gy > gridH || gx < 0f || gx > gridW) return@tap
+                                val row = rows.indexOfLast { it <= gy }.coerceIn(0, rows.size - 1)
+                                val col = cols.indexOfLast { it <= gx }.coerceIn(0, cols.size - 1)
+                                gs = selectStrandokuCell(currentState, row, col)
+                            },
                         ) {
-                            StrandokuGrid(puzzle = p, state = state, cellDp = cellDp)
+                            Surface(
+                                color = Color(0xFF0A1929),
+                                border = BorderStroke(2.dp, TextMuted.copy(alpha = 0.6f)),
+                                shape = RoundedCornerShape(4.dp),
+                            ) {
+                                StrandokuGrid(puzzle = p, state = state, cellDp = cellDp)
+                            }
                         }
-                    }
+                    } // end centering Box
 
                     Spacer(Modifier.height(8.dp))
 
