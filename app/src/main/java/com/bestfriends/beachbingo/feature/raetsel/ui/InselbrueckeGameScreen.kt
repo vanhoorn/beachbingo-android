@@ -154,10 +154,12 @@ fun InselbrueckeGameScreen(
                                             val newScale = (zoomScale * zoom).coerceIn(1f, 4f)
                                             val minPan = canvasSizePx * (1f - newScale)
                                             zoomScale = newScale
-                                            panOffset = Offset(
-                                                (panOffset.x + pan.x).coerceIn(minPan, 0f),
-                                                (panOffset.y + pan.y).coerceIn(minPan, 0f),
-                                            )
+                                            if (pan.getDistanceSquared() > 9f) {
+                                                panOffset = Offset(
+                                                    (panOffset.x + pan.x).coerceIn(minPan, 0f),
+                                                    (panOffset.y + pan.y).coerceIn(minPan, 0f),
+                                                )
+                                            }
                                         }
                                     }
                                     .pointerInput(Unit) {

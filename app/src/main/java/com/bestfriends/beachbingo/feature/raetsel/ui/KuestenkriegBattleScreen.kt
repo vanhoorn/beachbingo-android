@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.feature.raetsel.*
@@ -174,6 +175,15 @@ fun KuestenkriegBattleScreen(
             }
         }
 
+        BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            // Reserved: padding(20) + 2 gaps(24) + 2 title rows(48) + fleet row(28) + bottom spacer(24)
+            val reservedH = 144.dp
+            val availPerGrid = (maxHeight - reservedH) / 2
+            val cellDp = minOf(
+                availPerGrid / (BATTLE_GRID + 1),
+                maxWidth / (BATTLE_GRID + 1),
+            ).coerceIn(18.dp, 40.dp)
+
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
             // AI notification toast
@@ -191,6 +201,7 @@ fun KuestenkriegBattleScreen(
                 title = "Gegnerisches Gewässer",
                 subtitle = if (isMyTurn) "← Tippen zum Schießen" else null,
                 grid = enemyView,
+                cellDp = cellDp,
                 onCellTap = { r, c ->
                     if (isMyTurn && state.aiGrid[r][c] == ShotResult.UNKNOWN) {
                         state = playerShoot(state, r, c)
@@ -199,7 +210,7 @@ fun KuestenkriegBattleScreen(
             )
 
             // My grid
-            BattleGridSection(title = "Dein Gewässer", subtitle = null, grid = myView, onCellTap = { _, _ -> })
+            BattleGridSection(title = "Dein Gewässer", subtitle = null, grid = myView, cellDp = cellDp, onCellTap = { _, _ -> })
 
             // Fleet status (AI fleet)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -252,6 +263,7 @@ fun KuestenkriegBattleScreen(
 
             Spacer(Modifier.height(24.dp))
         }
+        } // BoxWithConstraints
     }
 }
 
@@ -260,11 +272,10 @@ private fun BattleGridSection(
     title: String,
     subtitle: String?,
     grid: Array<Array<CellView>>,
+    cellDp: Dp,
     onCellTap: (Int, Int) -> Unit,
 ) {
-    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        val cellDp = maxWidth / (BATTLE_GRID + 1)
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
                 Text(title, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
                 if (subtitle != null) {
@@ -304,5 +315,4 @@ private fun BattleGridSection(
                 }
             }
         }
-    }
 }

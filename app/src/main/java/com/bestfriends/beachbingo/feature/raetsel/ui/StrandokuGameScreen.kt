@@ -314,15 +314,20 @@ fun StrandokuGameScreen(
                     )
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            "🔢 Fülle das Gitter so, dass jede Zeile, Spalte ${when (variant) { "mega12" -> "und jedes 3×4-Feld"; "mega16" -> "und jedes 4×4-Feld"; "samurai" -> "und jedes Sub-Gitter"; else -> "und jedes 3×3-Feld" }} jede Zahl genau einmal enthält.",
+                            when (variant) {
+                                "mega12"  -> "🔢 Fülle das 12×12-Gitter so, dass jede Zeile, jede Spalte und jedes 3×4-Feld die Zahlen 1–12 (A=10, B=11, C=12) genau einmal enthält."
+                                "mega16"  -> "🔢 Fülle das 16×16-Gitter so, dass jede Zeile, jede Spalte und jedes 4×4-Feld die Zahlen 1–16 (A–G für 10–16) genau einmal enthält."
+                                "samurai" -> "🔢 Jede Zeile, jede Spalte und jedes 3×3-Feld jedes der fünf Teilgitter enthält die Zahlen 1–9 genau einmal."
+                                else      -> "🔢 Fülle das Gitter so, dass jede Zeile, jede Spalte und jedes 3×3-Feld die Zahlen 1–9 genau einmal enthält."
+                            },
                             fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp,
                         )
-                        if (variant == "killer") Text("➕ Die Zahlen in jedem Käfig müssen die angegebene Summe ergeben. Keine Zahl darf sich im Käfig wiederholen.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
-                        if (variant == "diagonal") Text("↗ Zusätzlich müssen auch beide Hauptdiagonalen jede Zahl einmal enthalten.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
-                        if (variant == "irregular") Text("🔷 Statt quadratischer Boxen gibt es unregelmäßig geformte Regionen — jede Region muss jede Zahl einmal enthalten.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
-                        if (variant == "samurai") Text("🏯 Fünf überlappende 9×9-Sudokus. Die Ecken teilen sich gemeinsame 3×3-Felder.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
+                        if (variant == "killer")    Text("➕ Die Zahlen in jedem Käfig müssen die angegebene Summe ergeben. Eine Zahl darf im selben Käfig nicht zweimal vorkommen.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
+                        if (variant == "diagonal")  Text("↗ Beide Hauptdiagonalen (von Ecke zu Ecke) müssen ebenfalls die Zahlen 1–9 genau einmal enthalten.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
+                        if (variant == "irregular") Text("🔷 Statt quadratischer Boxen gibt es unregelmäßig geformte Regionen. Jede farbige Region muss die Zahlen 1–9 genau einmal enthalten.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
+                        if (variant == "samurai")   Text("🏯 Das Mittelgitter überschneidet sich mit jedem der vier Eckgitter über ein gemeinsames 3×3-Feld. Alle fünf Teilgitter müssen je für sich ein gültiges Sudoku ergeben.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
                         Spacer(Modifier.fillMaxWidth().height(1.dp).background(BorderColor))
-                        Text("Tippe eine Zelle → dann eine Zahl. Notiz-Modus: Mehrere Kandidaten eintragen.", fontSize = 12.sp, color = TextMuted, lineHeight = 16.sp)
+                        Text("Tippe eine Zelle → dann eine Zahl auf dem Zahlenpad. Aktiviere den Notiz-Schalter, um Kandidaten einzutragen. ⌫ löscht die Eingabe.", fontSize = 12.sp, color = TextMuted, lineHeight = 16.sp)
                     }
                     Spacer(Modifier.height(16.dp))
                     Button(
