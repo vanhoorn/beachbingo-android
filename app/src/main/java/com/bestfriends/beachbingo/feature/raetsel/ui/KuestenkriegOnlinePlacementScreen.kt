@@ -34,7 +34,7 @@ import kotlin.random.Random
 
 private val KkOnlinePlacementAccent = Color(0xFFFB7185)
 
-private data class DragState(val start: Pair<Int, Int>, val current: Pair<Int, Int>)
+private data class OnlineDragState(val start: Pair<Int, Int>, val current: Pair<Int, Int>)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -160,7 +160,7 @@ fun KuestenkriegOnlinePlacementScreen(
     val density = LocalDensity.current
     val cellPxF = with(density) { cellDp.toPx() }
     val labelColPxF = with(density) { 20.dp.toPx() }
-    var dragState by remember { mutableStateOf<DragState?>(null) }
+    var dragState by remember { mutableStateOf<OnlineDragState?>(null) }
     var gridWidthPx by remember { mutableStateOf(0) }
 
     val ds = dragState
@@ -259,14 +259,14 @@ fun KuestenkriegOnlinePlacementScreen(
                                 }
                                 val down = awaitFirstDown(requireUnconsumed = false)
                                 val startCell = posToCell(down.position.x, down.position.y) ?: return@awaitEachGesture
-                                dragState = DragState(startCell, startCell)
+                                dragState = OnlineDragState(startCell, startCell)
                                 while (true) {
                                     val event = awaitPointerEvent()
                                     val change = event.changes.firstOrNull { it.id == down.id } ?: break
                                     if (!change.pressed) break
                                     change.consume()
                                     val cell = posToCell(change.position.x, change.position.y)
-                                    if (cell != null) dragState = DragState(startCell, cell)
+                                    if (cell != null) dragState = OnlineDragState(startCell, cell)
                                 }
                                 val gesture = dragState
                                 if (gesture != null && fleet.size < FLEET_DEFS.size) {
