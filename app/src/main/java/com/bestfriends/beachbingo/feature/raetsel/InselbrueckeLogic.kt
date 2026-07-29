@@ -243,6 +243,9 @@ private fun checkHashiSolved(puzzle: HashiPuzzle, bridges: List<HashiBridge>): B
     return isFullyConnected(puzzle.islands, bridges)
 }
 
+fun hashiAllSumsCorrect(puzzle: HashiPuzzle, bridges: List<HashiBridge>): Boolean =
+    bridges.isNotEmpty() && puzzle.islands.all { islandBridgeSum(it, bridges) == it.value }
+
 fun getHashiHint(state: HashiState, solution: List<HashiBridge>): Pair<Int,Int>? {
     for (sol in solution) {
         val cur = getBridgeCount(state.bridges, sol.from, sol.to)

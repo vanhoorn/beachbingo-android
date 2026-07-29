@@ -52,6 +52,8 @@ fun InselbrueckeGameScreen(
     var showWin by remember { mutableStateOf(false) }
     var showQuit by remember { mutableStateOf(false) }
     var showHelp by remember { mutableStateOf(false) }
+    // Derived: all island sums match their value but the graph isn't fully connected yet
+    val showConnectHint by remember { derivedStateOf { gs?.let { !it.solved && hashiAllSumsCorrect(it.puzzle, it.bridges) } ?: false } }
     var selectedIslandId by remember { mutableStateOf<Int?>(null) }
     var zoomScale by remember { mutableStateOf(1f) }
     var panOffset by remember { mutableStateOf(Offset.Zero) }
@@ -227,7 +229,25 @@ fun InselbrueckeGameScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(8.dp))
+                    if (showConnectHint) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFB45309).copy(alpha = 0.15f),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                "✓ Alle Zahlen stimmen – aber die Inseln sind noch nicht alle verbunden!",
+                                fontSize = 12.sp,
+                                color = Color(0xFFFCD34D),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                lineHeight = 16.sp,
+                            )
+                        }
+                        Spacer(Modifier.height(4.dp))
+                    } else {
+                        Spacer(Modifier.height(4.dp))
+                    }
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.horizontalScroll(rememberScrollState()),

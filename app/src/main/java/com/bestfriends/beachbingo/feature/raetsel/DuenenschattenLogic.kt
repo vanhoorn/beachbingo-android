@@ -5,14 +5,15 @@ import org.json.JSONObject
 import kotlin.math.abs
 
 // ── Seeded RNG (mulberry32) ───────────────────────────────────────────────────
+// Matches the JavaScript implementation exactly: all arithmetic stays in 32-bit signed Int.
+// Math.imul(a,b) = lower 32 bits of a*b = (a.toLong() * b.toLong()).toInt()
 class Mulberry32(private var seed: Int) {
+    private fun imul(a: Int, b: Int): Int = (a.toLong() * b.toLong()).toInt()
     fun next(): Double {
-        seed = (seed + 0x6d2b79f5)
-        var t = (seed xor (seed ushr 15)).toLong() * (1 or seed).toLong()
-        t = t and 0xFFFFFFFFL
-        t = (t + ((t xor (t ushr 7)) * (61 or t.toInt()).toLong())) xor t
-        t = t and 0xFFFFFFFFL
-        return ((t xor (t ushr 14)) and 0xFFFFFFFFL).toDouble() / 4294967296.0
+        seed += 0x6d2b79f5.toInt()          // Int overflow wraps = JS `| 0`
+        var t: Int = imul(seed xor (seed ushr 15), 1 or seed)
+        t = (t + imul(t xor (t ushr 7), 61 or t)) xor t
+        return ((t xor (t ushr 14)).toLong() and 0xFFFFFFFFL).toDouble() / 4294967296.0
     }
     fun nextInt(n: Int) = (next() * n).toInt()
 }
