@@ -4,7 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -149,42 +148,38 @@ fun InselbrueckeGameScreen(
                                 modifier = Modifier
                                     .size(innerCanvasSize)
                                     .pointerInput(Unit) {
-                                        val canvasSizePx = size.width.toFloat()
-                                        detectTransformGestures { _, pan, zoom, _ ->
-                                            val newScale = (zoomScale * zoom).coerceIn(1f, 4f)
-                                            val minPan = canvasSizePx * (1f - newScale)
-                                            zoomScale = newScale
-                                            if (pan.getDistanceSquared() > 9f) {
-                                                panOffset = Offset(
-                                                    (panOffset.x + pan.x).coerceIn(minPan, 0f),
-                                                    (panOffset.y + pan.y).coerceIn(minPan, 0f),
-                                                )
-                                            }
-                                        }
-                                    }
-                                    .pointerInput(Unit) {
                                         detectTapGestures(
-                                            onTap = { rawOffset ->
-                                                // Read gs/puzzleWithSol directly (not captured local vals)
-                                                // so this coroutine never needs to restart on state change.
+                                            onTap = { tapOffset ->
                                                 val currentState = gs ?: return@detectTapGestures
                                                 val currentPuzzle = puzzleWithSol?.puzzle ?: return@detectTapGestures
-                                                val col = ((rawOffset.x - panOffset.x) / zoomScale / boxPx).toInt()
-                                                val row = ((rawOffset.y - panOffset.y) / zoomScale / boxPx).toInt()
-                                                val tapped = currentPuzzle.islands.find { it.row == row && it.col == col }
+                                                val tapX = (tapOffset.x - panOffset.x) / zoomScale
+                                                val tapY = (tapOffset.y - panOffset.y) / zoomScale
+                                                val maxDistSq = (boxPx * 0.6f) * (boxPx * 0.6f)
+                                                val tapped = currentPuzzle.islands.minByOrNull { isl ->
+                                                    val cx = isl.col * boxPx + boxPx / 2f
+                                                    val cy = isl.row * boxPx + boxPx / 2f
+                                                    (tapX - cx) * (tapX - cx) + (tapY - cy) * (tapY - cy)
+                                                }?.takeIf { isl ->
+                                                    val cx = isl.col * boxPx + boxPx / 2f
+                                                    val cy = isl.row * boxPx + boxPx / 2f
+                                                    (tapX - cx) * (tapX - cx) + (tapY - cy) * (tapY - cy) <= maxDistSq
+                                                }
                                                 if (tapped != null) {
                                                     val sel = selectedIslandId
                                                     if (sel == null || sel == tapped.id) {
                                                         selectedIslandId = if (sel == tapped.id) null else tapped.id
                                                     } else {
-                                                        val neighbors = getNeighborIslands(currentPuzzle, currentPuzzle.islands.find { it.id == sel }!!, currentState.bridges)
-                                                        if (neighbors.any { it.id == tapped.id }) {
-                                                            gs = toggleHashiBridge(currentState, sel, tapped.id)
+                                                        val selIsland = currentPuzzle.islands.find { it.id == sel }
+                                                        if (selIsland != null) {
+                                                            val neighbors = getNeighborIslands(currentPuzzle, selIsland, currentState.bridges)
+                                                            if (neighbors.any { it.id == tapped.id }) {
+                                                                gs = toggleHashiBridge(currentState, sel, tapped.id)
+                                                            }
                                                         }
                                                         selectedIslandId = null
                                                     }
                                                 }
-                                            },
+                                            }
                                         )
                                     },
                             ) {

@@ -149,6 +149,16 @@ private fun tryGenerateHashiWithSolution(size: Int, targetIslands: Int, rng: Mul
         val nr = from.row + dr * dist; val nc = from.col + dc * dist
         if (nr !in 0 until size || nc !in 0 until size) return@repeat
         if (islands.any { it.row == nr && it.col == nc }) return@repeat
+        // Reject if the new island's position lies on an existing solution bridge path,
+        // which would block that bridge and make the puzzle unsolvable.
+        val onExistingBridge = solution.any { b ->
+            val a = islands.find { it.id == b.from }!!
+            val bb = islands.find { it.id == b.to }!!
+            val horiz = a.row == bb.row
+            if (horiz) nr == a.row && nc in (minOf(a.col, bb.col) + 1 until maxOf(a.col, bb.col))
+            else nc == a.col && nr in (minOf(a.row, bb.row) + 1 until maxOf(a.row, bb.row))
+        }
+        if (onExistingBridge) return@repeat
         val bridgeCount = if (rng.next() < 0.4) 2 else 1
         if (crossesExisting(from.row, from.col, nr, nc, islands, solution)) return@repeat
         val newIsland = HashiIsland(nextId++, nr, nc, 0)
@@ -187,7 +197,7 @@ fun getNeighborIslands(puzzle: HashiPuzzle, island: HashiIsland, bridges: List<H
                 val a = puzzle.islands.find { it.id == b.from }!!
                 val bb = puzzle.islands.find { it.id == b.to }!!
                 val bHoriz = a.row == bb.row
-                if (horiz == bHoriz) { r += dr; c += dc; continue }
+                if (horiz == bHoriz) continue
                 val hr: Int; val hc1: Int; val hc2: Int; val vc: Int; val vr1: Int; val vr2: Int
                 if (horiz) {
                     hr = island.row; hc1 = minOf(island.col, c); hc2 = maxOf(island.col, c)
