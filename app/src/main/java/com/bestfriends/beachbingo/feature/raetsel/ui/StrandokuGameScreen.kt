@@ -389,7 +389,7 @@ private fun StrandokuGrid(
     val (bw, bh) = getBoxDimensions(if (isSamurai) 9 else size)
     val sel = state.selected
 
-    Column {
+    Column(modifier = Modifier.width(IntrinsicSize.Max)) {
         for (r in 0 until size) {
             if (r > 0 && !isSamurai && puzzle.variant !in listOf("irregular", "killer")) {
                 val isBoxBoundary = r % bh == 0
@@ -516,7 +516,7 @@ private fun StrandokuCell(
                 textAlign = TextAlign.Center,
             )
             notes.isNotEmpty() && !isGiven -> {
-                val noteFontSp = (fontSp.value * 0.65f).sp
+                val noteFontSp = (cellDp.value * 0.30f).sp
                 if (puzzle.size <= 9) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         for (subRow in 0..2) {
