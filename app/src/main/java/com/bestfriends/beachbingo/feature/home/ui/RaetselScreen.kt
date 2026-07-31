@@ -55,6 +55,7 @@ fun RaetselScreen(
     onNavigateToStrandokuLobby: () -> Unit = {},
     onNavigateToWellensummeLobby: () -> Unit = {},
     onNavigateToKuestenkriegLobby: () -> Unit = {},
+    onNavigateToWortWelleLobby: () -> Unit = {},
 ) {
     val games = RIDDLE_GAMES.sortedBy { it.title }
     val gameNavMap = mapOf(
@@ -63,6 +64,7 @@ fun RaetselScreen(
         "strandoku"      to onNavigateToStrandokuLobby,
         "wellensumme"    to onNavigateToWellensummeLobby,
         "kuestenkrieg"   to onNavigateToKuestenkriegLobby,
+        "wortwelle"      to onNavigateToWortWelleLobby,
     )
     var rulesGameId by remember { mutableStateOf<String?>(null) }
     val activeRule = rulesGameId?.let { ALL_GAME_RULES[it] }

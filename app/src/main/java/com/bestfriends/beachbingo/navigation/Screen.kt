@@ -153,4 +153,13 @@ sealed interface Screen {
     @Serializable data class KuestenkriegOnlineLobby(val joinCode: String = "") : Screen
     @Serializable data class KuestenkriegOnlinePlacement(val gameCode: String) : Screen
     @Serializable data class KuestenkriegOnlineBattle(val gameCode: String) : Screen
+    // WortWelle
+    @Serializable object WortWelleLobby : Screen
+    @Serializable data class WortWelleGame(
+        val difficulty: String,
+        val isDaily: Boolean = false,
+        val dailyWord: String = "",
+        val dateStr: String = "",
+        val saveId: String? = null,
+    ) : Screen
 }

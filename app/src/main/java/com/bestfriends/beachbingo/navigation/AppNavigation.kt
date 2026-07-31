@@ -78,6 +78,8 @@ import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegBattleScreen
 import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegOnlineLobbyScreen
 import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegOnlinePlacementScreen
 import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegOnlineBattleScreen
+import com.bestfriends.beachbingo.feature.raetsel.ui.WortWelleLobbyScreen
+import com.bestfriends.beachbingo.feature.raetsel.ui.WortWelleGameScreen
 
 @Composable
 fun AppNavigation() {
@@ -196,6 +198,7 @@ fun AppNavigation() {
                 onNavigateToStrandokuLobby = { navController.navigate(Screen.StrandokuLobby) },
                 onNavigateToWellensummeLobby = { navController.navigate(Screen.WellensummeLobby) },
                 onNavigateToKuestenkriegLobby = { navController.navigate(Screen.KuestenkriegLobby) },
+                onNavigateToWortWelleLobby = { navController.navigate(Screen.WortWelleLobby) },
             )
         }
 
@@ -313,6 +316,27 @@ fun AppNavigation() {
             KuestenkriegGameScreen(
                 difficulty = route.difficulty, seed = route.seed, saveId = route.saveId,
                 onNavigateBack = { navController.navigate(Screen.KuestenkriegLobby) { popUpTo(Screen.KuestenkriegLobby) { inclusive = true } } }
+            )
+        }
+        composable<Screen.WortWelleLobby> {
+            WortWelleLobbyScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToGame = { diff, isDaily, dailyWord, dateStr, saveId ->
+                    navController.navigate(Screen.WortWelleGame(diff, isDaily, dailyWord, dateStr, saveId)) {
+                        popUpTo(Screen.WortWelleLobby)
+                    }
+                }
+            )
+        }
+        composable<Screen.WortWelleGame> { backStack ->
+            val route: Screen.WortWelleGame = backStack.toRoute()
+            WortWelleGameScreen(
+                difficulty = route.difficulty,
+                isDaily = route.isDaily,
+                dailyWord = route.dailyWord.ifEmpty { null },
+                dateStr = route.dateStr.ifEmpty { null },
+                saveId = route.saveId,
+                onNavigateBack = { navController.navigate(Screen.WortWelleLobby) { popUpTo(Screen.WortWelleLobby) { inclusive = true } } }
             )
         }
         composable<Screen.KuestenkriegPlacement> { backStack ->

@@ -153,6 +153,15 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         playerCounts = listOf(PlayerCount.ONE_TWO),
         genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
     ),
+    GameMetadata(
+        id = "wortwelle",
+        emoji = "🌊",
+        title = "WortWelle",
+        description = "Errate das deutsche Wort in wenigen Versuchen — Wordle auf Deutsch mit Hard Mode.",
+        color = 0xFF06B6D4,
+        playerCounts = listOf(PlayerCount.ONE_TWO),
+        genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
+    ),
 )
 
 val CARD_GAMES: List<GameMetadata> = ALL_GAMES.filter { GameGenre.CARD in it.genres }
