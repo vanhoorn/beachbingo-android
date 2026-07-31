@@ -1,5 +1,6 @@
 package com.bestfriends.beachbingo.feature.home.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,12 +27,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -249,6 +252,20 @@ fun HomeScreen(
                         val current = prefs.getStringSet("dismissed_game_ids", emptySet())?.toMutableSet() ?: mutableSetOf()
                         current.add(id)
                         prefs.edit().putStringSet("dismissed_game_ids", current).apply()
+                    }
+                    activeGame = null
+                },
+                onDelete = {
+                    activeGame?.let { game ->
+                        val collectionByType = mapOf(
+                            "strandraeuber" to "strandraeuberGames",
+                            "meermau"       to "meermauGames",
+                            "brandung"      to "brandungGames",
+                            "bingo"         to "games",
+                        )
+                        collectionByType[game.type]?.let { col ->
+                            firestore.collection(col).document(game.gameId).delete()
+                        }
                     }
                     activeGame = null
                 },
@@ -491,9 +508,29 @@ private fun ActiveGameBanner(
     game: ActiveGameInfo,
     onResume: () -> Unit,
     onDismiss: () -> Unit,
+    onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
     val accentColor = Color(0xFF0EA5E9)
+    val deleteColor = Color(0xFFEF4444)
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Spiel löschen?") },
+            text = { Text("\"${game.gameName}\" wird für alle Spieler beendet.") },
+            confirmButton = {
+                TextButton(onClick = { showDeleteDialog = false; onDelete() }) {
+                    Text("Löschen", color = deleteColor)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Abbrechen") }
+            }
+        )
+    }
+
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = Surface2Dark,
@@ -522,18 +559,25 @@ private fun ActiveGameBanner(
                 }
             }
             Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f).height(40.dp),
                 ) { Text("Ignorieren", color = TextMuted, fontSize = 13.sp) }
-                Button(
-                    onClick = onResume,
+                OutlinedButton(
+                    onClick = { showDeleteDialog = true },
                     modifier = Modifier.weight(1f).height(40.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = accentColor),
-                    shape = RoundedCornerShape(10.dp),
-                ) { Text("Weiterspielen →", color = Color.White, fontSize = 13.sp) }
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = deleteColor),
+                    border = BorderStroke(1.dp, deleteColor),
+                ) { Text("🗑 Löschen", color = deleteColor, fontSize = 13.sp) }
             }
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = onResume,
+                modifier = Modifier.fillMaxWidth().height(40.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                shape = RoundedCornerShape(10.dp),
+            ) { Text("Weiterspielen →", color = Color.White, fontSize = 13.sp) }
         }
     }
 }
