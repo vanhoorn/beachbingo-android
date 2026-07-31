@@ -286,9 +286,7 @@ fun WortWelleGameScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(controlsH.dp)
-                        .background(Surface2Dark, RoundedCornerShape(10.dp))
-                        .border(1.dp, BorderColor, RoundedCornerShape(10.dp))
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -305,17 +303,35 @@ fun WortWelleGameScreen(
                                 }
                                 onNavigateBack()
                             },
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, OceanBlue.copy(alpha = 0.33f)),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = OceanBlue.copy(alpha = 0.13f),
+                                contentColor = OceanBlue,
+                            ),
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                        ) { Text("💾 Speichern", fontSize = 13.sp, color = TextSub, fontWeight = FontWeight.Bold) }
+                        ) { Text("💾 Speichern", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
                     }
                     OutlinedButton(
                         onClick = { running = false; showRules = true },
-                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, TextSub.copy(alpha = 0.33f)),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = TextSub.copy(alpha = 0.13f),
+                            contentColor = TextSub,
+                        ),
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    ) { Text("? Regeln", fontSize = 13.sp, color = TextSub, fontWeight = FontWeight.Bold) }
+                    ) { Text("? Regeln", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                    OutlinedButton(
+                        onClick = { running = false; showQuit = true },
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Danger.copy(alpha = 0.33f)),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = Danger.copy(alpha = 0.13f),
+                            contentColor = Danger,
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    ) { Text("✕ Aufgeben", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
                 }
 
                 // ── QWERTZ-Tastatur ───────────────────────────────────────────
