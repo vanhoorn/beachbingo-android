@@ -28,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.feature.raetsel.*
 import com.bestfriends.beachbingo.ui.theme.*
-import kotlin.math.abs
 import kotlin.random.Random
 
 private val KkAccent = Color(0xFFFB7185)
@@ -101,22 +100,20 @@ fun KuestenkriegPlacementScreen(
 
     // Drag preview: cells the current ship would occupy if placed now
     val ds = dragState
-    val dragIsH: Boolean = if (ds != null) {
-        val (sr, sc) = ds.start; val (cr, cc) = ds.current
-        abs(cc - sc) >= abs(cr - sr)
-    } else horiz
+    // Orientation is always controlled by the button (never inferred from drag direction)
+    val dragIsH: Boolean = horiz
 
     val dragPreview: Set<Pair<Int, Int>> = if (ds != null && !allPlaced && currentDef != null) {
-        val (sr, sc) = ds.start
+        val (cr, cc) = ds.current  // preview follows the current finger position
         (0 until currentDef.size).mapNotNull { i ->
-            val r2 = if (dragIsH) sr else sr + i
-            val c2 = if (dragIsH) sc + i else sc
+            val r2 = if (dragIsH) cr else cr + i
+            val c2 = if (dragIsH) cc + i else cc
             if (r2 in 0 until BATTLE_GRID && c2 in 0 until BATTLE_GRID) Pair(r2, c2) else null
         }.toSet()
     } else emptySet()
 
     val dragIsValid: Boolean = if (ds != null && dragPreview.isNotEmpty() && !allPlaced && currentDef != null)
-        canPlaceShip(occupied, ds.start.first, ds.start.second, currentDef.size, dragIsH)
+        canPlaceShip(occupied, ds.current.first, ds.current.second, currentDef.size, dragIsH)
     else false
 
     Column(modifier = Modifier
@@ -221,15 +218,11 @@ fun KuestenkriegPlacementScreen(
                             val gesture = dragState
                             if (gesture != null && fleet.size < FLEET_DEFS.size) {
                                 val currFleetSize = fleet.size
-                                val (sr, sc) = gesture.start
-                                val (cr, cc) = gesture.current
-                                val isH = if (sr == cr && sc == cc) horiz
-                                           else abs(cc - sc) >= abs(cr - sr)
+                                val (cr, cc) = gesture.current  // place where the finger lifted
                                 val def = FLEET_DEFS[currFleetSize]
                                 val g = buildOccupied()
-                                if (canPlaceShip(g, sr, sc, def.size, isH)) {
-                                    fleet = fleet + PlacedShip(currFleetSize, def.size, sr, sc, isH)
-                                    horiz = isH
+                                if (canPlaceShip(g, cr, cc, def.size, horiz)) {
+                                    fleet = fleet + PlacedShip(currFleetSize, def.size, cr, cc, horiz)
                                 }
                             }
                             dragState = null
