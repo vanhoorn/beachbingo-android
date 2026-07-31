@@ -51,222 +51,60 @@ data class WwInitState(
     val elapsedSeconds: Int,
 )
 
-// ── Wortlisten ─────────────────────────────────────────────────────────────────
+// ── Hilfsfunktion: Uppercase im Spielformat (ß bleibt ß, nicht SS) ─────────────
 
-private val WORDS_4_TARGET: List<String> = listOf(
-    "HAUS","BIER","BUCH","GLAS","BAUM","BOOT","DACH","FELS","FLUT","GRAS",
-    "HAHN","HOLZ","HUND","KÄSE","KORB","LOCH","LÖWE","MEER","MOND","MOOS",
-    "NETZ","OBST","PFAD","RAND","RING","ROHR","SAAL","SAFT","SAND","SEIL",
-    "SOFA","SOHN","TEER","TIER","TUCH","TURM","WAND","WEIN","WELT","WURM",
-    "WALD","ZEIT","ZELT","MÖWE","DÜNE","TANG","WATT","STEG","KAHN","GOLD",
-    "HORN","KRUG","LAND","LAUB","MAUS","MEHL","NEST","NUSS","RABE","ROSE",
-    "ROST","RUND","RUTE","SIEG","TAKT","TANZ","TANK","VASE","WERK","WEHR",
-    "ZAHN","ZEUG","ZINK","ZINN","ZOLL","REIF","REIS","RAST","RAUM","MAHL",
-    "LIED","KEIL","KERN","KINN","GANG","GARN","GAST","FILM","DUFT","DOSE",
-    "DORF","BOCK","ARZT","ALGE","ADER","AFFE","BALL","BAND","BORD","BROT",
-    "BURG","DORN","EBBE","ERBE","ERDE","FACH","FARN","FEST","FLOH","FLUG",
-    "FORM","GIFT","GLUT","GOLF","GRAB","GURT","HAFF","HARM","HECK","HEMD",
-    "HERD","HOSE","HÖHE","HUHN","JADE","JOCH","KALK","LAGE","LÄRM","LAUF",
-    "LECK","LEHM","LEID","LEIM","LOHN","LUST","MARK","MAST","MOOR","MORD",
-    "NAHT","NARR","OPER","PAAR","PLAN","RANG","RIFF","RIND","ROCK","RUHE",
-    "RUNE","SALZ","SANG","SATZ","SOLD","UFER","URNE","VIEH","VIER","VOLK",
-    "VOLT","WECK","WEST","KIES","KLEE","KNIE","KOCH","LORE","MATT","GULP",
-    "HAUE","ESSE","ELLE","ÄHRE","ATEM","BACH","BISS","CAFE","JADE","SPAT",
-)
+internal fun wwToUpper(s: String) = buildString {
+    for (c in s) when (c) {
+        'ä' -> append('Ä')
+        'ö' -> append('Ö')
+        'ü' -> append('Ü')
+        'ß' -> append('ß')   // ß ist kein Großbuchstabe → bleibt ß
+        else -> append(c.uppercaseChar())
+    }
+}
 
-private val WORDS_4_GUESS_EXTRA: List<String> = listOf(
-    "ACHT","ALLE","ALSO","AMOK","ANNO","ARME","AUGE","AUTO","BARE","BAFF",
-    "EBEN","ECKE","EGAL","ELAN","ELCH","ELFE","EPOS","ERST","EURO","EWIG",
-    "FEIN","FETT","FIEL","FREI","FRON","FUGE","FUNK",
-    "GEIL","GIPS","GROB","GROG","GUSS","GUTE","HAAR","HAFT","HAST",
-    "HEHL","HEIL","HEIM","HELD","HELL","HERR","HIEB","HOCH",
-    "HOLD","HORT","JAGT","JEDE","JENE","KAHL","KALT",
-    "KARG","KEHR","KERL","KLAR","KLUB","KOKS","KOPF",
-    "KOST","KÜHL","KÜHN","LAST","LAUT","LEER","LEIB","LENZ","LESE",
-    "LOGE","LOST","LUFT","LUMP","MADE",
-    "MANN","MILD","MIST","MODE","MUND",
-    "NABE","NACH","NASE","NETT",
-    "NORD","NORM","OASE","ODER","OFEN","OHNE","OPAL","PACK",
-    "PAKT","PASS","PEST","PIER","PILS","POCH","POSE","PULK","PULS",
-    "RAPS","RAUB","RAUE","RECK","REDE","REGE",
-    "RIES","RISK","RITZ","ROSS","RUBE","RÜCK",
-    "RUSS","SAFE","SAGE","SAME","SARG","SAUM",
-    "SEHN","SEHR","SEID","SEIN","SEKT","SINN","SOLL","SPUK","SPUR","STAB","STAR",
-    "TAGE","TAKT","TALG","TEST","TIEF","TIPP",
-    "TORF","TRAB","TRAN","TREU","TROG","TÜLL",
-    "ULME","UNKE","VELO",
-    "VIEL","VISA","WABE","WADE","WAGE","WARM","WART","WEIS",
-    "WERG","YARD","ZEHN","ZORN",
-)
+// ── Wortlisten-Singleton ───────────────────────────────────────────────────────
+// Lädt 6 Asset-Dateien einmalig; danach nullkosten-Zugriff.
+// Quellen: enz/german-wordlist (CC0) + caco3/wordle-de Targets 5 (MIT)
 
-private val WORDS_5_TARGET: List<String> = listOf(
-    "STEIN","NACHT","LEBEN","LIEBE","JUNGE","KRANK","TISCH","FISCH","STUHL",
-    "BRIEF","SCHON","IMMER","TIERE","KRONE","HÄUSE","SCHAU","HEISS","BODEN",
-    "ABEND","AHORN","ALARM","ANGEL","ANGST","ANKER","ATLAS","ATOLL","AUTOR",
-    "BRAND","BRISE","BUCHT","BUSEN","DEICH","DELTA","DRUCK","DÜNEN","EBENE",
-    "EIMER","EISEN","ENGEL","ERNTE","FADEN","FAHNE","FALKE","FARBE","FASER",
-    "FEUER","FJORD","FLECK","FLORA","FLUSS","FORST","FROST","FUCHS","GABEL",
-    "GASSE","GEIST","GESTE","GLANZ","GLEIS","GLÜCK","GRUBE","GRUND","HAFEN",
-    "HAKEN","HARFE","HEIDE","HIRTE","HÖHLE","HÜGEL","HÜTTE","INSEL","JACKE",
-    "JÄGER","KABEL","KANAL","KANTE","KARTE","KATZE","KEGEL","KETTE","KLANG",
-    "KLIFF","KLOTZ","KNALL","KNOPF","KOBRA","KRAKE","KRÄHE","KREBS","KREUZ",
-    "KRISE","KÜSTE","LACHS","LAUNE","LEDER","LEHRE","LICHT","LINIE","LINSE",
-    "LISTE","LITER","LOTSE","LUNGE","MAGMA","MÄHNE","MARKT","MATTE","MEILE",
-    "MESSE","MILCH","MINZE","MÖBEL","MÖHRE","MOTTE","MULDE","MÜHLE","NABEL",
-    "NADEL","NARBE","NEBEL","NEFFE","NIERE","NOTEN","OCHSE","OTTER","PANDA",
-    "PAUKE","PERLE","PFAHL","PFEIL","PFERD","PISTE","PLATZ","PREIS","PROBE",
-    "QUARK","RACHE","RATTE","REGEN","REIHE","REISE","RIESE","RINDE","RUDER",
-    "SAITE","SALAT","SALON","SÄULE","SCHAF","SCHAL","SCHUH","SEGEL","SONDE",
-    "SPATZ","SPIEL","SPORT","STAAT","STAHL","STAMM","STAND","STAUB","STERN",
-    "STICH","STIEL","STIRN","STOCK","STROM","STUBE","STÜCK","STURM","STUTE",
-    "SUPPE","TAFEL","TANNE","TAUBE","TIGER","TINTE","TRAUM","TREUE","TRICK",
-    "TRITT","TRUHE","TULPE","ÜBUNG","VATER","VENUS","VOGEL","WAFFE","WALZE",
-    "WANNE","WANZE","WARZE","WELLE","WENDE","WITWE","WOLKE","WÜRZE","WURST",
-    "ZANGE","ZEILE","ZINNE","ZUCHT","ZWECK","BRUCH","DRAHT","DRANG","GROLL",
-    "GRIFF","HAUCH","HEFTE","KEHLE","KEULE","KIEME","KOGGE","KRÖTE","LAICH",
-    "LERCH","LUCHS","SÄBEL","SPREU","SPALT","STANK","STARK","STOPP","STEIL",
-    "UMZUG","UNRAT","BÜHNE","TRUPP","FINTE","HOLME","MALVE","ASSEL","LEMUR",
-    "TAPIR","VIOLA","VISUM","OCKER","SPORE",
-)
+object WwWordBank {
+    @Volatile private var initialized = false
 
-private val WORDS_5_GUESS_EXTRA: List<String> = listOf(
-    "ABGAS","ADLER","AHNEN","ALAND","ALPEN","AMSEL","ANFUG",
-    "ANMUT","ANTIK","APFEL","ARTEN","ASTER","ATMEN","BARKE",
-    "BASAR","BELEG","BETON","BIRKE","BLÄUE","BLECH","BLICK","BLOCK","BLUME",
-    "BLUSE","BOLZE","BORKE","BOXER","BULLE","BUSSE","CLOWN",
-    "DATEI","DATUM","DECKE","DEKAN","DEPOT","DOLCH",
-    "DRECK","DROGE","EICHE","EILIG","EINST","ELEND",
-    "FALTE","FEIND","FIBEL","FLAIR",
-    "FLAUE","FLIRT","FLOSS","FOHLE","FORKE","FOYER","FRAGE",
-    "FRECH","FREMD","FUGEN","FÜRST","GAFFE",
-    "GAMMA","GARDE","GEBOT","GEIER","GELEE",
-    "GENUG","GIESS","GLATT","GNADE","GOLEM",
-    "GREIS","GRIFF","GRIMM","GRIND","GROSS",
-    "GRUFT","GUMMI","GUSTO","HAFER","HALME",
-    "HASEL","HEIST","HELME","HERTZ","HIEBE",
-    "HINZU","HIRSE","HOLME","HONIG","HUMUS","HÜPFE","HURRA","HYDRA",
-    "IDIOT","IKONE","IRREN","IRRIG",
-    "JOKER","JOLLE","JUNGS","KAFFE",
-    "KALTE","KAMIN","KAPOK","KARGO","KARST","KASSE",
-    "KAUEN","KEHRT","KEILE","KELCH",
-    "KERNE","KERZE","KIEPE","KIPPE","KIWIS","KLAGE","KLARE","KLEBE",
-    "KLEID","KLEIN","KLOPS","KLUFT","KNABE","KNAST","KNIFF",
-    "KOMBI","KOPIE","KORSO","KRAUL",
-    "KREIS","KRILL","KRIMI","KRONE","KUPFE","KUREN",
-    "LACHE","LACKE","LAHME","LAMPE","LARVE","LATTE","LAUFE",
-    "LEBER","LECKT","LEUTE","LIANE","LICHT","LINDE","LIPPE",
-    "LOCKE","LODEN","LÜCKE","LUMPE",
-    "MAIRE","MALER","MANGE","MARKE","MÄUSE","MECKE",
-    "MEERE","MENGE","MEUTE","MIETE","MOLCH","MÜCKE",
-    "MUMIE","MÜNZE","MÜTZE","NATUR","NIXIE",
-    "OCKER","ORGEL","OZEAN","PAPPE","PATER","PAUSE","PELZE",
-    "PFOTE","PILZE","PINIE","PLANE","PLAZA","PLOTZ",
-    "POKAL","POLKA","POSSE","PRELL","PRIMA",
-    "PUMPE","PUPPE","QUELL","QUALE",
-    "RASTE","RECKE","REGEN","REIBE","REMIS","RENNE","RESTE",
-    "RETTE","RIEBE","RINNE","RIPPE","RITZE","ROBBE",
-    "ROLLE","ROSEN","RÜCKE","RUMPF","RUPFE","SAMEN",
-    "SARGE","SAUGE","SCHAL","SCHAM","SCHAR","SEHNE","SEIFE",
-    "SENSE","SERVE","SETZE","SIEBE","SINNE","SKALA",
-    "SOHLE","SORGE","SPANN","SPARE","SPÄTE","SPECK","SPEER","SPORE",
-    "SPOTT","SPUND","STECK","STEGE","STEIN","STICH","STIFT",
-    "STOPP","STREU","STUNK","STUMM",
-    "TABAK","TAGES","TAUFE","TEMPO","TISCH","TOBEN",
-    "TRÄNE","TRECK","TRETE","TRINK","TRUHE",
-    "TULPE","TURNE","ÜBEL","ULMER",
-    "VARAN","VERSE","VIELE","VIPER","VLIES",
-    "WACHT","WAHLE","WAPPE","WEBEN","WEDEL","WEGEN",
-    "WEIDE","WEILE","WENIG","WERBE","WINKE",
-    "WOLLE","WORTE","WÜSTE","ZÄHNE","ZANKE","ZECHE","ZEDER",
-    "ZIELE","ZIMTE","ZOPFE","ZUNGE","ZWANG","ZWECK","ZWEIG",
-)
+    private var targets4: List<String> = emptyList()
+    private var targets5: List<String> = emptyList()
+    private var targets6: List<String> = emptyList()
+    private var pool4: Set<String> = emptySet()
+    private var pool5: Set<String> = emptySet()
+    private var pool6: Set<String> = emptySet()
 
-private val WORDS_6_TARGET: List<String> = listOf(
-    "ARBEIT","BAMBUS","BRONZE","BRUDER","BRÜCKE","BÜFFEL","BUNKER","BÜRSTE",
-    "DELFIN","ELSTER","FALTER","FELSEN","FICHTE","FISCHE","FLAUTE","FLIEGE",
-    "FLOSSE","FROSCH","GARTEN","GESANG","GESETZ","GEWEHR","GIPFEL","GROTTE",
-    "HAMMER","HELFER","HERZEN","HIRSCH","HÖCKER","HUMMEL","HUNGER","INSELN",
-    "KATZEN","KESSEL","KIEFER","KLIPPE","KNECHT","KNOLLE","KOBOLD","KOFFER",
-    "KÖRPER","KRABBE","KRÄFTE","KRIPPE","KUTTER","LAGUNE","LERCHE","LÖCHER",
-    "MANDEL","MANGEL","MARDER","MISTEL","MÖHREN","MOLCHE","MÖRSER","MÜCKEN",
-    "MÜHLEN","MUSCHEL","MUSTER","NATTER","OCHSEN","OSTERN","PALMEN","PANZER",
-    "PAPIER","PERLEN","PINSEL","PLATTE","PRANKE","RACHEN","RECHEN","REIHER",
-    "RIEMEN","ROBBEN","RÜCKEN","SEUCHE","SILBER","SOMMER","SPEISE","SPOREN",
-    "SPROSS","STÄMME","STRAND","STRICH","STUNDE","TAIFUN","TEMPEL","TEUFEL",
-    "TRÄGER","TRESOR","URLAUB","VESPER","WAPPEN","WASSER","WEIZEN","WELLEN",
-    "WIESEN","WIRBEL","WUNDER","WURZEL","WÜSTEN","ZEIGER","ZIRKEL","ZITHER",
-    "ZUCKER","ZUNDER","SALBEI","SCHIFF","SCHNEE","SCHLAF","SCHELM","WALZER",
-    "VÖLKER","SATURN","ZOMBIE","PRIMEL","NIMBUS","TAUBEN","TINTEN","FLUTEN",
-    "LÜFTEN","BARSCH","ADVENT","AMBOSS","DEHNEN","DROGEN","BRIEFE","ARKADE",
-    "DAHLIE","DICHTE","DÜNUNG","EISBÄR","FORMEL","FRAUEN",
-    "FRISCH","BLÜTEN","MATTEN","MASERN","BACKEN",
-)
+    val isReady: Boolean get() = initialized
 
-private val WORDS_6_GUESS_EXTRA: List<String> = listOf(
-    "ABFALL","AKTION","ANKERN","ANTEIL","APFELN",
-    "BÄCKER","BAGGER","BALKON","BASTEI","BAUTEN","BECKEN","BEEREN",
-    "BELLEN","BEREIT","BIRKEN","BITTER","BLASER","BLAUER",
-    "BOCKIG","BORGEN","BORSTE","BRATEN","BREITE","BUHNEN",
-    "BÜSCHE","DAMMEN","DARBEN","DAUERN","DECKEL","DENKEN",
-    "DIESEL","DIENEN","DONNER","DORNEN","DÖRFER","DRÜCKE","DUNKEL","DÜSTER",
-    "EBENEN","EICHEN","EINZEL","ENGELN",
-    "FAKTOR","FÄUSTE","FÄHREN","FALLEN","FALTEN","FARBEN","FASERN",
-    "FEIGEN","FELDER","FERSEN","FEUERN","FINGER",
-    "FLADEN","FLÄCHE","FLUCHT","FOLGEN",
-    "FRÖSTE","FRUCHT","FUHREN","FÜLLEN","FUNKEN","FUTTER","GÄNGEN",
-    "GARBEN","GARNEN","GATTER","GEBÄCK","GEBIET","GEBÜHR",
-    "GEGNER","GEHWEG","GELTEN","GENUSS","GEPÄCK",
-    "GERÖLL","GERSTE","GERUCH","GEWALT","GEWAND",
-    "GLASER","GLEISE","GLÜHEN","GNADEN","GÖTTER","GRÄSER","GRAUEN",
-    "GRENZE","GRIFFE","GRÜBEL","GULDEN","GÜRTEL",
-    "HAFTEN","HALLEN","HALTEN","HÄNGEN","HARREN",
-    "HASSEN","HAUSEN","HECKEN","HELDEN","HELFEN","HEMMEN",
-    "HENKEL","HERDEN","HERREN","HESSEN","HINTEN","HOCKER",
-    "HOFFEN","HORTEN","HÜLSEN","IMPFEN","JUNGEN",
-    "KAFFER","KÄHNEN","KAPPEN","KÄSTEN","KAUFEN","KELCHE",
-    "KETTEN","KILLEN","KINDER","KISTEN","KLÄGER","KLÄREN","KLOPFE",
-    "KNACKE","KNARRE","KNOTEN","KOCHEN","KOSTEN","KRALLEN","KRONEN",
-    "KÜHLEN","KUNDEN","LAPPEN","LASERN","LAUFEN","LAUGEN",
-    "LAUBEN","LAUTEN","LEEREN","LEIERN","LEINEN","LENDEN",
-    "LEUCHTE","LICHTEN","LIEBEN","LINIEN","LÖSUNG","LUDERN",
-    "MACHEN","MAHNEN","MALERN","MASSEN","MEEREN",
-    "MENGEN","MESSEN","MIETEN","MORGEN","MÜNZEN",
-    "NARBEN","NETZEN","NIETEN","NORDEN","NUTZER","ÖFFNEN","ORDNEN",
-    "PECHEN","PELZEN","PFUNDE","PILGER","PINNEN",
-    "PLANEN","POSERN","PUTZEN","RANGEN","RANKEN","RASTEN",
-    "RATTEN","RECHTE","REGELN","RENNEN","RINNEN","RÖSTEN",
-    "RUDERN","RÜHREN","SALBEN","SANKEN","SAUGEN","SCHAFE",
-    "SCHERZ","SCHIFF","SCHIRM","SCHLAF","SELTEN","SENKEN",
-    "SINKEN","SIPPEN","SITZEN","SONNEN","SPALTE","SPANNE","SPAREN",
-    "SPERRE","SPIELE","SPINNE","STAUNEN","STEGEN","STEINE",
-    "STELLT","STEMME","STOFFE","STRECK",
-    "STRICH","STÜCKE","STUFEN","STÜRME","SUCHEN","SUMPFE","SURFEN",
-    "TAKTIK","TANKEN","TANNEN","TAUCHE","TESTEN","THEMEN","TIPPEN",
-    "TÖPFER","TRAGEN","TRAUFE","TREFFEN","TREIBEN","TRETEN","TRUPPE",
-    "TÜRME","TURNEN","VÖLLIG","VORRAT","WACHEN","WÄHLEN",
-    "WANDEL","WARTEN","WASCHEN","WEDELN","WEINEN","WEISEN","WENDEN",
-    "WERFEN","WINDEN","WISSEN","WOHNEN","WÖLBEN","WOLKEN","ZÄHLEN",
-    "ZEIGEN","ZIEHEN","ZIELEN","ZIMMER","ZÖGERN","ZOLLEN","ZÜCHTEN",
-)
+    @Synchronized
+    fun init(context: Context) {
+        if (initialized) return
+        targets4 = loadLines(context, "wortwelle/targets_4.txt")
+        targets5 = loadLines(context, "wortwelle/targets_5.txt")
+        targets6 = loadLines(context, "wortwelle/targets_6.txt")
+        // Pool = eigene Pool-Datei + Targets (Targets sind immer gültige Ratewörter)
+        pool4 = (loadLines(context, "wortwelle/pool_4.txt") + targets4).toHashSet()
+        pool5 = (loadLines(context, "wortwelle/pool_5.txt") + targets5).toHashSet()
+        pool6 = (loadLines(context, "wortwelle/pool_6.txt") + targets6).toHashSet()
+        initialized = true
+    }
+
+    private fun loadLines(context: Context, path: String): List<String> =
+        context.assets.open(path).bufferedReader().readLines()
+            .map { it.trim() }.filter { it.isNotEmpty() }
+
+    fun getTargets(len: Int): List<String> = when (len) { 4 -> targets4; 5 -> targets5; else -> targets6 }
+    fun getPool(len: Int): Set<String>     = when (len) { 4 -> pool4;    5 -> pool5;    else -> pool6    }
+}
 
 // ── Wortlisten-Zugriff ─────────────────────────────────────────────────────────
 
 fun getWwTargets(difficulty: String): List<String> {
     val len = WW_CONFIG[difficulty]?.wordLength ?: 5
-    return when (len) {
-        4    -> WORDS_4_TARGET
-        5    -> WORDS_5_TARGET
-        else -> WORDS_6_TARGET
-    }
-}
-
-private fun getWwGuessPool(difficulty: String): List<String> {
-    val len = WW_CONFIG[difficulty]?.wordLength ?: 5
-    return when (len) {
-        4    -> WORDS_4_TARGET + WORDS_4_GUESS_EXTRA
-        5    -> WORDS_5_TARGET + WORDS_5_GUESS_EXTRA
-        else -> WORDS_6_TARGET + WORDS_6_GUESS_EXTRA
-    }
+    return WwWordBank.getTargets(len)
 }
 
 // ── Kernlogik ─────────────────────────────────────────────────────────────────
@@ -287,12 +125,14 @@ fun getWwRandomWord(difficulty: String): String {
 }
 
 fun isValidWwGuess(word: String, difficulty: String): Boolean {
-    return word.uppercase() in getWwGuessPool(difficulty)
+    val len = WW_CONFIG[difficulty]?.wordLength ?: 5
+    // wwToUpper statt .uppercase() damit ß nicht zu SS wird
+    return wwToUpper(word) in WwWordBank.getPool(len)
 }
 
 fun computeWwStatuses(guess: String, target: String): List<WwLetterStatus> {
-    val g = guess.uppercase()
-    val t = target.uppercase()
+    val g = wwToUpper(guess)
+    val t = wwToUpper(target)
     val result = MutableList(g.length) { WwLetterStatus.ABSENT }
     val remaining = mutableMapOf<Char, Int>()
     for (i in t.indices) {
@@ -333,7 +173,7 @@ fun computeWwKeyStatuses(guesses: List<String>, target: String): Map<Char, WwLet
 
 fun validateWwHardMode(newGuess: String, previousGuesses: List<String>, target: String): String? {
     if (previousGuesses.isEmpty()) return null
-    val g = newGuess.uppercase()
+    val g = wwToUpper(newGuess)
     for (prev in previousGuesses) {
         val statuses = computeWwStatuses(prev, target)
         for (i in prev.indices) {

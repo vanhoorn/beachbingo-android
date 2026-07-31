@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.bestfriends.beachbingo.feature.raetsel.*
 import com.bestfriends.beachbingo.ui.theme.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private val WwAccent = Color(0xFF06B6D4)
 
@@ -33,13 +35,25 @@ fun WortWelleLobbyScreen(
     onNavigateToGame: (difficulty: String, isDaily: Boolean, dailyWord: String, dateStr: String, saveId: String?) -> Unit,
 ) {
     val context = LocalContext.current
+    var wordBankReady by remember { mutableStateOf(WwWordBank.isReady) }
     var selected by remember { mutableStateOf("mittel") }
     var saves by remember { mutableStateOf(PuzzleSaveManager.getSaves(context).filter { it.gameType == "wortwelle" && it.variant == "random" }) }
     var showStats by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
 
-    val (dailyWord, dateStr) = remember(selected) { getDailyWwWord(selected) }
-    val dailyPlayed = remember(selected, showStats) { hasDailyWwBeenPlayed(context, selected, dateStr) }
+    LaunchedEffect(Unit) {
+        if (!WwWordBank.isReady) {
+            withContext(Dispatchers.IO) { WwWordBank.init(context) }
+            wordBankReady = true
+        }
+    }
+
+    val (dailyWord, dateStr) = remember(selected, wordBankReady) {
+        if (wordBankReady) getDailyWwWord(selected) else Pair("", "")
+    }
+    val dailyPlayed = remember(selected, showStats, wordBankReady) {
+        if (wordBankReady) hasDailyWwBeenPlayed(context, selected, dateStr) else false
+    }
 
     val cfg = WW_CONFIG[selected]!!
 
