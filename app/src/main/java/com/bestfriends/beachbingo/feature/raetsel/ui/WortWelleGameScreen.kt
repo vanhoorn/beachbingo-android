@@ -289,7 +289,7 @@ fun WortWelleGameScreen(
                         .background(Surface2Dark, RoundedCornerShape(10.dp))
                         .border(1.dp, BorderColor, RoundedCornerShape(10.dp))
                         .padding(horizontal = 12.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (!isDaily) {
@@ -309,8 +309,6 @@ fun WortWelleGameScreen(
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                         ) { Text("💾 Speichern", fontSize = 13.sp, color = TextSub, fontWeight = FontWeight.Bold) }
-                    } else {
-                        Spacer(Modifier.weight(1f))
                     }
                     OutlinedButton(
                         onClick = { running = false; showRules = true },
