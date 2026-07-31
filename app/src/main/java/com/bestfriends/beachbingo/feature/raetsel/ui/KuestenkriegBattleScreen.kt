@@ -181,8 +181,8 @@ fun KuestenkriegBattleScreen(
             val availPerGrid = (maxHeight - reservedH) / 2
             val cellDp = minOf(
                 availPerGrid / (BATTLE_GRID + 1),
-                maxWidth / (BATTLE_GRID + 1),
-            ).coerceIn(18.dp, 40.dp)
+                (maxWidth - 42.dp) / BATTLE_GRID,
+            ).coerceIn(18.dp, 52.dp)
 
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
@@ -213,6 +213,7 @@ fun KuestenkriegBattleScreen(
             BattleGridSection(title = "Dein Gewässer", subtitle = null, grid = myView, cellDp = cellDp, onCellTap = { _, _ -> })
 
             // Fleet status (AI fleet)
+            Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 state.aiFleet.forEachIndexed { i, ship ->
                     val def = FLEET_DEFS.getOrNull(ship.id)
@@ -231,6 +232,7 @@ fun KuestenkriegBattleScreen(
                     }
                 }
             }
+            } // end centering Column
 
             // Game over panel
             if (state.gameOver) {

@@ -103,8 +103,10 @@ fun KuestenkriegGameScreen(
             } else {
                 val size = p.size
                 val labelDp: Dp = 22.dp
-                // Dynamic cell size: fills available width, capped so cells stay playable
-                val cellDp: Dp = ((screenAvailW - labelDp - 16.dp) / size).coerceIn(24.dp, 54.dp)
+                // Dynamic cell size: limited by both available width and height
+                val cellFromW = (screenAvailW - labelDp - 16.dp) / size
+                val cellFromH = (maxHeight - labelDp - 130.dp) / size
+                val cellDp: Dp = minOf(cellFromW, cellFromH).coerceAtLeast(24.dp)
                 val errors = computeKriegErrors(state)
 
                 val density = LocalDensity.current
@@ -229,13 +231,35 @@ fun KuestenkriegGameScreen(
         }
     }
     if (showQuit) {
-        AlertDialog(
-            onDismissRequest = { running = true; showQuit = false },
-            title = { Text("Spiel beenden?", color = TextPrimary) },
-            text = { Text("Fortschritt wird gespeichert.", color = TextMuted) },
-            confirmButton = { TextButton(onClick = onNavigateBack) { Text("Beenden", color = Danger, fontWeight = FontWeight.Bold) } },
-            dismissButton = { TextButton(onClick = { running = true; showQuit = false }) { Text("Weiterspielen", color = TextSub) } },
-            containerColor = SurfaceDark,
-        )
+        Dialog(onDismissRequest = { running = true; showQuit = false }) {
+            Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
+                Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("⚓", fontSize = 36.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Spiel beenden?", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Spacer(Modifier.height(20.dp))
+                    Button(
+                        onClick = { running = true; showQuit = false },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Surface2Dark),
+                        shape = RoundedCornerShape(10.dp),
+                    ) { Text("Weiterspielen", color = TextPrimary, fontWeight = FontWeight.Bold) }
+                    Spacer(Modifier.height(8.dp))
+                    Button(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = KkAccent),
+                        shape = RoundedCornerShape(10.dp),
+                    ) { Text("💾 Speichern & Beenden", color = BgDark, fontWeight = FontWeight.Bold) }
+                    Spacer(Modifier.height(8.dp))
+                    Button(
+                        onClick = { PuzzleSaveManager.deleteSave(context, saveIdRef); onNavigateBack() },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Danger),
+                        shape = RoundedCornerShape(10.dp),
+                    ) { Text("✕ Beenden ohne Speichern", color = Color.White, fontWeight = FontWeight.Bold) }
+                }
+            }
+        }
     }
 }
