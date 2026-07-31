@@ -97,6 +97,7 @@ fun KuestenkriegGameScreen(
     ) { padding ->
         BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(padding)) {
         val screenAvailW = maxWidth
+        val screenAvailH = maxHeight
         Column(modifier = Modifier.fillMaxSize().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             if (p == null || state == null) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = KkAccent) }
@@ -105,7 +106,7 @@ fun KuestenkriegGameScreen(
                 val labelDp: Dp = 22.dp
                 // Dynamic cell size: limited by both available width and height
                 val cellFromW = (screenAvailW - labelDp - 16.dp) / size
-                val cellFromH = (maxHeight - labelDp - 130.dp) / size
+                val cellFromH = (screenAvailH - labelDp - 130.dp) / size
                 val cellDp: Dp = minOf(cellFromW, cellFromH).coerceAtLeast(24.dp)
                 val errors = computeKriegErrors(state)
 
