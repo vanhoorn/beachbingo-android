@@ -184,16 +184,7 @@ fun WortWelleGameScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück", tint = TextSub)
                     }
                 },
-                actions = {
-                    IconButton(onClick = { running = false; showRules = true }) {
-                        Box(
-                            modifier = Modifier.size(32.dp)
-                                .background(Surface2Dark, RoundedCornerShape(8.dp))
-                                .border(1.dp, BorderColor, RoundedCornerShape(8.dp)),
-                            contentAlignment = Alignment.Center,
-                        ) { Text("?", fontSize = 14.sp, color = TextSub, fontWeight = FontWeight.Bold) }
-                    }
-                },
+                actions = {},
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark),
             )
         },
@@ -204,11 +195,12 @@ fun WortWelleGameScreen(
             val availH = maxHeight.value
 
             val keyboardH   = 168f  // 3 rows * 52dp + gaps + padding
+            val controlsH   = 52f   // Controls-Leiste (Speichern, Regeln)
             val errorH      = 30f
             val gridPad     = 16f
             val gridGapDp   = 5f
             val gridAvailW  = (availW - gridPad * 2 - gridGapDp * (cfg.wordLength - 1)).coerceAtLeast(80f)
-            val gridAvailH  = (availH - keyboardH - errorH - gridPad * 2 - gridGapDp * (cfg.maxGuesses - 1)).coerceAtLeast(80f)
+            val gridAvailH  = (availH - keyboardH - controlsH - errorH - gridPad * 2 - gridGapDp * (cfg.maxGuesses - 1)).coerceAtLeast(80f)
             val cellByW     = gridAvailW / cfg.wordLength
             val cellByH     = gridAvailH / cfg.maxGuesses
             val cellSize    = minOf(cellByW, cellByH).coerceIn(36f, 72f)
@@ -287,6 +279,45 @@ fun WortWelleGameScreen(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp), textAlign = TextAlign.Center)
                         }
                     }
+                }
+
+                // ── Controls-Leiste ───────────────────────────────────────────
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(controlsH.dp)
+                        .background(Surface2Dark, RoundedCornerShape(10.dp))
+                        .border(1.dp, BorderColor, RoundedCornerShape(10.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (!isDaily) {
+                        OutlinedButton(
+                            onClick = {
+                                if (saveIdRef.isNotEmpty()) {
+                                    PuzzleSaveManager.savePuzzle(context, PuzzleSave(
+                                        id = saveIdRef, gameType = "wortwelle", variant = "random",
+                                        difficulty = difficulty, seed = 0L,
+                                        puzzleState = serializeWwState(targetWord, guesses, input, gameStatus),
+                                        startedAt = System.currentTimeMillis(), elapsedSeconds = elapsed,
+                                    ))
+                                }
+                                onNavigateBack()
+                            },
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        ) { Text("💾 Speichern", fontSize = 13.sp, color = TextSub, fontWeight = FontWeight.Bold) }
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
+                    OutlinedButton(
+                        onClick = { running = false; showRules = true },
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    ) { Text("? Regeln", fontSize = 13.sp, color = TextSub, fontWeight = FontWeight.Bold) }
                 }
 
                 // ── QWERTZ-Tastatur ───────────────────────────────────────────
