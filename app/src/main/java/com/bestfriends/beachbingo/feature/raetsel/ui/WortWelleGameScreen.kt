@@ -210,7 +210,7 @@ fun WortWelleGameScreen(
             Column(
                 modifier = Modifier.fillMaxSize().padding(horizontal = gridPad.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween,
+                verticalArrangement = Arrangement.Top,
             ) {
 
                 // ── Gitter ───────────────────────────────────────────────────
