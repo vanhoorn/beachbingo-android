@@ -23,6 +23,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import com.bestfriends.beachbingo.R
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -42,6 +43,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -80,6 +85,18 @@ private data class PlayerCountEntry(
     val key: PlayerCount,
     val label: String,
     val emoji: String,
+)
+
+private data class TourSlide(val emoji: String, val title: String, val description: String)
+
+private val TOUR_SLIDES = listOf(
+    TourSlide("🏖️", "Willkommen bei BeachBande!", "Diese kurze Tour zeigt dir die wichtigsten Funktionen. Du kannst sie jederzeit über das ? oben links erneut aufrufen."),
+    TourSlide("🎮", "Rubriken", "Alle Spiele sind nach Art sortiert: Rätsel, Karten, Action und Couch. So findest du schnell das passende Spiel für eure Runde."),
+    TourSlide("👥", "Nach Spieleranzahl filtern", "Tippe auf eine Spieleranzahl, um alle passenden Spiele zu sehen – ideal, wenn du schon weißt, wie viele mitspielen werden."),
+    TourSlide("★", "Favoriten", "Öffne ein Spiel und tippe auf das Herz-Symbol, um es als Favorit zu markieren. Favoriten erscheinen immer oben auf dem Startbildschirm."),
+    TourSlide("🔗", "Spiel beitreten", "Über das Ketten-Symbol oben rechts kannst du einem laufenden Spiel beitreten – per 6-stelligem Code oder QR-Code-Scan."),
+    TourSlide("📱", "Spieler per QR-Code einladen", "In jeder Spiellobby findest du einen QR-Code. Zeige ihn deinen Mitspielern – sie können sofort beitreten, ohne den Code abzutippen."),
+    TourSlide("👤", "Profil & Einstellungen", "Über das Personen-Symbol oben rechts erreichst du dein Profil. Dort kannst du Name, Avatar und Einstellungen anpassen und speichern."),
 )
 
 private val PLAYER_COUNT_LIST = listOf(
@@ -123,6 +140,8 @@ fun HomeScreen(
     var favoriteIds by remember { mutableStateOf<List<String>>(emptyList()) }
     var activeGame by remember { mutableStateOf<ActiveGameInfo?>(null) }
     var savedPuzzles by remember { mutableStateOf<List<PuzzleSave>>(emptyList()) }
+    var showTour by remember { mutableStateOf(false) }
+    var tourSlide by remember { mutableStateOf(0) }
 
     val auth = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
@@ -130,6 +149,8 @@ fun HomeScreen(
 
     LaunchedEffect(Unit) {
         savedPuzzles = PuzzleSaveManager.getSaves(context)
+        val tourSeen = context.getSharedPreferences("beachbande_prefs", 0).getBoolean("tour_seen", false)
+        if (!tourSeen) showTour = true
     }
 
     LaunchedEffect(uid) {
@@ -220,6 +241,20 @@ fun HomeScreen(
                     modifier = Modifier
                         .size(48.dp)
                         .border(1.dp, BorderColor, RoundedCornerShape(14.dp))
+                        .clickable { showTour = true; tourSlide = 0 }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text("?", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextMuted)
+                    }
+                }
+
+                Spacer(Modifier.width(8.dp))
+
+                Surface(
+                    shape = RoundedCornerShape(14.dp), color = Surface2Dark,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .border(1.dp, BorderColor, RoundedCornerShape(14.dp))
                         .clickable { onNavigateToJoin() }
                 ) {
                     Box(contentAlignment = Alignment.Center) { Text("🔗", fontSize = 22.sp) }
@@ -303,28 +338,6 @@ fun HomeScreen(
                             "strandraeuber"  -> onNavigateToStrandraeuberLobby()
                         }
                     })
-                }
-            }
-        }
-
-        // ── Spieleranzahl ─────────────────────────────────────────────────────────
-        SectionHeader(
-            title = "SPIELERANZAHL", emoji = "👥",
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp)
-        )
-        Column(
-            modifier = Modifier.padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PLAYER_COUNT_LIST.forEach { entry ->
-                    val gameCount = ALL_GAMES.count { entry.key in it.playerCounts }
-                    CategoryTile(
-                        entry = entry,
-                        gameCount = gameCount,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onNavigateToCategory(entry.key.name) }
-                    )
                 }
             }
         }
@@ -484,6 +497,28 @@ fun HomeScreen(
             }
         }
 
+        // ── Spieleranzahl ─────────────────────────────────────────────────────────
+        SectionHeader(
+            title = "SPIELERANZAHL", emoji = "👥",
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp)
+        )
+        Column(
+            modifier = Modifier.padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                PLAYER_COUNT_LIST.forEach { entry ->
+                    val gameCount = ALL_GAMES.count { entry.key in it.playerCounts }
+                    CategoryTile(
+                        entry = entry,
+                        gameCount = gameCount,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onNavigateToCategory(entry.key.name) }
+                    )
+                }
+            }
+        }
+
         // ── Gespeicherte Spiele ───────────────────────────────────────────────────
         if (savedPuzzles.isNotEmpty()) {
             SectionHeader(
@@ -503,6 +538,21 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+
+        // ── Tour ─────────────────────────────────────────────────────────────────
+        if (showTour) {
+            HelpTourDialog(
+                slide = tourSlide,
+                onNext = { if (tourSlide < TOUR_SLIDES.size - 1) tourSlide++ },
+                onBack = { if (tourSlide > 0) tourSlide-- },
+                onClose = {
+                    context.getSharedPreferences("beachbande_prefs", 0)
+                        .edit().putBoolean("tour_seen", true).apply()
+                    showTour = false
+                    tourSlide = 0
+                },
+            )
         }
 
         Spacer(Modifier.height(32.dp))
@@ -709,6 +759,125 @@ private fun SavedPuzzleCard(
                 text = "⏱ $elapsed",
                 fontSize = 10.sp, color = TextMuted,
             )
+        }
+    }
+}
+
+@Composable
+private fun HelpTourDialog(
+    slide: Int,
+    onNext: () -> Unit,
+    onBack: () -> Unit,
+    onClose: () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onClose,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.88f)),
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(20.dp)
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.1f))
+                    .clickable { onClose() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("✕", fontSize = 16.sp, color = Color.White.copy(alpha = 0.6f))
+            }
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                val current = TOUR_SLIDES[slide]
+
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = SurfaceDark,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, BorderColor, RoundedCornerShape(20.dp)),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 28.dp, vertical = 36.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(current.emoji, fontSize = 64.sp, lineHeight = 72.sp)
+                        Spacer(Modifier.height(20.dp))
+                        Text(
+                            current.title,
+                            fontSize = 20.sp, fontWeight = FontWeight.ExtraBold,
+                            color = TextPrimary, textAlign = TextAlign.Center, lineHeight = 26.sp,
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        Text(
+                            current.description,
+                            fontSize = 14.sp, color = TextMuted,
+                            textAlign = TextAlign.Center, lineHeight = 22.sp,
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TOUR_SLIDES.forEachIndexed { i, _ ->
+                        Box(
+                            modifier = Modifier
+                                .height(7.dp)
+                                .width(if (i == slide) 20.dp else 7.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(if (i == slide) OceanBlue else Color.White.copy(alpha = 0.25f))
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    if (slide > 0) {
+                        OutlinedButton(
+                            onClick = onBack,
+                            modifier = Modifier.weight(1f).height(50.dp),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
+                            shape = RoundedCornerShape(12.dp),
+                        ) {
+                            Text("← Zurück", color = Color.White.copy(alpha = 0.7f), fontSize = 15.sp)
+                        }
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
+                    Button(
+                        onClick = if (slide == TOUR_SLIDES.size - 1) onClose else onNext,
+                        modifier = Modifier.weight(1f).height(50.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = OceanBlue),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Text(
+                            if (slide == TOUR_SLIDES.size - 1) "Los geht's!" else "Weiter →",
+                            color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
         }
     }
 }
