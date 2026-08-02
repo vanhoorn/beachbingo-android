@@ -17,11 +17,20 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.bestfriends.beachbingo.feature.raetsel.HITORI_SIZES
 import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
 import com.bestfriends.beachbingo.ui.theme.*
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 private val DsAccent = Color(0xFFFBBF24)
 
@@ -32,8 +41,29 @@ fun DuenenschattenLobbyScreen(
     onNavigateToGame: (difficulty: String, seed: Long, saveId: String?) -> Unit,
 ) {
     val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+    val uid = auth.currentUser?.uid
     var selected by remember { mutableStateOf("mittel") }
     var saves by remember { mutableStateOf(PuzzleSaveManager.getSaves(context).filter { it.gameType == "duenenschatten" }) }
+    var showStats by remember { mutableStateOf(false) }
+    var showRules by remember { mutableStateOf(false) }
+    var isFavorite by remember { mutableStateOf(false) }
+
+    LaunchedEffect(uid) {
+        if (uid == null) return@LaunchedEffect
+        try {
+            val snap = db.collection("users").document(uid).get().await()
+            @Suppress("UNCHECKED_CAST")
+            isFavorite = (snap.get("favoriteGames") as? List<String>)?.contains("duenenschatten") == true
+        } catch (_: Exception) {}
+    }
+
+    fun toggleFavorite() {
+        isFavorite = !isFavorite
+        val update = if (isFavorite) FieldValue.arrayUnion("duenenschatten") else FieldValue.arrayRemove("duenenschatten")
+        if (uid != null) db.collection("users").document(uid).update("favoriteGames", update)
+    }
 
     val difficulties = listOf("leicht", "mittel", "schwer", "experte")
     val diffLabels = mapOf("leicht" to "Leicht", "mittel" to "Mittel", "schwer" to "Schwer", "experte" to "Experte")
@@ -61,10 +91,26 @@ fun DuenenschattenLobbyScreen(
                 Spacer(Modifier.width(14.dp))
                 Text("◼", fontSize = 32.sp)
                 Spacer(Modifier.width(14.dp))
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text("RÄTSEL", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
                     Text("DünenSchatten", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
                 }
+                Spacer(Modifier.width(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(10.dp), color = DsAccent.copy(alpha = 0.12f),
+                    modifier = Modifier.size(36.dp).border(1.dp, DsAccent.copy(alpha = 0.35f), RoundedCornerShape(10.dp)).clickable { showStats = true }
+                ) { Box(contentAlignment = Alignment.Center) { Text("🏆", fontSize = 16.sp) } }
+                Spacer(Modifier.width(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isFavorite) SandGold.copy(alpha = 0.12f) else Surface2Dark,
+                    modifier = Modifier.size(36.dp).border(1.dp, if (isFavorite) SandGold.copy(alpha = 0.5f) else BorderColor, RoundedCornerShape(10.dp)).clickable { toggleFavorite() }
+                ) { Box(contentAlignment = Alignment.Center) { Text(if (isFavorite) "★" else "☆", fontSize = 16.sp, color = if (isFavorite) SandGold else TextSub) } }
+                Spacer(Modifier.width(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(10.dp), color = Surface2Dark,
+                    modifier = Modifier.size(36.dp).border(1.dp, BorderColor, RoundedCornerShape(10.dp)).clickable { showRules = true }
+                ) { Box(contentAlignment = Alignment.Center) { Text("?", fontSize = 16.sp, color = TextSub, fontWeight = FontWeight.Bold) } }
             }
         }
 
@@ -148,5 +194,40 @@ fun DuenenschattenLobbyScreen(
             }
         }
         Spacer(Modifier.height(32.dp))
+    }
+
+    if (showStats) {
+        Dialog(onDismissRequest = { showStats = false }) {
+            Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
+                Column(modifier = Modifier.padding(24.dp)) {
+                    Text("🏆 Bestzeiten", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
+                        textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp))
+                    listOf("leicht" to "mittel", "schwer" to "experte").forEach { (d1, d2) ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            listOf(d1, d2).forEach { d ->
+                                val best = PuzzleSaveManager.getBestTimeAny(context, "duenenschatten", d)
+                                Surface(shape = RoundedCornerShape(12.dp), color = BgDark, modifier = Modifier.weight(1f)) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(14.dp)) {
+                                        Text(diffLabels[d] ?: d, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                                        Spacer(Modifier.height(6.dp))
+                                        Text(if (best != null) PuzzleSaveManager.formatElapsed(best) else "—",
+                                            fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = if (best != null) DsAccent else TextMuted)
+                                        Text("Bestzeit", fontSize = 10.sp, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                    }
+                    Button(onClick = { showStats = false }, modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = DsAccent),
+                        shape = RoundedCornerShape(10.dp)
+                    ) { Text("Schliessen", fontWeight = FontWeight.Bold, color = BgDark) }
+                }
+            }
+        }
+    }
+    ALL_GAME_RULES["duenenschatten"]?.let { rule ->
+        if (showRules) GameRulesBottomSheet(rule = rule, onDismiss = { showRules = false })
     }
 }

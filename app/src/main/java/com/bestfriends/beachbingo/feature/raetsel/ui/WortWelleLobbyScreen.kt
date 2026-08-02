@@ -23,7 +23,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.bestfriends.beachbingo.feature.raetsel.*
 import com.bestfriends.beachbingo.ui.theme.*
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 private val WwAccent = Color(0xFF06B6D4)
@@ -35,11 +40,30 @@ fun WortWelleLobbyScreen(
     onNavigateToGame: (difficulty: String, isDaily: Boolean, dailyWord: String, dateStr: String, saveId: String?) -> Unit,
 ) {
     val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance()
+    val uid = auth.currentUser?.uid
     var wordBankReady by remember { mutableStateOf(WwWordBank.isReady) }
     var selected by remember { mutableStateOf("mittel") }
     var saves by remember { mutableStateOf(PuzzleSaveManager.getSaves(context).filter { it.gameType == "wortwelle" && it.variant == "random" }) }
     var showStats by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
+    var isFavorite by remember { mutableStateOf(false) }
+
+    LaunchedEffect(uid) {
+        if (uid == null) return@LaunchedEffect
+        try {
+            val snap = db.collection("users").document(uid).get().await()
+            @Suppress("UNCHECKED_CAST")
+            isFavorite = (snap.get("favoriteGames") as? List<String>)?.contains("wortwelle") == true
+        } catch (_: Exception) {}
+    }
+
+    fun toggleFavorite() {
+        isFavorite = !isFavorite
+        val update = if (isFavorite) FieldValue.arrayUnion("wortwelle") else FieldValue.arrayRemove("wortwelle")
+        if (uid != null) db.collection("users").document(uid).update("favoriteGames", update)
+    }
 
     LaunchedEffect(Unit) {
         if (!WwWordBank.isReady) {
@@ -90,6 +114,14 @@ fun WortWelleLobbyScreen(
                         .border(1.dp, WwAccent.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                         .clickable { showStats = true }
                 ) { Box(contentAlignment = Alignment.Center) { Text("📊", fontSize = 16.sp) } }
+                Spacer(Modifier.width(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isFavorite) SandGold.copy(alpha = 0.12f) else Surface2Dark,
+                    modifier = Modifier.size(36.dp)
+                        .border(1.dp, if (isFavorite) SandGold.copy(alpha = 0.5f) else BorderColor, RoundedCornerShape(10.dp))
+                        .clickable { toggleFavorite() }
+                ) { Box(contentAlignment = Alignment.Center) { Text(if (isFavorite) "★" else "☆", fontSize = 16.sp, color = if (isFavorite) SandGold else TextSub) } }
                 Spacer(Modifier.width(8.dp))
                 Surface(
                     shape = RoundedCornerShape(10.dp), color = Surface2Dark,

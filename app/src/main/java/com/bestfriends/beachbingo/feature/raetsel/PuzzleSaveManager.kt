@@ -57,6 +57,15 @@ object PuzzleSaveManager {
     fun generateId(): String =
         System.currentTimeMillis().toString(36) + (Math.random() * 1_000_000).toLong().toString(36)
 
+    fun getBestTimeAny(context: Context, gameTypePrefix: String, difficulty: String): Int? {
+        val prefs = context.getSharedPreferences(PREFS_BEST, Context.MODE_PRIVATE)
+        val suffix = "_$difficulty"
+        val matches = prefs.all.entries
+            .filter { (k, _) -> k.startsWith(gameTypePrefix) && k.endsWith(suffix) }
+            .mapNotNull { (_, v) -> v as? Int }
+        return if (matches.isEmpty()) null else matches.min()
+    }
+
     fun getBestTime(context: Context, gameType: String, variant: String, difficulty: String): Int? {
         val prefs = context.getSharedPreferences(PREFS_BEST, Context.MODE_PRIVATE)
         val key = "${gameType}_${variant}_${difficulty}"
