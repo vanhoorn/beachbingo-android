@@ -268,7 +268,7 @@ fun InselbrueckeGameScreen(
                                 if (hint != null) gs = toggleHashiBridge(currentState, hint.first, hint.second)
                             },
                             border = BorderStroke(1.dp, IbAccent.copy(alpha = 0.5f)),
-                        ) { Text("💡 Hinweis", color = IbAccent, fontWeight = FontWeight.Bold) }
+                        ) { Text("💡", color = IbAccent, fontWeight = FontWeight.Bold) }
                         OutlinedButton(
                             onClick = { running = false; showHelp = true },
                             border = BorderStroke(1.dp, TextSub.copy(alpha = 0.5f)),
@@ -276,7 +276,7 @@ fun InselbrueckeGameScreen(
                         OutlinedButton(
                             onClick = { running = false; showQuit = true },
                             border = BorderStroke(1.dp, Danger.copy(alpha = 0.5f)),
-                        ) { Text("✕ Abbruch", color = Danger, fontWeight = FontWeight.Bold) }
+                        ) { Text("✕", color = Danger, fontWeight = FontWeight.Bold) }
                     }
                 }
             }

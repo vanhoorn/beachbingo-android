@@ -310,7 +310,7 @@ fun WortWelleGameScreen(
                             ),
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                        ) { Text("💾 Speichern", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                        ) { Text("💾", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
                     }
                     OutlinedButton(
                         onClick = { running = false; showRules = true },

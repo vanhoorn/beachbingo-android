@@ -246,7 +246,7 @@ fun WellensummeGameScreen(
                                 if (hint != null) gs = enterKakuroNumber(selectKakuroCell(state, hint.first, hint.second), p.cells[hint.first][hint.second].solution ?: 0)
                             },
                             border = BorderStroke(1.dp, WsAccent.copy(alpha = 0.5f)),
-                        ) { Text("💡 Hinweis", color = WsAccent, fontWeight = FontWeight.Bold) }
+                        ) { Text("💡", color = WsAccent, fontWeight = FontWeight.Bold) }
                         OutlinedButton(
                             onClick = { running = false; showHelp = true },
                             border = BorderStroke(1.dp, TextSub.copy(alpha = 0.5f)),

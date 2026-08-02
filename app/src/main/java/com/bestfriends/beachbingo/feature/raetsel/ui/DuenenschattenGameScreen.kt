@@ -233,7 +233,7 @@ fun DuenenschattenGameScreen(
                                 }
                             },
                             border = BorderStroke(1.dp, DsAccent.copy(alpha = 0.5f)),
-                        ) { Text("💡 Hinweis", color = DsAccent, fontWeight = FontWeight.Bold) }
+                        ) { Text("💡", color = DsAccent, fontWeight = FontWeight.Bold) }
                         OutlinedButton(
                             onClick = { running = false; showHelp = true },
                             border = BorderStroke(1.dp, TextSub.copy(alpha = 0.5f)),
@@ -241,7 +241,7 @@ fun DuenenschattenGameScreen(
                         OutlinedButton(
                             onClick = { running = false; showQuit = true },
                             border = BorderStroke(1.dp, Danger.copy(alpha = 0.5f)),
-                        ) { Text("✕ Abbruch", color = Danger, fontWeight = FontWeight.Bold) }
+                        ) { Text("✕", color = Danger, fontWeight = FontWeight.Bold) }
                     }
                 }
             }
