@@ -165,8 +165,8 @@ fun BrandungLobbyScreen(
                     )),
                     "createdAt" to System.currentTimeMillis(),
                 )
-                val ref = db.collection("brandungGames").add(data).await()
-                gameDocId = ref.id
+                db.collection("brandungGames").document(code).set(data).await()
+                gameDocId = code
                 gameCode = code
                 onlineStep = "waiting"
             } catch (_: Exception) {

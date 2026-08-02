@@ -33,7 +33,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         description = "Ziehe Zahlen, markiere deine Karte – BINGO!",
         color = 0xFF0EA5E9,
         playerCounts = listOf(PlayerCount.TWO_FOUR, PlayerCount.FOUR_PLUS),
-        genres = listOf(GameGenre.PARTY),
+        genres = listOf(GameGenre.PARTY, GameGenre.COUCH),
     ),
     GameMetadata(
         id = "pong",
@@ -51,7 +51,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         description = "Vier in einer Reihe mit Beach-Twist.",
         color = 0xFFF59E0B,
         playerCounts = listOf(PlayerCount.ONE_TWO),
-        genres = listOf(GameGenre.LOGICAL),
+        genres = listOf(GameGenre.LOGICAL, GameGenre.COUCH),
     ),
     GameMetadata(
         id = "pirates",
@@ -69,7 +69,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         description = "Frisst Krabben, Muscheln und Fische. Werde nie die Grenzen!",
         color = 0xFF22C55E,
         playerCounts = listOf(PlayerCount.ONE_TWO),
-        genres = listOf(GameGenre.ACTION),
+        genres = listOf(GameGenre.COUCH),
     ),
     GameMetadata(
         id = "strandturm",
@@ -164,5 +164,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
     ),
 )
 
-val CARD_GAMES: List<GameMetadata> = ALL_GAMES.filter { GameGenre.CARD in it.genres }
+val CARD_GAMES: List<GameMetadata>   = ALL_GAMES.filter { GameGenre.CARD   in it.genres }
 val RIDDLE_GAMES: List<GameMetadata> = ALL_GAMES.filter { GameGenre.RIDDLE in it.genres }
+val ACTION_GAMES: List<GameMetadata> = ALL_GAMES.filter { GameGenre.ACTION in it.genres }
+val COUCH_GAMES: List<GameMetadata>  = ALL_GAMES.filter { GameGenre.COUCH  in it.genres }

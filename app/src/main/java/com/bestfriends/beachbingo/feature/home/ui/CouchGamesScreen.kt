@@ -1,6 +1,5 @@
 package com.bestfriends.beachbingo.feature.home.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,14 +35,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bestfriends.beachbingo.R
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
-import com.bestfriends.beachbingo.core.model.CARD_GAMES
+import com.bestfriends.beachbingo.core.model.COUCH_GAMES
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.BorderColor
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
@@ -53,13 +49,13 @@ import com.bestfriends.beachbingo.ui.theme.TextPrimary
 import com.bestfriends.beachbingo.ui.theme.TextSub
 
 @Composable
-fun CardGamesScreen(
+fun CouchGamesScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToBrandungLobby: () -> Unit,
-    onNavigateToMeermauLobby: () -> Unit,
-    onNavigateToStrandraeuberLobby: () -> Unit,
+    onNavigateToBingoLobby: () -> Unit,
+    onNavigateToVierLobby: () -> Unit,
+    onNavigateToWormLobby: () -> Unit,
 ) {
-    val games = CARD_GAMES.sortedBy { it.title }
+    val games = COUCH_GAMES.sortedBy { it.title }
     var rulesGameId by remember { mutableStateOf<String?>(null) }
     val activeRule = rulesGameId?.let { ALL_GAME_RULES[it] }
 
@@ -71,7 +67,6 @@ fun CardGamesScreen(
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
-        // Header
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -99,7 +94,7 @@ fun CardGamesScreen(
 
                 Spacer(Modifier.width(14.dp))
 
-                Text(text = "🃏", fontSize = 32.sp)
+                Text(text = "🛋️", fontSize = 32.sp)
 
                 Spacer(Modifier.width(14.dp))
 
@@ -112,7 +107,7 @@ fun CardGamesScreen(
                         letterSpacing = 1.5.sp,
                     )
                     Text(
-                        text = "Karten",
+                        text = "Couch",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = TextPrimary,
@@ -121,7 +116,6 @@ fun CardGamesScreen(
             }
         }
 
-        // Game list (alphabetically sorted)
         Column(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -143,9 +137,9 @@ fun CardGamesScreen(
                         modifier = Modifier
                             .clickable {
                                 when (game.id) {
-                                    "brandung"      -> onNavigateToBrandungLobby()
-                                    "meermau"       -> onNavigateToMeermauLobby()
-                                    "strandraeuber" -> onNavigateToStrandraeuberLobby()
+                                    "bingo" -> onNavigateToBingoLobby()
+                                    "vier"  -> onNavigateToVierLobby()
+                                    "worm"  -> onNavigateToWormLobby()
                                 }
                             }
                             .padding(20.dp),
@@ -157,16 +151,7 @@ fun CardGamesScreen(
                             modifier = Modifier.size(64.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                if (game.id == "meermau") {
-                                    Image(
-                                        painter = painterResource(R.drawable.ic_meermau_logo),
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier.size(44.dp)
-                                    )
-                                } else {
-                                    Text(text = game.emoji, fontSize = 32.sp)
-                                }
+                                Text(text = game.emoji, fontSize = 32.sp)
                             }
                         }
 
@@ -190,7 +175,6 @@ fun CardGamesScreen(
 
                         Spacer(Modifier.width(8.dp))
 
-                        // Info button
                         Surface(
                             shape = RoundedCornerShape(10.dp),
                             color = accentColor.copy(alpha = 0.12f),

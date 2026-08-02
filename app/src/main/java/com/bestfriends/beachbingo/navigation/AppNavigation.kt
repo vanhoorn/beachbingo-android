@@ -23,9 +23,11 @@ import com.bestfriends.beachbingo.feature.bingo.ui.GameScreen
 import com.bestfriends.beachbingo.feature.bingo.ui.JoinGameScreen
 import com.bestfriends.beachbingo.feature.bingo.ui.LobbyScreen
 import com.bestfriends.beachbingo.feature.bingo.ui.ResultsScreen
+import com.bestfriends.beachbingo.feature.home.ui.ActionGamesScreen
 import com.bestfriends.beachbingo.feature.home.ui.AllGamesScreen
 import com.bestfriends.beachbingo.feature.home.ui.CardGamesScreen
 import com.bestfriends.beachbingo.feature.home.ui.CategoryScreen
+import com.bestfriends.beachbingo.feature.home.ui.CouchGamesScreen
 import com.bestfriends.beachbingo.feature.home.ui.HomeScreen
 import com.bestfriends.beachbingo.feature.home.ui.RaetselScreen
 import com.bestfriends.beachbingo.feature.pong.ui.PongGameScreen
@@ -149,6 +151,8 @@ fun AppNavigation() {
                 onNavigateToJoin = { navController.navigate(Screen.JoinGame) },
                 onNavigateToCategory = { playerCount -> navController.navigate(Screen.Category(playerCount)) },
                 onNavigateToCardGames = { navController.navigate(Screen.CardGames) },
+                onNavigateToActionGames = { navController.navigate(Screen.ActionGames) },
+                onNavigateToCouchGames = { navController.navigate(Screen.CouchGames) },
                 onNavigateToAllGames = { navController.navigate(Screen.AllGames) },
                 onNavigateToRaetsel = { navController.navigate(Screen.Raetsel) },
                 onRejoinGame = { type, gameId ->
@@ -187,6 +191,24 @@ fun AppNavigation() {
                 onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
                 onNavigateToMeermauLobby = { navController.navigate(Screen.MeermauLobby) },
                 onNavigateToStrandraeuberLobby = { navController.navigate(Screen.StrandraeuberLobby) },
+            )
+        }
+
+        composable<Screen.ActionGames> {
+            ActionGamesScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToPongLobby = { navController.navigate(Screen.PongLobby) },
+                onNavigateToPiratesLobby = { navController.navigate(Screen.PiratesLobby) },
+                onNavigateToStrandturmLobby = { navController.navigate(Screen.StrandturmLobby) },
+            )
+        }
+
+        composable<Screen.CouchGames> {
+            CouchGamesScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToBingoLobby = { navController.navigate(Screen.Lobby) },
+                onNavigateToVierLobby = { navController.navigate(Screen.VierLobby) },
+                onNavigateToWormLobby = { navController.navigate(Screen.WormLobby) },
             )
         }
 

@@ -51,8 +51,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.platform.LocalContext
+import com.bestfriends.beachbingo.core.model.ACTION_GAMES
 import com.bestfriends.beachbingo.core.model.ALL_GAMES
 import com.bestfriends.beachbingo.core.model.CARD_GAMES
+import com.bestfriends.beachbingo.core.model.COUCH_GAMES
 import com.bestfriends.beachbingo.core.model.GameGenre
 import com.bestfriends.beachbingo.core.model.GameMetadata
 import com.bestfriends.beachbingo.core.model.PlayerCount
@@ -108,6 +110,8 @@ fun HomeScreen(
     onNavigateToJoin: () -> Unit,
     onNavigateToCategory: (String) -> Unit,
     onNavigateToCardGames: () -> Unit,
+    onNavigateToActionGames: () -> Unit,
+    onNavigateToCouchGames: () -> Unit,
     onNavigateToAllGames: () -> Unit,
     onNavigateToRaetsel: () -> Unit,
     onRejoinGame: (type: String, gameId: String) -> Unit = { _, _ -> },
@@ -326,10 +330,7 @@ fun HomeScreen(
         }
 
         // ── Rätsel ────────────────────────────────────────────────────────────────
-        SectionHeader(
-            title = "RÄTSEL", emoji = "🧩",
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp)
-        )
+        Spacer(Modifier.height(24.dp))
         Surface(
             shape = RoundedCornerShape(14.dp),
             color = SurfaceDark,
@@ -359,11 +360,8 @@ fun HomeScreen(
             }
         }
 
-        // ── Kartenspiele ──────────────────────────────────────────────────────────
-        SectionHeader(
-            title = "KARTENSPIELE", emoji = "🃏",
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp)
-        )
+        // ── Karten ────────────────────────────────────────────────────────────────
+        Spacer(Modifier.height(24.dp))
         Surface(
             shape = RoundedCornerShape(14.dp),
             color = SurfaceDark,
@@ -381,7 +379,7 @@ fun HomeScreen(
                 Text(text = "🃏", fontSize = 28.sp)
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Kartenspiele",
+                        text = "Karten",
                         fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
                     )
                     Text(
@@ -393,32 +391,70 @@ fun HomeScreen(
             }
         }
 
-        // ── Gespeicherte Spiele ───────────────────────────────────────────────────
-        if (savedPuzzles.isNotEmpty()) {
-            SectionHeader(
-                title = "GESPEICHERTE SPIELE", emoji = "💾",
-                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp)
-            )
+        // ── Action ────────────────────────────────────────────────────────────────
+        Spacer(Modifier.height(24.dp))
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = SurfaceDark,
+            modifier = Modifier
+                .padding(horizontal = 20.dp)
+                .fillMaxWidth()
+                .border(1.5.dp, Color(0xFFF97316).copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                .clickable { onNavigateToActionGames() }
+        ) {
             Row(
-                modifier = Modifier
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                savedPuzzles.forEach { save ->
-                    val info = PUZZLE_GAME_INFO[save.gameType]
-                    if (info != null) {
-                        SavedPuzzleCard(save = save, info = info, onClick = { onNavigateToRaetsel() })
-                    }
+                Text(text = "⚡", fontSize = 28.sp)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Action",
+                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
+                    )
+                    Text(
+                        text = "${ACTION_GAMES.size} Spiele · BeachPirates, BeachVolley & mehr",
+                        fontSize = 12.sp, color = TextMuted,
+                    )
                 }
+                Text(text = "›", fontSize = 22.sp, color = Color(0xFFF97316))
+            }
+        }
+
+        // ── Couch ─────────────────────────────────────────────────────────────────
+        Spacer(Modifier.height(24.dp))
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = SurfaceDark,
+            modifier = Modifier
+                .padding(horizontal = 20.dp)
+                .fillMaxWidth()
+                .border(1.5.dp, Color(0xFFF59E0B).copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                .clickable { onNavigateToCouchGames() }
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(text = "🛋️", fontSize = 28.sp)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Couch",
+                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
+                    )
+                    Text(
+                        text = "${COUCH_GAMES.size} Spiele · BeachBingo, Vier4Bier & mehr",
+                        fontSize = 12.sp, color = TextMuted,
+                    )
+                }
+                Text(text = "›", fontSize = 22.sp, color = Color(0xFFF59E0B))
             }
         }
 
         // ── Alle Spiele ───────────────────────────────────────────────────────────
-        SectionHeader(
-            title = "ALLE SPIELE", emoji = "🎮",
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp)
-        )
+        Spacer(Modifier.height(24.dp))
         Surface(
             shape = RoundedCornerShape(14.dp),
             color = SurfaceDark,
@@ -445,6 +481,27 @@ fun HomeScreen(
                     )
                 }
                 Text(text = "›", fontSize = 22.sp, color = OceanBlue)
+            }
+        }
+
+        // ── Gespeicherte Spiele ───────────────────────────────────────────────────
+        if (savedPuzzles.isNotEmpty()) {
+            SectionHeader(
+                title = "GESPEICHERTE SPIELE", emoji = "💾",
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp)
+            )
+            Row(
+                modifier = Modifier
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                savedPuzzles.forEach { save ->
+                    val info = PUZZLE_GAME_INFO[save.gameType]
+                    if (info != null) {
+                        SavedPuzzleCard(save = save, info = info, onClick = { onNavigateToRaetsel() })
+                    }
+                }
             }
         }
 

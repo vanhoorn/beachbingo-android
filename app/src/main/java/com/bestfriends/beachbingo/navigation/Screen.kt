@@ -77,6 +77,8 @@ sealed interface Screen {
     @Serializable data class Category(val playerCount: String) : Screen
     @Serializable object AllGames : Screen
     @Serializable object CardGames : Screen
+    @Serializable object ActionGames : Screen
+    @Serializable object CouchGames : Screen
     @Serializable object Raetsel : Screen
     // Brandung
     @Serializable object BrandungLobby : Screen
