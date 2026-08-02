@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,21 +39,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import kotlin.math.sin
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestfriends.beachbingo.core.model.PongDifficulty
 import com.bestfriends.beachbingo.feature.pong.viewmodel.BALL_R
@@ -282,26 +279,7 @@ fun PongGameScreen(
                     }
                 }
 
-                Canvas(
-                    modifier = canvasModifier.pointerInput(mySide, cw, ch) {
-                        // Track all pointer events for paddle control
-                        while (true) {
-                            val event = awaitPointerEventScope {
-                                awaitPointerEvent()
-                            }
-                            event.changes.firstOrNull()?.let { change ->
-                                val pos = change.position
-                                val sx = cw / size.width
-                                val sy = ch / size.height
-                                val lx = pos.x * sx
-                                val ly = pos.y * sy
-                                val paddle = if (mySide == "left" || mySide == "right") ly.toDouble() else lx.toDouble()
-                                viewModel.updateMyPaddle(paddle)
-                                change.consume()
-                            }
-                        }
-                    }
-                ) {
+                Canvas(modifier = canvasModifier) {
                     val scaleX = size.width / cw
                     val scaleY = size.height / ch
 
@@ -309,6 +287,66 @@ fun PongGameScreen(
                         draw2PField(gs, scaleX, scaleY)
                     } else {
                         drawMultiField(gs, totalPaddles, scaleX, scaleY)
+                    }
+                }
+            }
+
+            // ── Zone control strip ────────────────────────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .background(Color(0xFF0D0D0D))
+                    .pointerInput(mySide, humanCount, is2P, cw, ch) {
+                        while (true) {
+                            val event = awaitPointerEventScope { awaitPointerEvent() }
+                            event.changes.forEach { change ->
+                                val pos = change.position
+                                val zW = size.width.toFloat()
+                                val zH = size.height.toFloat()
+                                val frac  = (pos.y / zH).coerceIn(0f, 1f)
+                                val fracX = (pos.x / zW).coerceIn(0f, 1f)
+                                val side = if (humanCount == 1) mySide
+                                           else if (pos.x < zW / 2f) "left" else "right"
+                                val isVert = side == "left" || side == "right"
+                                val wallOff = if (is2P && isVert) MARGIN.toDouble() else 0.0
+                                val axisSize = (if (isVert) ch else cw).toDouble()
+                                val pMin = PADDLE_LEN / 2.0 + wallOff
+                                val pMax = axisSize - PADDLE_LEN / 2.0 - wallOff
+                                val paddle = if (isVert) pMin + frac * (pMax - pMin)
+                                             else pMin + fracX * (pMax - pMin)
+                                viewModel.updatePaddleSide(side, paddle)
+                                change.consume()
+                            }
+                        }
+                    }
+            ) {
+                if (humanCount >= 2) {
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(Modifier.width(3.dp).height(28.dp).background(OceanBlue, RoundedCornerShape(2.dp)))
+                            Text("↕", fontSize = 10.sp, color = Color(0xFF444444), fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("↕", fontSize = 10.sp, color = Color(0xFF444444), fontWeight = FontWeight.Bold)
+                            Box(Modifier.width(3.dp).height(28.dp).background(Coral, RoundedCornerShape(2.dp)))
+                        }
+                    }
+                } else {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        val paddleColor = SIDE_COLOR[mySide] ?: OceanBlue
+                        val isVert = mySide == "left" || mySide == "right"
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (isVert) {
+                                Box(Modifier.width(3.dp).height(32.dp).background(paddleColor, RoundedCornerShape(2.dp)))
+                                Text("↕", fontSize = 11.sp, color = Color(0xFF444444), fontWeight = FontWeight.Bold)
+                            } else {
+                                Box(Modifier.width(32.dp).height(3.dp).background(paddleColor, RoundedCornerShape(2.dp)))
+                                Text("↔", fontSize = 11.sp, color = Color(0xFF444444), fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
             }
@@ -340,17 +378,6 @@ fun PongGameScreen(
                 }
             }
 
-            // ── Touch hint ────────────────────────────────────────────────────
-            Text(
-                if (mySide == "left" || mySide == "right") "↕ Ziehe zum Steuern" else "↔ Ziehe zum Steuern",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                textAlign = TextAlign.Center,
-                fontSize = 11.sp,
-                color = (SIDE_COLOR[mySide] ?: TextMuted).copy(alpha = 0.6f),
-                fontWeight = FontWeight.Bold
-            )
         }
 
         if (showQuitDialog) {
@@ -492,189 +519,106 @@ fun PongGameScreen(
 
 // ── DrawScope helpers ─────────────────────────────────────────────────────────
 
-private fun DrawScope.drawBackground(sx: Float, sy: Float) {
-    // Sandy beach gradient
-    drawRect(
-        brush = Brush.linearGradient(
-            colors = listOf(Color(0xFFC8A86B), Color(0xFFD4B87A), Color(0xFFC09050)),
-            start = Offset(0f, 0f),
-            end = Offset(0f, size.height)
-        )
-    )
-    // Subtle sand texture
-    val lineColor = Color(0x128B6A30)
-    var y = 0f
-    while (y < size.height) {
-        val offset = sin(y * 0.3f) * 1.5f
-        drawLine(lineColor, Offset(0f, y + offset), Offset(size.width, y + offset), 1.dp.toPx())
-        y += 6f
-    }
-    // Court boundary
-    val bx = (MARGIN + PADDLE_THICK + 4) * sx
-    val bTop = 8f * sy
-    drawRect(
-        color = Color(0x59FFFFFF),
-        topLeft = Offset(bx, bTop),
-        size = Size(size.width - 2 * bx, size.height - 2 * bTop),
-        style = Stroke(width = 2.dp.toPx())
-    )
-}
-
 private fun DrawScope.draw2PField(g: PongGS, sx: Float, sy: Float) {
-    drawBackground(sx, sy)
-
-    // Top and bottom walls — sand planks (ball bounces off these, MARGIN units thick)
+    val w = size.width
+    val h = size.height
     val wallH = MARGIN * sy
-    val wallColor = Color(0xCC8B6530)
-    drawRect(wallColor, Offset(0f, 0f), Size(size.width, wallH))
-    drawRect(wallColor, Offset(0f, size.height - wallH), Size(size.width, wallH))
 
-    // Net bar + horizontal stripes
-    val nx = size.width / 2f
-    drawRect(Color(0x4D000000), Offset(nx - 3f, 0f), Size(6f, size.height))   // shadow
-    drawRect(Color(0xFF7A5C28), Offset(nx - 2f, 0f), Size(4f, size.height))
-    val stripeStep = 9f * sy
-    var ys = 8f * sy
-    while (ys < size.height) {
-        drawLine(Color(0x8CFFFFFF), Offset(nx - 6f, ys), Offset(nx + 6f, ys), 1.dp.toPx())
-        ys += stripeStep
+    // Black background
+    drawRect(Color.Black)
+
+    // White walls
+    drawRect(Color.White, Offset(0f, 0f), Size(w, wallH))
+    drawRect(Color.White, Offset(0f, h - wallH), Size(w, wallH))
+
+    // Dashed center line
+    val dashLen = 12.dp.toPx()
+    val dashGap = 10.dp.toPx()
+    val nx = w / 2f
+    var yy = wallH
+    while (yy < h - wallH) {
+        val end = (yy + dashLen).coerceAtMost(h - wallH)
+        drawLine(Color.White, Offset(nx, yy), Offset(nx, end), 4.dp.toPx())
+        yy += dashLen + dashGap
     }
 
-    drawSurfboard(
-        x = MARGIN * sx,
-        y = (g.paddleLeft - PADDLE_LEN / 2).toFloat() * sy,
-        w = PADDLE_THICK * sx, h = PADDLE_LEN * sy,
-        color = OceanBlue, vertical = true
+    // Left paddle
+    drawRect(
+        color = Color.White,
+        topLeft = Offset(MARGIN * sx, (g.paddleLeft - PADDLE_LEN / 2).toFloat() * sy),
+        size = Size(PADDLE_THICK * sx, PADDLE_LEN * sy)
     )
-    drawSurfboard(
-        x = size.width - (MARGIN + PADDLE_THICK) * sx,
-        y = (g.paddleRight - PADDLE_LEN / 2).toFloat() * sy,
-        w = PADDLE_THICK * sx, h = PADDLE_LEN * sy,
-        color = Coral, vertical = true
+    // Right paddle
+    drawRect(
+        color = Color.White,
+        topLeft = Offset(w - (MARGIN + PADDLE_THICK) * sx, (g.paddleRight - PADDLE_LEN / 2).toFloat() * sy),
+        size = Size(PADDLE_THICK * sx, PADDLE_LEN * sy)
     )
-    drawVolleyball(g, sx, sy)
+
+    drawClassicBall(g, sx, sy)
 }
 
 private fun DrawScope.drawMultiField(g: PongGS, totalPaddles: Int, sx: Float, sy: Float) {
     val s = size.width
     val wall = g.wallSide
 
-    drawBackground(sx, sy)
+    // Black background
+    drawRect(Color.Black)
 
-    // Dashed cross net
-    val dashLen = 5.dp.toPx()
-    val dashGap = 6.dp.toPx()
+    // Dashed cross
+    val dashLen = 10.dp.toPx()
+    val dashGap = 8.dp.toPx()
     var yy = 0f
     while (yy < s) {
-        drawLine(Color(0x4CFFFFFF), Offset(s / 2f, yy), Offset(s / 2f, (yy + dashLen).coerceAtMost(s)), 1.5.dp.toPx())
+        val end = (yy + dashLen).coerceAtMost(s)
+        drawLine(Color.White, Offset(s / 2f, yy), Offset(s / 2f, end), 3.dp.toPx())
         yy += dashLen + dashGap
     }
     var xx = 0f
     while (xx < s) {
-        drawLine(Color(0x4CFFFFFF), Offset(xx, s / 2f), Offset((xx + dashLen).coerceAtMost(s), s / 2f), 1.5.dp.toPx())
+        val end = (xx + dashLen).coerceAtMost(s)
+        drawLine(Color.White, Offset(xx, s / 2f), Offset(end, s / 2f), 3.dp.toPx())
         xx += dashLen + dashGap
     }
 
-    // Corner deflectors (4P) — sand-colored
+    // Corner triangles (4P)
     if (totalPaddles == 4) {
         val cs = CORNER_SIZE * sx
-        val cc = Color(0xBB8B6530)
+        val cc = Color(0xFF333333)
         drawPath(Path().apply { moveTo(0f, 0f); lineTo(cs, 0f); lineTo(0f, cs); close() }, cc)
         drawPath(Path().apply { moveTo(s, 0f); lineTo(s - cs, 0f); lineTo(s, cs); close() }, cc)
         drawPath(Path().apply { moveTo(0f, s); lineTo(cs, s); lineTo(0f, s - cs); close() }, cc)
         drawPath(Path().apply { moveTo(s, s); lineTo(s - cs, s); lineTo(s, s - cs); close() }, cc)
     }
 
-    // Wall — sand plank
+    // Wall
     if (wall != null) {
-        val wc = Color(0xCC8B6530)
         val thickness = (PADDLE_THICK + MARGIN) * sx
         when (wall) {
-            "left"   -> drawRect(wc, Offset(0f, 0f),             Size(thickness, s))
-            "right"  -> drawRect(wc, Offset(s - thickness, 0f),  Size(thickness, s))
-            "top"    -> drawRect(wc, Offset(0f, 0f),             Size(s, thickness))
-            "bottom" -> drawRect(wc, Offset(0f, s - thickness),  Size(s, thickness))
+            "left"   -> drawRect(Color(0xFF333333), Offset(0f, 0f),            Size(thickness, s))
+            "right"  -> drawRect(Color(0xFF333333), Offset(s - thickness, 0f), Size(thickness, s))
+            "top"    -> drawRect(Color(0xFF333333), Offset(0f, 0f),            Size(s, thickness))
+            "bottom" -> drawRect(Color(0xFF333333), Offset(0f, s - thickness), Size(s, thickness))
         }
     }
 
     // Paddles
     val activeSides = PongGameViewModel.sidesForPaddles(totalPaddles, wall)
     activeSides.forEach { side ->
-        val color = SIDE_COLOR[side] ?: OceanBlue
+        val color = SIDE_COLOR[side] ?: Color.White
         val pos = PongGameViewModel.paddleOf(g, side).toFloat()
         when (side) {
-            "left"   -> drawSurfboard(MARGIN * sx, (pos - PADDLE_LEN / 2) * sy, PADDLE_THICK * sx, PADDLE_LEN * sy, color, vertical = true)
-            "right"  -> drawSurfboard(s - (MARGIN + PADDLE_THICK) * sx, (pos - PADDLE_LEN / 2) * sy, PADDLE_THICK * sx, PADDLE_LEN * sy, color, vertical = true)
-            "top"    -> drawSurfboard((pos - PADDLE_LEN / 2) * sx, MARGIN * sy, PADDLE_LEN * sx, PADDLE_THICK * sy, color, vertical = false)
-            "bottom" -> drawSurfboard((pos - PADDLE_LEN / 2) * sx, s - (MARGIN + PADDLE_THICK) * sy, PADDLE_LEN * sx, PADDLE_THICK * sy, color, vertical = false)
+            "left"   -> drawRect(color, Offset(MARGIN * sx, (pos - PADDLE_LEN / 2) * sy), Size(PADDLE_THICK * sx, PADDLE_LEN * sy))
+            "right"  -> drawRect(color, Offset(s - (MARGIN + PADDLE_THICK) * sx, (pos - PADDLE_LEN / 2) * sy), Size(PADDLE_THICK * sx, PADDLE_LEN * sy))
+            "top"    -> drawRect(color, Offset((pos - PADDLE_LEN / 2) * sx, MARGIN * sy), Size(PADDLE_LEN * sx, PADDLE_THICK * sy))
+            "bottom" -> drawRect(color, Offset((pos - PADDLE_LEN / 2) * sx, s - (MARGIN + PADDLE_THICK) * sy), Size(PADDLE_LEN * sx, PADDLE_THICK * sy))
         }
     }
 
-    drawVolleyball(g, sx, sy)
+    drawClassicBall(g, sx, sy)
 }
 
-private fun DrawScope.drawSurfboard(x: Float, y: Float, w: Float, h: Float, color: Color, vertical: Boolean) {
-    val cx = x + w / 2f
-    val cy = y + h / 2f
-    val hw = w / 2f
-    val hh = h / 2f
-
-    val path = Path()
-    if (vertical) {
-        path.moveTo(cx, cy - hh)
-        path.cubicTo(cx + hw * 2.2f, cy - hh * 0.6f, cx + hw * 2.2f, cy + hh * 0.6f, cx, cy + hh)
-        path.cubicTo(cx - hw * 2.2f, cy + hh * 0.6f, cx - hw * 2.2f, cy - hh * 0.6f, cx, cy - hh)
-        path.close()
-        drawPath(path, brush = Brush.linearGradient(
-            colors = listOf(shadeColor(color, -0.08f), color, shadeColor(color, -0.08f)),
-            start = Offset(x, cy), end = Offset(x + w, cy)
-        ))
-        drawLine(Color(0x59FFFFFF), Offset(cx, cy - hh * 0.7f), Offset(cx, cy + hh * 0.7f), 1.5.dp.toPx())
-    } else {
-        path.moveTo(cx - hw, cy)
-        path.cubicTo(cx - hw * 0.6f, cy - hh * 2.2f, cx + hw * 0.6f, cy - hh * 2.2f, cx + hw, cy)
-        path.cubicTo(cx + hw * 0.6f, cy + hh * 2.2f, cx - hw * 0.6f, cy + hh * 2.2f, cx - hw, cy)
-        path.close()
-        drawPath(path, brush = Brush.linearGradient(
-            colors = listOf(shadeColor(color, -0.08f), color, shadeColor(color, -0.08f)),
-            start = Offset(cx, y), end = Offset(cx, y + h)
-        ))
-        drawLine(Color(0x59FFFFFF), Offset(cx - hw * 0.7f, cy), Offset(cx + hw * 0.7f, cy), 1.5.dp.toPx())
-    }
-}
-
-private fun shadeColor(color: Color, delta: Float): Color = Color(
-    red   = (color.red   + delta).coerceIn(0f, 1f),
-    green = (color.green + delta).coerceIn(0f, 1f),
-    blue  = (color.blue  + delta).coerceIn(0f, 1f),
-    alpha = color.alpha
-)
-
-private fun DrawScope.drawVolleyball(g: PongGS, sx: Float, sy: Float) {
+private fun DrawScope.drawClassicBall(g: PongGS, sx: Float, sy: Float) {
     if (g.paused && g.pauseTimer >= 30) return
-    val bx = g.bx.toFloat() * sx
-    val by = g.by.toFloat() * sy
-    val r  = BALL_R * sx
-    val r2 = r * 1.05f
-    val seam = Stroke(width = 1.4.dp.toPx())
-
-    // Drop shadow
-    drawCircle(Color(0x66000000), radius = r * 1.1f, center = Offset(bx + 1f, by + 2f))
-    // Ball base (off-white)
-    drawCircle(Color(0xFFF5F2E6), radius = r, center = Offset(bx, by))
-
-    // Blue seam — arc centered at (bx - r*0.3, by - r*0.3), from 99° sweep 135°
-    drawArc(Color(0xFF2563EB), 99f, 135f, false,
-        Offset(bx - r * 0.3f - r2, by - r * 0.3f - r2), Size(r2 * 2, r2 * 2), style = seam)
-    // Orange seam — arc centered at (bx + r*0.3, by), from 279° sweep 126°
-    drawArc(Color(0xFFF59E0B), 279f, 126f, false,
-        Offset(bx + r * 0.3f - r2, by - r2), Size(r2 * 2, r2 * 2), style = seam)
-    // Green seam — arc centered at (bx, by + r*0.35), from 9° sweep 162°
-    drawArc(Color(0xFF16A34A), 9f, 162f, false,
-        Offset(bx - r2, by + r * 0.35f - r2), Size(r2 * 2, r2 * 2), style = seam)
-
-    // Outer border
-    drawCircle(Color(0x26000000), radius = r, center = Offset(bx, by), style = Stroke(1.dp.toPx()))
-    // Highlight
-    drawCircle(Color(0x8CFFFFFF), radius = r * 0.3f, center = Offset(bx - r * 0.28f, by - r * 0.28f))
+    drawCircle(Color.White, radius = BALL_R * sx, center = Offset(g.bx.toFloat() * sx, g.by.toFloat() * sy))
 }

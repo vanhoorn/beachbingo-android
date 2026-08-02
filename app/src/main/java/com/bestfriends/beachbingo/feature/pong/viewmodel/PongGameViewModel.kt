@@ -33,6 +33,14 @@ const val PADDLE_LEN = 90f
 const val MARGIN = 20f
 const val BALL_R = 9f
 const val BASE_SPEED = 5.0
+
+/** Returns a launch angle that avoids near-vertical: tilt 10°–80° from horizontal. */
+private fun launchAngle(): Double {
+    val tilt = (10.0 + Math.random() * 70.0) * Math.PI / 180.0
+    val hDir = if (Math.random() < 0.5) 0.0 else Math.PI
+    val vSign = if (Math.random() < 0.5) 1.0 else -1.0
+    return hDir + vSign * tilt
+}
 const val MAX_SPEED = 13.0
 const val CORNER_SIZE = 38f
 
@@ -142,7 +150,7 @@ class PongGameViewModel @Inject constructor(
         val wall = if (totalPaddles == 3) {
             listOf("left", "right", "top", "bottom").filter { it !in humanSides }.random()
         } else null
-        val angle = Math.random() * Math.PI * 2
+        val angle = launchAngle()
         _gs.value = PongGS(
             bx = cw / 2, by = ch / 2,
             bvx = BASE_SPEED * cos(angle), bvy = BASE_SPEED * sin(angle),
@@ -344,7 +352,7 @@ class PongGameViewModel @Inject constructor(
                 return lostSide
             } else {
                 // Reset ball after point
-                val angle = Math.random() * Math.PI * 2
+                val angle = launchAngle()
                 _gs.value = newGs.copy(
                     bx = cw / 2, by = ch / 2,
                     bvx = BASE_SPEED * cos(angle), bvy = BASE_SPEED * sin(angle),
@@ -408,12 +416,31 @@ class PongGameViewModel @Inject constructor(
         }
     }
 
+    fun updatePaddleSide(side: String, position: Double) {
+        val is2P = totalPaddles == 2
+        val ch = if (is2P) H2.toDouble() else SQ.toDouble()
+        val cw = if (is2P) W2.toDouble() else SQ.toDouble()
+        val isVertical = side == "left" || side == "right"
+        val axisSize = if (isVertical) ch else cw
+        val wallOff = if (is2P && isVertical) MARGIN.toDouble() else 0.0
+        val clamped = position.coerceIn(PADDLE_LEN / 2.0 + wallOff, axisSize - PADDLE_LEN / 2.0 - wallOff)
+        _gs.update { gs ->
+            when (side) {
+                "left"   -> gs.copy(paddleLeft   = clamped)
+                "right"  -> gs.copy(paddleRight  = clamped)
+                "top"    -> gs.copy(paddleTop    = clamped)
+                "bottom" -> gs.copy(paddleBottom = clamped)
+                else -> gs
+            }
+        }
+    }
+
     fun resetGame() {
         val is2P = totalPaddles == 2
         val cw = if (is2P) W2.toDouble() else SQ.toDouble()
         val ch = if (is2P) H2.toDouble() else SQ.toDouble()
         val wall = if (totalPaddles == 3) listOf("left", "right", "top", "bottom").random() else null
-        val angle = Math.random() * Math.PI * 2
+        val angle = launchAngle()
         _gs.value = PongGS(
             bx = cw / 2, by = ch / 2,
             bvx = BASE_SPEED * cos(angle), bvy = BASE_SPEED * sin(angle),
