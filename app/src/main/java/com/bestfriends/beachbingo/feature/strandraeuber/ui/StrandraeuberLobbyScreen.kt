@@ -71,6 +71,8 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import org.json.JSONObject
 
 private val SpCrimson = Color(0xFFE11D48)
 
@@ -91,7 +93,7 @@ private fun generateGameCode(): String {
 @Composable
 fun StrandraeuberLobbyScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToGame: (mode: String, gameId: String?, aiCount: Int, difficulty: String, totalRounds: Int) -> Unit,
+    onNavigateToGame: (mode: String, gameId: String?, aiCount: Int, difficulty: String, totalRounds: Int, saveId: String?) -> Unit,
     onNavigateToResults: () -> Unit,
     onNavigateToSettings: () -> Unit,
 ) {
@@ -184,7 +186,7 @@ fun StrandraeuberLobbyScreen(
                 db.collection("strandraeuberGames").document(code).set(data).await()
                 gameDocId = code
                 gameCode = code
-                onNavigateToGame("ONLINE", code, 0, difficulty, totalRounds)
+                onNavigateToGame("ONLINE", code, 0, difficulty, totalRounds, null)
             } catch (_: Exception) {
                 createError = "Erstellen fehlgeschlagen. Bitte erneut versuchen."
             } finally {
@@ -199,7 +201,7 @@ fun StrandraeuberLobbyScreen(
             try {
                 db.collection("strandraeuberGames").document(gameDocId)
                     .update(mapOf("status" to "RUNNING", "phase" to "DEALING")).await()
-                onNavigateToGame("ONLINE", gameDocId, 0, "SNIPER", totalRounds)
+                onNavigateToGame("ONLINE", gameDocId, 0, "SNIPER", totalRounds, null)
             } catch (_: Exception) {}
         }
     }
@@ -264,6 +266,24 @@ fun StrandraeuberLobbyScreen(
             // ── Step: Mode ──
             if (step == "mode") {
                 Text("Spielmodus wählen", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+
+                // Fortsetzen card
+                val savedSp = remember { PuzzleSaveManager.getGameSave(context, "strandraeuber") }
+                if (savedSp != null) {
+                    val savedAiCount = remember(savedSp) {
+                        try { maxOf(1, JSONObject(savedSp.gameState).getJSONArray("players").length() - 1) } catch (_: Exception) { 1 }
+                    }
+                    val savedTotalRounds = remember(savedSp) {
+                        try { JSONObject(savedSp.gameState).optInt("totalRounds", 3) } catch (_: Exception) { 3 }
+                    }
+                    SpModeCard(
+                        emoji = "▶️",
+                        title = "Fortsetzen",
+                        description = savedSp.displayLabel,
+                        color = SpCrimson,
+                        onClick = { onNavigateToGame("AI", null, savedAiCount, savedSp.difficulty, savedTotalRounds, savedSp.id) },
+                    )
+                }
 
                 SpModeCard(
                     emoji = "🤖",
@@ -379,7 +399,7 @@ fun StrandraeuberLobbyScreen(
                 }
 
                 Button(
-                    onClick = { onNavigateToGame("AI", null, aiCount, difficulty, totalRounds) },
+                    onClick = { onNavigateToGame("AI", null, aiCount, difficulty, totalRounds, null) },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = SpCrimson),
                     shape = RoundedCornerShape(12.dp),

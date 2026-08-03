@@ -77,6 +77,13 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
+import com.bestfriends.beachbingo.feature.raetsel.GameSave
+import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -88,6 +95,7 @@ private val AI_NAMES = listOf("🤖 Möwe", "🤖 Krabbe", "🤖 Fisch", "🤖 H
 
 // ── Data Models ────────────────────────────────────────────────────────────────
 
+@Serializable
 data class SpCard(
     val id: String,
     val pairId: String,
@@ -95,6 +103,7 @@ data class SpCard(
     val name: String,
 )
 
+@Serializable
 data class SpLocalPlayer(
     val userId: String,
     val displayName: String,
@@ -118,6 +127,56 @@ data class SpGameState(
     val totalRounds: Int,
     val lastActionText: String = "",
     val showRoundEnd: Boolean = false,
+)
+
+// Serializable save state (Pair is not serializable, so we use a wrapper)
+@Serializable
+private data class SpCardPair(val first: SpCard, val second: SpCard)
+
+@Serializable
+private data class SpSavedState(
+    val players: List<SpLocalPlayer>,
+    val activePlayerIndices: List<Int>,
+    val turnIndex: Int,
+    val phase: String,
+    val lastPairsDiscarded: List<SpCardPair>,
+    val discardedPairs: List<SpCardPair>,
+    val roundScores: Map<String, Int>,
+    val loserUserId: String?,
+    val roundNumber: Int,
+    val totalRounds: Int,
+    val lastActionText: String,
+    val showRoundEnd: Boolean,
+)
+
+private fun SpGameState.toSavedState() = SpSavedState(
+    players = players,
+    activePlayerIndices = activePlayerIndices,
+    turnIndex = turnIndex,
+    phase = phase.name,
+    lastPairsDiscarded = lastPairsDiscarded.map { SpCardPair(it.first, it.second) },
+    discardedPairs = discardedPairs.map { SpCardPair(it.first, it.second) },
+    roundScores = roundScores,
+    loserUserId = loserUserId,
+    roundNumber = roundNumber,
+    totalRounds = totalRounds,
+    lastActionText = lastActionText,
+    showRoundEnd = showRoundEnd,
+)
+
+private fun SpSavedState.toSpGameState() = SpGameState(
+    players = players,
+    activePlayerIndices = activePlayerIndices,
+    turnIndex = turnIndex,
+    phase = try { SpPhase.valueOf(phase) } catch (_: Exception) { SpPhase.PLAYING },
+    lastPairsDiscarded = lastPairsDiscarded.map { Pair(it.first, it.second) },
+    discardedPairs = discardedPairs.map { Pair(it.first, it.second) },
+    roundScores = roundScores,
+    loserUserId = loserUserId,
+    roundNumber = roundNumber,
+    totalRounds = totalRounds,
+    lastActionText = lastActionText,
+    showRoundEnd = showRoundEnd,
 )
 
 // ── Card deck ──────────────────────────────────────────────────────────────────
@@ -562,12 +621,14 @@ fun StrandraeuberGameScreen(
     aiCount: Int,
     difficulty: String,
     totalRounds: Int,
+    saveId: String? = null,
     onNavigateBack: () -> Unit,
 ) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid ?: ""
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     val audio = remember { StrandraeuberAudioManager() }
     DisposableEffect(Unit) { onDispose { audio.release() } }
@@ -577,6 +638,20 @@ fun StrandraeuberGameScreen(
 
     var selectedCardIndex by remember { mutableIntStateOf(-1) }
     var showLoser by remember { mutableStateOf(false) }
+
+    // ── Restore from save ──────────────────────────────────────────────────────
+    LaunchedEffect(saveId) {
+        if (saveId == null) return@LaunchedEffect
+        val save = PuzzleSaveManager.getGameSave(context, "strandraeuber")
+        if (save == null || save.id != saveId) return@LaunchedEffect
+        try {
+            val restored = Json.decodeFromString<SpSavedState>(save.gameState)
+            localState = restored.toSpGameState().copy(
+                phase = SpPhase.PLAYING,
+                showRoundEnd = false,
+            )
+        } catch (_: Exception) {}
+    }
 
     // Load settings and init game
     LaunchedEffect(uid) {
@@ -590,6 +665,7 @@ fun StrandraeuberGameScreen(
         } catch (_: Exception) {}
         audio.startMusic(snd, mus)
 
+        if (mode == "AI" && saveId != null) return@LaunchedEffect
         if (mode == "AI") {
             try {
                 val snap = db.collection("users").document(uid).get().await()
@@ -739,36 +815,63 @@ fun StrandraeuberGameScreen(
     var startingGame by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
 
-    BackHandler(enabled = mode == "ONLINE") { showQuitDialog = true }
+    BackHandler { showQuitDialog = true }
 
+    val st = localState
     if (showQuitDialog) {
-        Dialog(onDismissRequest = { showQuitDialog = false }) {
-            androidx.compose.material3.Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = SurfaceDark,
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text("🏳️", fontSize = 36.sp)
-                    Text("Spiel verlassen?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
-                    Text(
-                        "Du kannst über den Code wieder beitreten.",
-                        fontSize = 13.sp, color = TextMuted, textAlign = TextAlign.Center,
+        if (mode == "AI" && st != null) {
+            GameSaveQuitDialog(
+                emoji = "🦹",
+                message = "Runde ${st.roundNumber} · ${st.players.size} Spieler",
+                onContinue = { showQuitDialog = false },
+                onSaveAndQuit = {
+                    val saveData = GameSave(
+                        id = java.util.UUID.randomUUID().toString(),
+                        gameType = "strandraeuber",
+                        difficulty = difficulty,
+                        gameState = Json.encodeToString(st.copy(phase = SpPhase.PLAYING, showRoundEnd = false).toSavedState()),
+                        displayLabel = "Runde ${st.roundNumber} · ${st.players.size} Spieler",
+                        savedAt = System.currentTimeMillis(),
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        OutlinedButton(
-                            onClick = { showQuitDialog = false },
-                            modifier = Modifier.weight(1f).height(44.dp),
-                        ) { Text("Bleiben", color = TextPrimary) }
-                        Button(
-                            onClick = { showQuitDialog = false; onNavigateBack() },
-                            modifier = Modifier.weight(1f).height(44.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = SpCrimson),
-                            shape = RoundedCornerShape(10.dp),
-                        ) { Text("Verlassen", color = Color.White) }
+                    PuzzleSaveManager.saveGame(context, saveData)
+                    showQuitDialog = false
+                    onNavigateBack()
+                },
+                onQuitWithoutSave = {
+                    PuzzleSaveManager.deleteGameSave(context, "strandraeuber")
+                    showQuitDialog = false
+                    onNavigateBack()
+                },
+            )
+        } else {
+            Dialog(onDismissRequest = { showQuitDialog = false }) {
+                androidx.compose.material3.Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = SurfaceDark,
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text("🏳️", fontSize = 36.sp)
+                        Text("Spiel verlassen?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                        Text(
+                            "Du kannst über den Code wieder beitreten.",
+                            fontSize = 13.sp, color = TextMuted, textAlign = TextAlign.Center,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            OutlinedButton(
+                                onClick = { showQuitDialog = false },
+                                modifier = Modifier.weight(1f).height(44.dp),
+                            ) { Text("Bleiben", color = TextPrimary) }
+                            Button(
+                                onClick = { showQuitDialog = false; onNavigateBack() },
+                                modifier = Modifier.weight(1f).height(44.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = SpCrimson),
+                                shape = RoundedCornerShape(10.dp),
+                            ) { Text("Verlassen", color = Color.White) }
+                        }
                     }
                 }
             }
@@ -794,7 +897,7 @@ fun StrandraeuberGameScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { if (mode == "ONLINE") showQuitDialog = true else onNavigateBack() }) {
+                    IconButton(onClick = { showQuitDialog = true }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Zurück", tint = TextPrimary)
                     }
                 },

@@ -900,8 +900,8 @@ fun AppNavigation() {
                         popUpTo(Screen.Home) { inclusive = false }
                     }
                 },
-                onNavigateToGame = { mode, gameId, aiCount, difficulty, totalRounds ->
-                    navController.navigate(Screen.StrandraeuberGame(mode, gameId, aiCount, difficulty, totalRounds)) {
+                onNavigateToGame = { mode, gameId, aiCount, difficulty, totalRounds, saveId ->
+                    navController.navigate(Screen.StrandraeuberGame(mode, gameId, aiCount, difficulty, totalRounds, saveId)) {
                         popUpTo(Screen.StrandraeuberLobby)
                     }
                 },
@@ -918,6 +918,7 @@ fun AppNavigation() {
                 aiCount = route.aiCount,
                 difficulty = route.difficulty,
                 totalRounds = route.totalRounds,
+                saveId = route.saveId,
                 onNavigateBack = {
                     navController.navigate(Screen.StrandraeuberLobby) {
                         popUpTo(Screen.StrandraeuberLobby) { inclusive = true }

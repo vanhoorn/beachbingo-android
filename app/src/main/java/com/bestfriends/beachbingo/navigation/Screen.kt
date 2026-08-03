@@ -124,6 +124,7 @@ sealed interface Screen {
         val aiCount: Int = 2,
         val difficulty: String = "SNIPER",
         val totalRounds: Int = 3,
+        val saveId: String? = null,
     ) : Screen
     @Serializable object StrandraeuberSettings : Screen
     @Serializable object StrandraeuberResults : Screen
