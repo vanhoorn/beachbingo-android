@@ -78,6 +78,8 @@ import com.bestfriends.beachbingo.ui.theme.SurfaceDark
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
 import com.bestfriends.beachbingo.ui.theme.TextSub
+import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import org.json.JSONObject
 
 private val BeerOrange = Color(0xFFC2410C)
 
@@ -86,7 +88,7 @@ private val BeerOrange = Color(0xFFC2410C)
 fun VierLobbyScreen(
     initialJoinCode: String? = null,
     onNavigateBack: () -> Unit,
-    onNavigateToGame: (mode: String, gameId: String?, myDrinkId: String, aiDrinkId: String?, aiDifficulty: String) -> Unit,
+    onNavigateToGame: (mode: String, gameId: String?, myDrinkId: String, aiDrinkId: String?, aiDifficulty: String, saveId: String?) -> Unit,
     onNavigateToResults: () -> Unit,
     onNavigateToSettings: () -> Unit,
     viewModel: VierLobbyViewModel = hiltViewModel(),
@@ -127,7 +129,7 @@ fun VierLobbyScreen(
     LaunchedEffect(uiState.navigateToGame) {
         uiState.navigateToGame?.let { nav ->
             viewModel.clearNavigate()
-            onNavigateToGame(nav.mode, nav.gameId, nav.myDrinkId, nav.aiDrinkId, nav.aiDifficulty)
+            onNavigateToGame(nav.mode, nav.gameId, nav.myDrinkId, nav.aiDrinkId, nav.aiDifficulty, null)
         }
     }
 
@@ -182,6 +184,35 @@ fun VierLobbyScreen(
 
             // ── Step: Mode ──
             if (step == "mode") {
+                val savedVierGame = remember { PuzzleSaveManager.getGameSave(context, "vier") }
+                if (savedVierGame != null) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0x1AC2410C),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Text("💾", fontSize = 26.sp)
+                            Column(Modifier.weight(1f)) {
+                                Text("Gespeichertes Spiel", fontSize = 11.sp, color = TextMuted, fontWeight = FontWeight.Bold)
+                                Text(savedVierGame.displayLabel, fontSize = 14.sp, color = TextPrimary)
+                            }
+                            Button(
+                                onClick = {
+                                    val savedState = try { JSONObject(savedVierGame.gameState) } catch (_: Exception) { null }
+                                    val savedMyDrinkId = savedState?.optString("myDrinkId") ?: "lager"
+                                    val savedAiDrinkId = savedState?.optString("aiDrinkId") ?: "whisky"
+                                    onNavigateToGame("ai", null, savedMyDrinkId, savedAiDrinkId, savedVierGame.difficulty, savedVierGame.id)
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = BeerOrange),
+                            ) { Text("Fortsetzen", fontSize = 13.sp) }
+                        }
+                    }
+                }
                 Text(
                     text = "Spielmodus wählen",
                     style = MaterialTheme.typography.titleMedium,

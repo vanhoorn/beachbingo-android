@@ -555,8 +555,8 @@ fun AppNavigation() {
                         popUpTo(Screen.Home) { inclusive = false }
                     }
                 },
-                onNavigateToGame = { mode, gameId, myDrinkId, aiDrinkId, aiDifficulty ->
-                    navController.navigate(Screen.VierGame(mode, gameId, myDrinkId, aiDrinkId, aiDifficulty)) {
+                onNavigateToGame = { mode, gameId, myDrinkId, aiDrinkId, aiDifficulty, saveId ->
+                    navController.navigate(Screen.VierGame(mode, gameId, myDrinkId, aiDrinkId, aiDifficulty, saveId)) {
                         popUpTo(Screen.VierLobby)
                     }
                 },
@@ -573,6 +573,7 @@ fun AppNavigation() {
                 myDrinkId = route.myDrinkId,
                 aiDrinkId = route.aiDrinkId,
                 aiDifficulty = route.aiDifficulty,
+                saveId = route.saveId,
                 onNavigateBack = {
                     navController.navigate(Screen.VierLobby) {
                         popUpTo(Screen.VierLobby) { inclusive = true }

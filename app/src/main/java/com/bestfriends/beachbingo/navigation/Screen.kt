@@ -33,6 +33,7 @@ sealed interface Screen {
         val myDrinkId: String,
         val aiDrinkId: String?,
         val aiDifficulty: String = "SNIPER",
+        val saveId: String? = null,
     ) : Screen
     @Serializable object VierSettings : Screen
     @Serializable object VierResults : Screen

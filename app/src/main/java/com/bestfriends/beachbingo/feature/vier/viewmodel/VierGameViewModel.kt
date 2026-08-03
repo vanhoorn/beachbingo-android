@@ -384,6 +384,37 @@ class VierGameViewModel @Inject constructor(
         }
     }
 
+    fun loadSave(board: List<Int>, currentPlayer: Int, difficulty: String) {
+        aiResultWritten = false
+        _uiState.update {
+            VierGameUiState(board = board, currentPlayer = currentPlayer, aiThinking = currentPlayer == 2)
+        }
+        if (currentPlayer == 2) {
+            viewModelScope.launch {
+                delay(500)
+                val current = _uiState.value
+                if (current.currentPlayer != 2 || current.winner != null || current.draw) return@launch
+                val aiCol = getBestMove(current.board, 2, difficulty)
+                val aiRow = getAvailableRow(current.board, aiCol)
+                val aiBoard = dropPieceIntoBoard(current.board, aiCol, 2)
+                val (aiWon, aiWinCells) = checkWin(aiBoard, 2)
+                val aiDraw = !aiWon && isBoardDraw(aiBoard)
+                dropAnimKey++
+                _uiState.update {
+                    it.copy(
+                        board = aiBoard, currentPlayer = 1,
+                        winner = if (aiWon) 2 else null, draw = aiDraw,
+                        winCells = aiWinCells, aiThinking = false,
+                        lastDroppedCell = aiRow * COLS + aiCol,
+                        lastDroppedRow = aiRow, dropAnimKey = dropAnimKey,
+                    )
+                }
+                if (aiWon) saveAiResult(humanWon = false, draw = false)
+                else if (aiDraw) saveAiResult(humanWon = false, draw = true)
+            }
+        }
+    }
+
     fun restartAi() {
         aiResultWritten = false
         _uiState.update { VierGameUiState() }

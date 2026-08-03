@@ -44,6 +44,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.bestfriends.beachbingo.ui.components.GameHudBar
 import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
+import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
+import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.GameSave
+import androidx.compose.ui.platform.LocalContext
+import org.json.JSONArray
+import org.json.JSONObject
 import kotlinx.coroutines.tasks.await
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -92,11 +98,14 @@ fun VierGameScreen(
     myDrinkId: String,
     aiDrinkId: String?,
     aiDifficulty: String = "SNIPER",
+    saveId: String? = null,
     onNavigateBack: () -> Unit,
     viewModel: VierGameViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val uid = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+
+    val context = LocalContext.current
 
     // Initialize game
     LaunchedEffect(mode, gameId) {
@@ -105,6 +114,19 @@ fun VierGameScreen(
         } else if (mode == "ai") {
             viewModel.initAi(myDrinkId)
         }
+    }
+
+    // Restore from save (AI mode only)
+    LaunchedEffect(saveId) {
+        if (saveId == null || mode != "ai") return@LaunchedEffect
+        val save = PuzzleSaveManager.getGameSave(context, "vier") ?: return@LaunchedEffect
+        try {
+            val obj = JSONObject(save.gameState)
+            val arr = obj.getJSONArray("board")
+            val board = (0 until arr.length()).map { arr.getInt(it) }
+            val currentPlayer = obj.getInt("currentPlayer")
+            viewModel.loadSave(board, currentPlayer, aiDifficulty)
+        } catch (_: Exception) {}
     }
 
     // Derived display values
@@ -189,11 +211,43 @@ fun VierGameScreen(
     }
 
     if (showQuitDialog) {
-        QuitConfirmDialog(
-            message = "Das laufende Spiel wird beendet.",
-            onConfirm = { onNavigateBack() },
-            onDismiss = { showQuitDialog = false; manualPaused = false },
-        )
+        if (isAiMode && !gameOver) {
+            GameSaveQuitDialog(
+                emoji = "🍺",
+                message = "KI-Partie · ${uiState.board.count { it != 0 }} Steine gesetzt",
+                onContinue = { showQuitDialog = false; manualPaused = false },
+                onSaveAndQuit = {
+                    val boardJson = JSONArray(uiState.board.map { it.toLong() })
+                    PuzzleSaveManager.saveGame(
+                        context,
+                        GameSave(
+                            id = java.util.UUID.randomUUID().toString(),
+                            gameType = "vier",
+                            difficulty = aiDifficulty,
+                            gameState = JSONObject()
+                                .put("board", boardJson)
+                                .put("currentPlayer", uiState.currentPlayer)
+                                .put("myDrinkId", myDrinkId)
+                                .put("aiDrinkId", aiDrinkId ?: "whisky")
+                                .toString(),
+                            displayLabel = "KI · ${uiState.board.count { it != 0 }} Steine",
+                            savedAt = System.currentTimeMillis(),
+                        )
+                    )
+                    onNavigateBack()
+                },
+                onQuitWithoutSave = {
+                    PuzzleSaveManager.deleteGameSave(context, "vier")
+                    onNavigateBack()
+                },
+            )
+        } else {
+            QuitConfirmDialog(
+                message = "Das laufende Spiel wird beendet.",
+                onConfirm = { onNavigateBack() },
+                onDismiss = { showQuitDialog = false; manualPaused = false },
+            )
+        }
     }
 
     Scaffold(
