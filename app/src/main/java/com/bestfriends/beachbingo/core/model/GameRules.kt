@@ -250,7 +250,7 @@ val ALL_GAME_RULES: Map<String, GameRule> = mapOf(
         title = "WortWelle",
         emoji = "🌊",
         color = 0xFF06B6D4,
-        tagline = "Jede Welle bringt einen neuen Hinweis.",
+        tagline = "Das Wordle-Rätsel auf Deutsch — mit Umlauten, Hard Mode und Tageswort.",
         goal = "Errate das geheime deutsche Wort in möglichst wenigen Versuchen.",
         rules = listOf(
             "Tippe auf die Buchstaben-Tastatur und bestätige mit ↵ — jede Eingabe ist ein vollständiges Wort.",

@@ -80,9 +80,9 @@ private val MeermauViolet = Color(0xFF7C3AED)
 private data class MmDifficultyOption(val id: String, val label: String, val emoji: String, val description: String)
 
 private val MM_DIFFICULTIES = listOf(
-    MmDifficultyOption("ROOKIE",     "Rookie",     "😅", "Macht häufig Fehler – gut zum Üben"),
+    MmDifficultyOption("ROOKIE",     "Rookie",     "🌊", "Macht häufig Fehler – gut zum Üben"),
     MmDifficultyOption("SNIPER",     "Sniper",     "🎯", "Spielt clever – fordert aber fair"),
-    MmDifficultyOption("BOSS_LEVEL", "Boss Level", "💀", "Fast unbesiegbar – alles oder nichts"),
+    MmDifficultyOption("BOSS_LEVEL", "Boss Level", "💪", "Fast unbesiegbar – alles oder nichts"),
 )
 
 private fun generateMeermauCode(): String {
@@ -105,7 +105,7 @@ fun MeermauLobbyScreen(
     val scope = rememberCoroutineScope()
 
     var step by remember { mutableStateOf("mode") }
-    var aiCount by remember { mutableIntStateOf(1) }
+    var aiCount by remember { mutableIntStateOf(2) }
     var difficulty by remember { mutableStateOf("SNIPER") }
     var isFavorite by remember { mutableStateOf(false) }
 

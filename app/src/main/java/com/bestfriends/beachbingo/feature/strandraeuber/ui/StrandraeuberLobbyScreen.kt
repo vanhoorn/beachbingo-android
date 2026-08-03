@@ -77,9 +77,9 @@ private val SpCrimson = Color(0xFFE11D48)
 private data class SpDifficultyOption(val id: String, val label: String, val emoji: String, val description: String)
 
 private val SP_DIFFICULTIES = listOf(
-    SpDifficultyOption("ROOKIE",     "Rookie",     "😅", "Macht häufig Fehler – gut zum Üben"),
+    SpDifficultyOption("ROOKIE",     "Rookie",     "🌊", "Macht häufig Fehler – gut zum Üben"),
     SpDifficultyOption("SNIPER",     "Sniper",     "🎯", "Spielt clever – fordert aber fair"),
-    SpDifficultyOption("BOSS_LEVEL", "Boss Level", "💀", "Mischt immer – fast unberechenbar"),
+    SpDifficultyOption("BOSS_LEVEL", "Boss Level", "💪", "Mischt immer – fast unberechenbar"),
 )
 
 private fun generateGameCode(): String {

@@ -77,9 +77,9 @@ private val BrandungTeal = Color(0xFF0D9488)
 private data class DifficultyOption(val id: String, val label: String, val emoji: String, val description: String)
 
 private val DIFFICULTIES = listOf(
-    DifficultyOption("ROOKIE",     "Rookie",     "😅", "Macht häufig Fehler – gut zum Üben"),
+    DifficultyOption("ROOKIE",     "Rookie",     "🌊", "Macht häufig Fehler – gut zum Üben"),
     DifficultyOption("SNIPER",     "Sniper",     "🎯", "Spielt clever – fordert aber fair"),
-    DifficultyOption("BOSS_LEVEL", "Boss Level", "💀", "Fast unbesiegbar – alles oder nichts"),
+    DifficultyOption("BOSS_LEVEL", "Boss Level", "💪", "Fast unbesiegbar – alles oder nichts"),
 )
 
 private fun generateGameCode(): String {

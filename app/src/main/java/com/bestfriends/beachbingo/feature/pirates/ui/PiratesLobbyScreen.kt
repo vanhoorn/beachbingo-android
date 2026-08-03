@@ -52,7 +52,7 @@ fun PiratesLobbyScreen(
     val firestore = FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid
 
-    var difficulty by remember { mutableStateOf("SNIPER") }
+    var difficulty by remember { mutableStateOf("ROOKIE") }
     var fireRate by remember { mutableIntStateOf(5) }
     var controlMode by remember { mutableStateOf("BUTTONS") }
     var loading by remember { mutableStateOf(true) }
@@ -62,7 +62,7 @@ fun PiratesLobbyScreen(
     LaunchedEffect(uid) {
         if (uid == null) { loading = false; return@LaunchedEffect }
         val snap = firestore.collection("users").document(uid).get().await()
-        difficulty = snap.getString("preferredPiratesDifficulty") ?: "SNIPER"
+        difficulty = snap.getString("preferredPiratesDifficulty") ?: "ROOKIE"
         fireRate = (snap.getLong("preferredPiratesFireRate") ?: 5L).toInt()
         controlMode = snap.getString("preferredPiratesControlMode") ?: "BUTTONS"
         @Suppress("UNCHECKED_CAST")
@@ -214,7 +214,7 @@ fun PiratesLobbyScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = Purple),
                     shape = RoundedCornerShape(14.dp),
                 ) {
-                    Text("🏴‍☠️  Spiel starten", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("🎮 Spielen", fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
 
                 Spacer(Modifier.height(8.dp))

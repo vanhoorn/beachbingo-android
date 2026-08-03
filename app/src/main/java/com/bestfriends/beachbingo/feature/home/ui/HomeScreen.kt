@@ -131,6 +131,13 @@ fun HomeScreen(
     onNavigateToCouchGames: () -> Unit,
     onNavigateToAllGames: () -> Unit,
     onNavigateToRaetsel: () -> Unit,
+    onNavigateToDuenenschattenLobby: () -> Unit = {},
+    onNavigateToInselbrueckeLobby: () -> Unit = {},
+    onNavigateToStrandokuLobby: () -> Unit = {},
+    onNavigateToWellensummeLobby: () -> Unit = {},
+    onNavigateToKuestenkriegLobby: () -> Unit = {},
+    onNavigateToWortWelleLobby: () -> Unit = {},
+    onNavigateToRaetselGame: (save: PuzzleSave) -> Unit = {},
     onRejoinGame: (type: String, gameId: String) -> Unit = { _, _ -> },
     viewModel: AuthViewModel = hiltViewModel(),
 ) {
@@ -327,15 +334,21 @@ fun HomeScreen(
                 favoriteGames.forEach { game ->
                     MiniGameCard(game = game, onClick = {
                         when (game.id) {
-                            "bingo"      -> onNavigateToBingoLobby()
-                            "pong"       -> onNavigateToPongLobby()
-                            "vier"       -> onNavigateToVierLobby()
-                            "pirates"    -> onNavigateToPiratesLobby()
-                            "worm"       -> onNavigateToWormLobby()
-                            "strandturm" -> onNavigateToStrandturmLobby()
+                            "bingo"          -> onNavigateToBingoLobby()
+                            "pong"           -> onNavigateToPongLobby()
+                            "vier"           -> onNavigateToVierLobby()
+                            "pirates"        -> onNavigateToPiratesLobby()
+                            "worm"           -> onNavigateToWormLobby()
+                            "strandturm"     -> onNavigateToStrandturmLobby()
                             "brandung"       -> onNavigateToBrandungLobby()
                             "meermau"        -> onNavigateToMeermauLobby()
                             "strandraeuber"  -> onNavigateToStrandraeuberLobby()
+                            "duenenschatten" -> onNavigateToDuenenschattenLobby()
+                            "inselbruecke"   -> onNavigateToInselbrueckeLobby()
+                            "strandoku"      -> onNavigateToStrandokuLobby()
+                            "wellensumme"    -> onNavigateToWellensummeLobby()
+                            "kuestenkrieg"   -> onNavigateToKuestenkriegLobby()
+                            "wortwelle"      -> onNavigateToWortWelleLobby()
                         }
                     })
                 }
@@ -534,7 +547,7 @@ fun HomeScreen(
                 savedPuzzles.forEach { save ->
                     val info = PUZZLE_GAME_INFO[save.gameType]
                     if (info != null) {
-                        SavedPuzzleCard(save = save, info = info, onClick = { onNavigateToRaetsel() })
+                        SavedPuzzleCard(save = save, info = info, onClick = { onNavigateToRaetselGame(save) })
                     }
                 }
             }
@@ -872,7 +885,7 @@ private fun HelpTourDialog(
                         shape = RoundedCornerShape(12.dp),
                     ) {
                         Text(
-                            if (slide == TOUR_SLIDES.size - 1) "Los geht's!" else "Weiter →",
+                            if (slide == TOUR_SLIDES.size - 1) "Los geht's! 🏖️" else "Weiter →",
                             color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold,
                         )
                     }

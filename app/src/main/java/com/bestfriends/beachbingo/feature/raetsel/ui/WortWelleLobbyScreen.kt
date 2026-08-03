@@ -113,7 +113,7 @@ fun WortWelleLobbyScreen(
                     modifier = Modifier.size(36.dp)
                         .border(1.dp, WwAccent.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                         .clickable { showStats = true }
-                ) { Box(contentAlignment = Alignment.Center) { Text("📊", fontSize = 16.sp) } }
+                ) { Box(contentAlignment = Alignment.Center) { Text("🏆", fontSize = 16.sp) } }
                 Spacer(Modifier.width(8.dp))
                 Surface(
                     shape = RoundedCornerShape(10.dp),
@@ -214,11 +214,11 @@ fun WortWelleLobbyScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = WwAccent),
                 shape = RoundedCornerShape(14.dp),
             ) {
-                Text("🎲 Zufälliges Spiel starten", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = BgDark)
+                Text("🌊 Zufälliges Spiel starten", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = BgDark)
             }
 
             // ── Gespeicherte Spiele ───────────────────────────────────────────
-            val filteredSaves = saves.filter { it.difficulty == selected }
+            val filteredSaves = saves
             if (filteredSaves.isNotEmpty()) {
                 Text("GESPEICHERTE SPIELE", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
                 filteredSaves.forEach { save ->
@@ -312,6 +312,24 @@ fun WortWelleLobbyScreen(
                                         if (count > 0) Text("$count", fontSize = 11.sp, color = BgDark, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 6.dp))
                                     }
                                 }
+                            }
+                        }
+                    }
+
+                    if (stats.dailyPlayed > 0) {
+                        Spacer(Modifier.height(16.dp))
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = BgDark,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+                                Text("🗓 Tageswort", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    "Gespielt: ${stats.dailyPlayed} · Gewonnen: ${stats.dailyWon} · Streak: ${stats.dailyCurrentStreak}",
+                                    fontSize = 12.sp, color = TextMuted,
+                                )
                             }
                         }
                     }

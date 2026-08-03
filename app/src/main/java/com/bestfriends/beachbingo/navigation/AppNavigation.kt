@@ -82,6 +82,7 @@ import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegOnlinePlacement
 import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegOnlineBattleScreen
 import com.bestfriends.beachbingo.feature.raetsel.ui.WortWelleLobbyScreen
 import com.bestfriends.beachbingo.feature.raetsel.ui.WortWelleGameScreen
+import com.bestfriends.beachbingo.feature.raetsel.PuzzleSave
 
 @Composable
 fun AppNavigation() {
@@ -155,6 +156,22 @@ fun AppNavigation() {
                 onNavigateToCouchGames = { navController.navigate(Screen.CouchGames) },
                 onNavigateToAllGames = { navController.navigate(Screen.AllGames) },
                 onNavigateToRaetsel = { navController.navigate(Screen.Raetsel) },
+                onNavigateToDuenenschattenLobby = { navController.navigate(Screen.DuenenschattenLobby) },
+                onNavigateToInselbrueckeLobby = { navController.navigate(Screen.InselbrueckeLobby) },
+                onNavigateToStrandokuLobby = { navController.navigate(Screen.StrandokuLobby) },
+                onNavigateToWellensummeLobby = { navController.navigate(Screen.WellensummeLobby) },
+                onNavigateToKuestenkriegLobby = { navController.navigate(Screen.KuestenkriegLobby) },
+                onNavigateToWortWelleLobby = { navController.navigate(Screen.WortWelleLobby) },
+                onNavigateToRaetselGame = { save ->
+                    when (save.gameType) {
+                        "duenenschatten" -> navController.navigate(Screen.DuenenschattenGame(save.difficulty, save.seed, save.id))
+                        "inselbruecke"   -> navController.navigate(Screen.InselbrueckeGame(save.difficulty, save.seed, save.id))
+                        "strandoku"      -> navController.navigate(Screen.StrandokuGame(save.variant, save.difficulty, save.seed, save.id))
+                        "wellensumme"    -> navController.navigate(Screen.WellensummeGame(save.difficulty, save.seed, save.id))
+                        "kuestenkrieg"   -> navController.navigate(Screen.KuestenkriegGame(save.difficulty, save.seed, save.id))
+                        "wortwelle"      -> navController.navigate(Screen.WortWelleGame(save.difficulty, saveId = save.id))
+                    }
+                },
                 onRejoinGame = { type, gameId ->
                     when (type) {
                         "strandraeuber" -> navController.navigate(Screen.StrandraeuberGame("ONLINE", gameId, 0, "SNIPER", 3))
@@ -181,7 +198,12 @@ fun AppNavigation() {
                 onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
                 onNavigateToMeermauLobby = { navController.navigate(Screen.MeermauLobby) },
                 onNavigateToStrandraeuberLobby = { navController.navigate(Screen.StrandraeuberLobby) },
-                onNavigateToRaetsel = { navController.navigate(Screen.Raetsel) },
+                onNavigateToDuenenschattenLobby = { navController.navigate(Screen.DuenenschattenLobby) },
+                onNavigateToInselbrueckeLobby = { navController.navigate(Screen.InselbrueckeLobby) },
+                onNavigateToStrandokuLobby = { navController.navigate(Screen.StrandokuLobby) },
+                onNavigateToWellensummeLobby = { navController.navigate(Screen.WellensummeLobby) },
+                onNavigateToKuestenkriegLobby = { navController.navigate(Screen.KuestenkriegLobby) },
+                onNavigateToWortWelleLobby = { navController.navigate(Screen.WortWelleLobby) },
             )
         }
 
@@ -392,7 +414,12 @@ fun AppNavigation() {
                 onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
                 onNavigateToMeermauLobby = { navController.navigate(Screen.MeermauLobby) },
                 onNavigateToStrandraeuberLobby = { navController.navigate(Screen.StrandraeuberLobby) },
-                onNavigateToRaetsel = { navController.navigate(Screen.Raetsel) },
+                onNavigateToDuenenschattenLobby = { navController.navigate(Screen.DuenenschattenLobby) },
+                onNavigateToInselbrueckeLobby = { navController.navigate(Screen.InselbrueckeLobby) },
+                onNavigateToStrandokuLobby = { navController.navigate(Screen.StrandokuLobby) },
+                onNavigateToWellensummeLobby = { navController.navigate(Screen.WellensummeLobby) },
+                onNavigateToKuestenkriegLobby = { navController.navigate(Screen.KuestenkriegLobby) },
+                onNavigateToWortWelleLobby = { navController.navigate(Screen.WortWelleLobby) },
             )
         }
 

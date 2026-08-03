@@ -278,7 +278,7 @@ fun LobbyScreen(
             } else {
                 item {
                     Text(
-                        "Deine Spiele",
+                        "Meine Spiele",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 4.dp)

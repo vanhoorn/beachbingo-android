@@ -77,7 +77,12 @@ fun CategoryScreen(
     onNavigateToBrandungLobby: () -> Unit,
     onNavigateToMeermauLobby: () -> Unit,
     onNavigateToStrandraeuberLobby: () -> Unit,
-    onNavigateToRaetsel: () -> Unit = {},
+    onNavigateToDuenenschattenLobby: () -> Unit = {},
+    onNavigateToInselbrueckeLobby: () -> Unit = {},
+    onNavigateToStrandokuLobby: () -> Unit = {},
+    onNavigateToWellensummeLobby: () -> Unit = {},
+    onNavigateToKuestenkriegLobby: () -> Unit = {},
+    onNavigateToWortWelleLobby: () -> Unit = {},
 ) {
     val playerCount = runCatching { PlayerCount.valueOf(playerCountName) }.getOrNull()
         ?: return
@@ -198,17 +203,21 @@ fun CategoryScreen(
                                 .clickable {
                                     handleGameClick(game.id) {
                                         when (game.id) {
-                                            "bingo"      -> onNavigateToBingoLobby()
-                                            "pong"       -> onNavigateToPongLobby()
-                                            "vier"       -> onNavigateToVierLobby()
-                                            "pirates"    -> onNavigateToPiratesLobby()
-                                            "worm"       -> onNavigateToWormLobby()
-                                            "strandturm" -> onNavigateToStrandturmLobby()
-                                            "brandung"      -> onNavigateToBrandungLobby()
-                                            "meermau"       -> onNavigateToMeermauLobby()
-                                            "strandraeuber" -> onNavigateToStrandraeuberLobby()
-                                            "strandoku", "wellensumme", "kuestenkrieg",
-                                            "duenenschatten", "inselbruecke" -> onNavigateToRaetsel()
+                                            "bingo"          -> onNavigateToBingoLobby()
+                                            "pong"           -> onNavigateToPongLobby()
+                                            "vier"           -> onNavigateToVierLobby()
+                                            "pirates"        -> onNavigateToPiratesLobby()
+                                            "worm"           -> onNavigateToWormLobby()
+                                            "strandturm"     -> onNavigateToStrandturmLobby()
+                                            "brandung"       -> onNavigateToBrandungLobby()
+                                            "meermau"        -> onNavigateToMeermauLobby()
+                                            "strandraeuber"  -> onNavigateToStrandraeuberLobby()
+                                            "duenenschatten" -> onNavigateToDuenenschattenLobby()
+                                            "inselbruecke"   -> onNavigateToInselbrueckeLobby()
+                                            "strandoku"      -> onNavigateToStrandokuLobby()
+                                            "wellensumme"    -> onNavigateToWellensummeLobby()
+                                            "kuestenkrieg"   -> onNavigateToKuestenkriegLobby()
+                                            "wortwelle"      -> onNavigateToWortWelleLobby()
                                         }
                                     }
                                 }

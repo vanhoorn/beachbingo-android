@@ -15,9 +15,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
@@ -26,7 +26,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.bestfriends.beachbingo.feature.raetsel.*
 import com.bestfriends.beachbingo.ui.theme.*
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private val WwGameAccent    = Color(0xFF06B6D4)
 private val WwCorrectColor  = Color(0xFF22C55E)
@@ -83,6 +85,7 @@ fun WortWelleGameScreen(
     var gameStatus by remember { mutableStateOf(init.gameStatus) }
     var elapsed    by remember { mutableIntStateOf(init.elapsedSeconds) }
     var running    by remember { mutableStateOf(true) }
+    var paused     by remember { mutableStateOf(false) }
 
     var showResult  by remember { mutableStateOf(false) }
     var showQuit    by remember { mutableStateOf(false) }
@@ -93,11 +96,23 @@ fun WortWelleGameScreen(
     val resultSaved = remember { mutableStateOf(false) }
     val saveIdRef   = remember { if (!isDaily) saveId ?: PuzzleSaveManager.generateId() else "" }
 
+    // ── Flip-Animation ───────────────────────────────────────────────────────
+    val preRevealedRows = remember { (0 until init.guesses.size).toSet() }
+    val flipScales = remember { List(cfg.maxGuesses) { List(cfg.wordLength) { Animatable(1f) } } }
+    var revealedSet by remember {
+        mutableStateOf(
+            preRevealedRows.flatMap { row ->
+                (0 until cfg.wordLength).map { col -> row * 100 + col }
+            }.toSet()
+        )
+    }
+
+    val bestTime = remember { PuzzleSaveManager.getBestTimeAny(context, "wortwelle", difficulty) }
     val keyStatuses = remember(guesses) { computeWwKeyStatuses(guesses, targetWord) }
 
     // ── Timer ───────────────────────────────────────────────────────────────
-    LaunchedEffect(running, showResult) {
-        while (running && gameStatus == "playing") { delay(1000L); elapsed++ }
+    LaunchedEffect(running, showResult, paused) {
+        while (running && !paused && gameStatus == "playing") { delay(1000L); elapsed++ }
     }
 
     // ── Spielende erkennen ───────────────────────────────────────────────────
@@ -109,8 +124,24 @@ fun WortWelleGameScreen(
             if (gameStatus == "won") PuzzleSaveManager.recordBestTime(context, "wortwelle", difficulty, difficulty, elapsed)
             recordWwResult(context, difficulty, gameStatus == "won", guesses.size, isDaily, dateStr)
             if (!isDaily && saveIdRef.isNotEmpty()) PuzzleSaveManager.deleteSave(context, saveIdRef)
-            delay(600L)
+            delay(cfg.wordLength * 150L + 200L)
             showResult = true
+        }
+    }
+
+    // ── Flip-Animation nach Submit ────────────────────────────────────────────
+    LaunchedEffect(guesses.size) {
+        val row = guesses.size - 1
+        if (row < 0 || row in preRevealedRows) return@LaunchedEffect
+        coroutineScope {
+            for (col in 0 until cfg.wordLength) {
+                launch {
+                    delay(col * 150L)
+                    flipScales[row][col].animateTo(0f, tween(150))
+                    revealedSet = revealedSet + (row * 100 + col)
+                    flipScales[row][col].animateTo(1f, tween(150))
+                }
+            }
         }
     }
 
@@ -195,8 +226,9 @@ fun WortWelleGameScreen(
                 title = {
                     Column {
                         Text("WORTWELLE", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                        val bestLabel = if (bestTime != null) "  ⏱ ${PuzzleSaveManager.formatElapsed(bestTime)}" else ""
                         Text(
-                            "${cfg.label}${if (isDaily) " · Tageswort" else ""}  ·  ${PuzzleSaveManager.formatElapsed(elapsed)}",
+                            "${cfg.label}${if (isDaily) " · Tageswort" else ""}  ·  ${PuzzleSaveManager.formatElapsed(elapsed)}$bestLabel",
                             style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.ExtraBold,
                         )
                     }
@@ -216,8 +248,8 @@ fun WortWelleGameScreen(
             val availW = maxWidth.value
             val availH = maxHeight.value
 
-            val keyboardH   = 168f  // 3 rows * 52dp + gaps + padding
-            val controlsH   = 52f   // Controls-Leiste (Speichern, Regeln)
+            val keyboardH   = 168f
+            val controlsH   = 52f
             val errorH      = 30f
             val gridPad     = 16f
             val gridGapDp   = 5f
@@ -253,13 +285,15 @@ fun WortWelleGameScreen(
                         ) {
                             for (col in 0 until cfg.wordLength) {
                                 val cellStr = if (isCurrentRow) cells.getOrElse(col) { "" } else ""
+                                val isRevealed = (row * 100 + col) in revealedSet
                                 val char: Char? = when {
                                     guess != null -> guess.getOrNull(col)
                                     isCurrentRow  -> cellStr.firstOrNull()
                                     else          -> null
                                 }
                                 val status: WwLetterStatus = when {
-                                    statuses != null -> statuses.getOrElse(col) { WwLetterStatus.ABSENT }
+                                    guess != null && isRevealed -> statuses?.getOrElse(col) { WwLetterStatus.ABSENT } ?: WwLetterStatus.ABSENT
+                                    guess != null && !isRevealed -> WwLetterStatus.TYPING
                                     isCurrentRow && cellStr.isNotEmpty() -> WwLetterStatus.TYPING
                                     else -> WwLetterStatus.EMPTY
                                 }
@@ -276,9 +310,11 @@ fun WortWelleGameScreen(
                                     status == WwLetterStatus.EMPTY  -> BorderColor
                                     else -> Color.Transparent
                                 }
+                                val flipScale = flipScales[row][col].value
                                 Box(
                                     modifier = Modifier
                                         .size(cellDp)
+                                        .scale(scaleX = 1f, scaleY = flipScale)
                                         .background(bg, RoundedCornerShape(6.dp))
                                         .border(2.dp, borderColor, RoundedCornerShape(6.dp))
                                         .then(
@@ -345,6 +381,18 @@ fun WortWelleGameScreen(
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                         ) { Text("💾", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
                     }
+                    if (gameStatus == "playing") {
+                        OutlinedButton(
+                            onClick = { paused = !paused },
+                            border = androidx.compose.foundation.BorderStroke(1.dp, WwGameAccent.copy(alpha = 0.33f)),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = WwGameAccent.copy(alpha = 0.13f),
+                                contentColor = WwGameAccent,
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        ) { Text(if (paused) "▶" else "⏸", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                    }
                     OutlinedButton(
                         onClick = { running = false; showRules = true },
                         border = androidx.compose.foundation.BorderStroke(1.dp, TextSub.copy(alpha = 0.33f)),
@@ -364,7 +412,7 @@ fun WortWelleGameScreen(
                         ),
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    ) { Text("✕ Aufgeben", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                    ) { Text("✕", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
                 }
 
                 // ── QWERTZ-Tastatur ───────────────────────────────────────────
@@ -422,41 +470,39 @@ fun WortWelleGameScreen(
 
     // ── Ergebnis-Dialog ───────────────────────────────────────────────────────
     if (showResult) {
+        val finalStats = remember(showResult) { getWwStats(context, difficulty) }
+        val winPct = if (finalStats.played > 0) finalStats.won * 100 / finalStats.played else 0
         Dialog(onDismissRequest = {}) {
             Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
                 Column(modifier = Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(if (gameStatus == "won") "🎉" else "😔", fontSize = 48.sp)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        if (gameStatus == "won") "Gewonnen!" else "Verloren!",
+                        if (gameStatus == "won") "Glückwunsch!" else "Verloren!",
                         fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
                     )
+                    Spacer(Modifier.height(10.dp))
+                    Text("Das Wort war:", fontSize = 13.sp, color = TextMuted)
                     Spacer(Modifier.height(6.dp))
-                    if (gameStatus == "lost") {
-                        Text("Das Wort war:", fontSize = 13.sp, color = TextMuted)
-                        Spacer(Modifier.height(6.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            targetWord.forEach { ch ->
-                                Box(
-                                    modifier = Modifier.size(36.dp).background(WwCorrectColor, RoundedCornerShape(6.dp)),
-                                    contentAlignment = Alignment.Center,
-                                ) { Text(ch.toString(), fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color.White) }
-                            }
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        targetWord.forEach { ch ->
+                            Box(
+                                modifier = Modifier.size(36.dp).background(WwCorrectColor, RoundedCornerShape(6.dp)),
+                                contentAlignment = Alignment.Center,
+                            ) { Text(ch.toString(), fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color.White) }
                         }
-                        Spacer(Modifier.height(8.dp))
                     }
-                    if (gameStatus == "won") {
-                        Text(
-                            "${guesses.size} Versuch${if (guesses.size == 1) "" else "e"} · ${PuzzleSaveManager.formatElapsed(elapsed)}",
-                            fontSize = 14.sp, color = WwGameAccent, fontWeight = FontWeight.Bold,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                    }
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "${PuzzleSaveManager.formatElapsed(elapsed)}  ·  $winPct% Gewonnen  ·  Streak: ${finalStats.currentStreak}",
+                        fontSize = 13.sp, color = WwGameAccent, fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                    )
                     if (isDaily && dateStr != null) {
-                        Text("Tageswort vom $dateStr", fontSize = 11.sp, color = TextMuted)
                         Spacer(Modifier.height(8.dp))
+                        Text("Tageswort vom $dateStr", fontSize = 11.sp, color = TextMuted)
                     }
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(16.dp))
                     Button(
                         onClick = onNavigateBack, modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = WwGameAccent),

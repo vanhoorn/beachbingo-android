@@ -64,7 +64,12 @@ fun AllGamesScreen(
     onNavigateToBrandungLobby: () -> Unit,
     onNavigateToMeermauLobby: () -> Unit,
     onNavigateToStrandraeuberLobby: () -> Unit,
-    onNavigateToRaetsel: () -> Unit = {},
+    onNavigateToDuenenschattenLobby: () -> Unit = {},
+    onNavigateToInselbrueckeLobby: () -> Unit = {},
+    onNavigateToStrandokuLobby: () -> Unit = {},
+    onNavigateToWellensummeLobby: () -> Unit = {},
+    onNavigateToKuestenkriegLobby: () -> Unit = {},
+    onNavigateToWortWelleLobby: () -> Unit = {},
 ) {
     val games = ALL_GAMES.sortedBy { it.title }
     var rulesGameId by remember { mutableStateOf<String?>(null) }
@@ -150,17 +155,21 @@ fun AllGamesScreen(
                         modifier = Modifier
                             .clickable {
                                 when (game.id) {
-                                    "bingo"      -> onNavigateToBingoLobby()
-                                    "pong"       -> onNavigateToPongLobby()
-                                    "vier"       -> onNavigateToVierLobby()
-                                    "pirates"    -> onNavigateToPiratesLobby()
-                                    "worm"       -> onNavigateToWormLobby()
-                                    "strandturm" -> onNavigateToStrandturmLobby()
-                                    "brandung"      -> onNavigateToBrandungLobby()
-                                    "meermau"       -> onNavigateToMeermauLobby()
-                                    "strandraeuber" -> onNavigateToStrandraeuberLobby()
-                                    "strandoku", "wellensumme", "kuestenkrieg",
-                                    "duenenschatten", "inselbruecke" -> onNavigateToRaetsel()
+                                    "bingo"          -> onNavigateToBingoLobby()
+                                    "pong"           -> onNavigateToPongLobby()
+                                    "vier"           -> onNavigateToVierLobby()
+                                    "pirates"        -> onNavigateToPiratesLobby()
+                                    "worm"           -> onNavigateToWormLobby()
+                                    "strandturm"     -> onNavigateToStrandturmLobby()
+                                    "brandung"       -> onNavigateToBrandungLobby()
+                                    "meermau"        -> onNavigateToMeermauLobby()
+                                    "strandraeuber"  -> onNavigateToStrandraeuberLobby()
+                                    "duenenschatten" -> onNavigateToDuenenschattenLobby()
+                                    "inselbruecke"   -> onNavigateToInselbrueckeLobby()
+                                    "strandoku"      -> onNavigateToStrandokuLobby()
+                                    "wellensumme"    -> onNavigateToWellensummeLobby()
+                                    "kuestenkrieg"   -> onNavigateToKuestenkriegLobby()
+                                    "wortwelle"      -> onNavigateToWortWelleLobby()
                                 }
                             }
                             .padding(20.dp),
