@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.Danger
 import com.bestfriends.beachbingo.ui.theme.SandGold
@@ -76,19 +77,27 @@ import com.bestfriends.beachbingo.ui.theme.SurfaceDark
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
 import com.bestfriends.beachbingo.ui.theme.TextSub
+import com.bestfriends.beachbingo.feature.raetsel.GameSave
+import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 // ── Data models ──────────────────────────────────────────────────────────────
 
 private val BrandungTeal = Color(0xFF0D9488)
 
+@Serializable
 data class BrandungCard(val rank: String, val suit: String)
 
+@Serializable
 data class BrandungPlayerLocal(
     val userId: String,
     val displayName: String,
@@ -99,6 +108,7 @@ data class BrandungPlayerLocal(
     val isAI: Boolean = false,
 )
 
+@Serializable
 data class LocalBrandungState(
     val players: List<BrandungPlayerLocal>,
     val tableCards: List<BrandungCard>,
@@ -804,12 +814,14 @@ fun BrandungGameScreen(
     gameId: String?,
     aiCount: Int,
     difficulty: String,
+    saveId: String? = null,
     onNavigateBack: () -> Unit,
 ) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid ?: ""
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     val audio = remember { BrandungAudioManager() }
     DisposableEffect(Unit) { onDispose { audio.release() } }
@@ -826,36 +838,75 @@ fun BrandungGameScreen(
     var selectedTableIdx by remember { mutableStateOf<Int?>(null) }
     var showQuitDialog by remember { mutableStateOf(false) }
 
-    BackHandler(enabled = mode == "online") { showQuitDialog = true }
+    BackHandler { showQuitDialog = true }
 
+    // ── Restore from save ──────────────────────────────────────────────────────
+    LaunchedEffect(saveId) {
+        if (saveId == null) return@LaunchedEffect
+        val save = PuzzleSaveManager.getGameSave(context, "brandung")
+        if (save == null || save.id != saveId) return@LaunchedEffect
+        try {
+            val restored = Json.decodeFromString<LocalBrandungState>(save.gameState)
+            localState = restored.copy(aiThinking = false)
+        } catch (_: Exception) {}
+    }
+
+    // ── Quit dialog ────────────────────────────────────────────────────────────
     if (showQuitDialog) {
-        Dialog(onDismissRequest = { showQuitDialog = false }) {
-            androidx.compose.material3.Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = SurfaceDark,
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text("🏳️", fontSize = 36.sp)
-                    Text("Spiel verlassen?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
-                    Text(
-                        "Du kannst über den Code wieder beitreten.",
-                        fontSize = 13.sp, color = TextMuted, textAlign = TextAlign.Center,
+        val st = localState
+        if (mode == "ai" && st != null) {
+            GameSaveQuitDialog(
+                emoji = "🌊",
+                message = "Runde ${st.round} · ${st.players.size} Spieler · ${st.players.firstOrNull()?.lives ?: 0}♥",
+                onContinue = { showQuitDialog = false },
+                onSaveAndQuit = {
+                    val saveData = GameSave(
+                        id = java.util.UUID.randomUUID().toString(),
+                        gameType = "brandung",
+                        difficulty = difficulty,
+                        gameState = Json.encodeToString(st.copy(aiThinking = false)),
+                        displayLabel = "Runde ${st.round} · ${st.players.size} Spieler · ${st.players.firstOrNull()?.lives ?: 0}♥",
+                        savedAt = System.currentTimeMillis(),
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        OutlinedButton(
-                            onClick = { showQuitDialog = false },
-                            modifier = Modifier.weight(1f).height(44.dp),
-                        ) { Text("Bleiben", color = TextPrimary) }
-                        Button(
-                            onClick = { showQuitDialog = false; onNavigateBack() },
-                            modifier = Modifier.weight(1f).height(44.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = BrandungTeal),
-                            shape = RoundedCornerShape(10.dp),
-                        ) { Text("Verlassen", color = Color.White) }
+                    PuzzleSaveManager.saveGame(context, saveData)
+                    showQuitDialog = false
+                    onNavigateBack()
+                },
+                onQuitWithoutSave = {
+                    PuzzleSaveManager.deleteGameSave(context, "brandung")
+                    showQuitDialog = false
+                    onNavigateBack()
+                },
+            )
+        } else {
+            Dialog(onDismissRequest = { showQuitDialog = false }) {
+                androidx.compose.material3.Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = SurfaceDark,
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text("🏳️", fontSize = 36.sp)
+                        Text("Spiel verlassen?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                        Text(
+                            "Du kannst über den Code wieder beitreten.",
+                            fontSize = 13.sp, color = TextMuted, textAlign = TextAlign.Center,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            OutlinedButton(
+                                onClick = { showQuitDialog = false },
+                                modifier = Modifier.weight(1f).height(44.dp),
+                            ) { Text("Bleiben", color = TextPrimary) }
+                            Button(
+                                onClick = { showQuitDialog = false; onNavigateBack() },
+                                modifier = Modifier.weight(1f).height(44.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = BrandungTeal),
+                                shape = RoundedCornerShape(10.dp),
+                            ) { Text("Verlassen", color = Color.White) }
+                        }
                     }
                 }
             }
@@ -877,6 +928,7 @@ fun BrandungGameScreen(
         } catch (_: Exception) {}
         audio.startMusic(snd, mus)
 
+        if (mode == "ai" && saveId != null) return@LaunchedEffect
         if (mode == "ai") {
             val snap = try { db.collection("users").document(uid).get().await() } catch (_: Exception) { null }
             val displayName = snap?.getString("displayName") ?: "Du"
@@ -1044,7 +1096,7 @@ fun BrandungGameScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { if (mode == "online") showQuitDialog = true else onNavigateBack() }) {
+                    IconButton(onClick = { showQuitDialog = true }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Zurück", tint = TextPrimary)
                     }
                 },

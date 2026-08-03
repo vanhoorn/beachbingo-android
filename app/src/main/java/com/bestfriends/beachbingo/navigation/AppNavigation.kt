@@ -810,8 +810,8 @@ fun AppNavigation() {
                         popUpTo(Screen.Home) { inclusive = false }
                     }
                 },
-                onNavigateToGame = { mode, gameId, aiCount, difficulty ->
-                    navController.navigate(Screen.BrandungGame(mode, gameId, aiCount, difficulty)) {
+                onNavigateToGame = { mode, gameId, aiCount, difficulty, saveId ->
+                    navController.navigate(Screen.BrandungGame(mode, gameId, aiCount, difficulty, saveId)) {
                         popUpTo(Screen.BrandungLobby)
                     }
                 },
@@ -827,6 +827,7 @@ fun AppNavigation() {
                 gameId = route.gameId,
                 aiCount = route.aiCount,
                 difficulty = route.difficulty,
+                saveId = route.saveId,
                 onNavigateBack = {
                     navController.navigate(Screen.BrandungLobby) {
                         popUpTo(Screen.BrandungLobby) { inclusive = true }

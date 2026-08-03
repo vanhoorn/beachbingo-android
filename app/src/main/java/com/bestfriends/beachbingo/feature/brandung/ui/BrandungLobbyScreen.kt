@@ -71,6 +71,8 @@ import kotlinx.coroutines.tasks.await
 import androidx.compose.material.icons.outlined.HelpOutline
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
+import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import org.json.JSONObject
 
 private val BrandungTeal = Color(0xFF0D9488)
 
@@ -91,7 +93,7 @@ private fun generateGameCode(): String {
 @Composable
 fun BrandungLobbyScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToGame: (mode: String, gameId: String?, aiCount: Int, difficulty: String) -> Unit,
+    onNavigateToGame: (mode: String, gameId: String?, aiCount: Int, difficulty: String, saveId: String?) -> Unit,
     onNavigateToResults: () -> Unit,
     onNavigateToSettings: () -> Unit,
 ) {
@@ -182,7 +184,7 @@ fun BrandungLobbyScreen(
             try {
                 db.collection("brandungGames").document(gameDocId)
                     .update("status", "RUNNING").await()
-                onNavigateToGame("online", gameDocId, 0, "SNIPER")
+                onNavigateToGame("online", gameDocId, 0, "SNIPER", null)
             } catch (_: Exception) {}
         }
     }
@@ -247,6 +249,22 @@ fun BrandungLobbyScreen(
             // ── Step: Mode ──
             if (step == "mode") {
                 Text("Spielmodus wählen", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+
+                // Fortsetzen card
+                val savedBrandung = remember { PuzzleSaveManager.getGameSave(context, "brandung") }
+                if (savedBrandung != null) {
+                    val savedAiCount = remember(savedBrandung) {
+                        try { JSONObject(savedBrandung.gameState).getJSONArray("players").length() - 1 } catch (_: Exception) { 1 }
+                    }
+                    val savedDifficulty = savedBrandung.difficulty
+                    BrandungModeCard(
+                        emoji = "▶️",
+                        title = "Fortsetzen",
+                        description = savedBrandung.displayLabel,
+                        color = Color(0xFF0D9488),
+                        onClick = { onNavigateToGame("ai", null, savedAiCount, savedDifficulty, savedBrandung.id) },
+                    )
+                }
 
                 BrandungModeCard(
                     emoji = "🤖",
@@ -349,7 +367,7 @@ fun BrandungLobbyScreen(
                 }
 
                 Button(
-                    onClick = { onNavigateToGame("ai", null, aiCount, difficulty) },
+                    onClick = { onNavigateToGame("ai", null, aiCount, difficulty, null) },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = BrandungTeal),
                     shape = RoundedCornerShape(12.dp),

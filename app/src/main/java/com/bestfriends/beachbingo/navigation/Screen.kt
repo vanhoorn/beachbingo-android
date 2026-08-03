@@ -94,6 +94,7 @@ sealed interface Screen {
         val gameId: String? = null,
         val aiCount: Int = 2,
         val difficulty: String = "SNIPER",
+        val saveId: String? = null,
     ) : Screen
     @Serializable object BrandungSettings : Screen
     @Serializable object BrandungResults : Screen
