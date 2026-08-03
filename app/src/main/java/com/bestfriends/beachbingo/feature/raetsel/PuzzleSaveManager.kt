@@ -6,7 +6,7 @@ import org.json.JSONObject
 
 data class PuzzleSave(
     val id: String,
-    val gameType: String,   // "strandoku" | "wellensumme" | "kuestenkrieg" | "duenenschatten" | "inselbruecke"
+    val gameType: String,   // "wortwelle" | "strandoku" | "wellensumme" | "kuestenkrieg" | "duenenschatten" | "inselbruecke"
     val variant: String,
     val difficulty: String, // "leicht" | "mittel" | "schwer" | "experte"
     val seed: Long,
@@ -108,6 +108,7 @@ object PuzzleSaveManager {
 }
 
 val PUZZLE_GAME_INFO = mapOf(
+    "wortwelle"      to Triple("WortWelle",     "🌊", 0xFF06B6D4L),
     "strandoku"      to Triple("Strandoku",     "🔢", 0xFF38BDF8L),
     "wellensumme"    to Triple("WellenSumme",   "➕", 0xFFC084FCL),
     "kuestenkrieg"   to Triple("Küstenkrieg",   "⚓", 0xFFFB7185L),

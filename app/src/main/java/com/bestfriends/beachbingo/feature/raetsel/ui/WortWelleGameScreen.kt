@@ -34,9 +34,9 @@ private val WwPresentColor  = Color(0xFFEAB308)
 private val WwAbsentColor   = Color(0xFF374151)
 
 private val KEYBOARD_ROWS = listOf(
-    listOf("Q","W","E","R","T","Z","U","I","O","P","Ü"),
-    listOf("A","S","D","F","G","H","J","K","L","Ö","Ä"),
-    listOf("←","Y","X","C","V","B","N","M","ß","↵"),
+    listOf("Q","W","E","R","T","Z","U","I","O","P","←"),
+    listOf("A","S","D","F","G","H","J","K","L"),
+    listOf("Y","X","C","V","B","N","M","↵"),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,7 +69,17 @@ fun WortWelleGameScreen(
 
     val targetWord = remember { init.targetWord }
     var guesses    by remember { mutableStateOf(init.guesses) }
-    var input      by remember { mutableStateOf(init.currentInput) }
+    var cells      by remember {
+        mutableStateOf(List(cfg.wordLength) { i ->
+            init.currentInput.getOrNull(i)?.let { if (it.isLetter()) it.toString() else "" } ?: ""
+        })
+    }
+    var cursorPos  by remember {
+        val f = (0 until cfg.wordLength).firstOrNull { i ->
+            init.currentInput.getOrNull(i)?.isLetter() != true
+        } ?: (cfg.wordLength - 1)
+        mutableIntStateOf(f)
+    }
     var gameStatus by remember { mutableStateOf(init.gameStatus) }
     var elapsed    by remember { mutableIntStateOf(init.elapsedSeconds) }
     var running    by remember { mutableStateOf(true) }
@@ -96,6 +106,7 @@ fun WortWelleGameScreen(
         if (gameStatus == "won" || gameStatus == "lost") {
             resultSaved.value = true
             running = false
+            if (gameStatus == "won") PuzzleSaveManager.recordBestTime(context, "wortwelle", difficulty, difficulty, elapsed)
             recordWwResult(context, difficulty, gameStatus == "won", guesses.size, isDaily, dateStr)
             if (!isDaily && saveIdRef.isNotEmpty()) PuzzleSaveManager.deleteSave(context, saveIdRef)
             delay(600L)
@@ -125,7 +136,7 @@ fun WortWelleGameScreen(
             PuzzleSaveManager.savePuzzle(context, PuzzleSave(
                 id = saveIdRef, gameType = "wortwelle", variant = "random",
                 difficulty = difficulty, seed = 0L,
-                puzzleState = serializeWwState(targetWord, guesses, input, gameStatus),
+                puzzleState = serializeWwState(targetWord, guesses, cells.joinToString(""), gameStatus),
                 startedAt = System.currentTimeMillis(), elapsedSeconds = elapsed,
             ))
         }
@@ -135,13 +146,22 @@ fun WortWelleGameScreen(
     fun handleKey(key: String) {
         if (gameStatus != "playing") return
         when (key) {
-            "←" -> if (input.isNotEmpty()) input = input.dropLast(1)
+            "←" -> {
+                if (cells[cursorPos].isNotEmpty()) {
+                    cells = cells.toMutableList().also { it[cursorPos] = "" }
+                } else if (cursorPos > 0) {
+                    val newPos = cursorPos - 1
+                    cells = cells.toMutableList().also { it[newPos] = "" }
+                    cursorPos = newPos
+                }
+            }
             "↵" -> {
-                if (input.length < cfg.wordLength) {
+                if (cells.any { it.isEmpty() }) {
                     errorMsg = "Bitte ${cfg.wordLength} Buchstaben eingeben."
                     shakeRow = guesses.size
                     return
                 }
+                val input = cells.joinToString("")
                 if (!isValidWwGuess(input, difficulty)) {
                     errorMsg = "Unbekanntes Wort!"
                     shakeRow = guesses.size
@@ -157,12 +177,14 @@ fun WortWelleGameScreen(
                 }
                 val newGuesses = guesses + input
                 guesses = newGuesses
-                input = ""
+                cells = List(cfg.wordLength) { "" }
+                cursorPos = 0
                 if (newGuesses.last() == targetWord) gameStatus = "won"
                 else if (newGuesses.size >= cfg.maxGuesses) gameStatus = "lost"
             }
             else -> {
-                if (input.length < cfg.wordLength) input += key
+                cells = cells.toMutableList().also { it[cursorPos] = key }
+                if (cursorPos < cfg.wordLength - 1) cursorPos++
             }
         }
     }
@@ -230,14 +252,15 @@ fun WortWelleGameScreen(
                             modifier = Modifier.offset { IntOffset((offsetX * density).toInt(), 0) },
                         ) {
                             for (col in 0 until cfg.wordLength) {
+                                val cellStr = if (isCurrentRow) cells.getOrElse(col) { "" } else ""
                                 val char: Char? = when {
                                     guess != null -> guess.getOrNull(col)
-                                    isCurrentRow  -> input.getOrNull(col)
+                                    isCurrentRow  -> cellStr.firstOrNull()
                                     else          -> null
                                 }
                                 val status: WwLetterStatus = when {
                                     statuses != null -> statuses.getOrElse(col) { WwLetterStatus.ABSENT }
-                                    isCurrentRow && col < input.length -> WwLetterStatus.TYPING
+                                    isCurrentRow && cellStr.isNotEmpty() -> WwLetterStatus.TYPING
                                     else -> WwLetterStatus.EMPTY
                                 }
                                 val bg = when (status) {
@@ -246,16 +269,26 @@ fun WortWelleGameScreen(
                                     WwLetterStatus.ABSENT  -> WwAbsentColor
                                     else -> Color.Transparent
                                 }
-                                val borderColor = when (status) {
-                                    WwLetterStatus.TYPING -> WwGameAccent
-                                    WwLetterStatus.EMPTY  -> BorderColor
+                                val isCursorCell = isCurrentRow && col == cursorPos && gameStatus == "playing"
+                                val borderColor = when {
+                                    isCursorCell -> WwGameAccent
+                                    status == WwLetterStatus.TYPING -> WwGameAccent
+                                    status == WwLetterStatus.EMPTY  -> BorderColor
                                     else -> Color.Transparent
                                 }
                                 Box(
                                     modifier = Modifier
                                         .size(cellDp)
                                         .background(bg, RoundedCornerShape(6.dp))
-                                        .border(2.dp, borderColor, RoundedCornerShape(6.dp)),
+                                        .border(2.dp, borderColor, RoundedCornerShape(6.dp))
+                                        .then(
+                                            if (isCurrentRow && gameStatus == "playing")
+                                                Modifier.clickable(
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                    indication = null,
+                                                ) { cursorPos = col }
+                                            else Modifier
+                                        ),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     if (char != null) {
@@ -297,7 +330,7 @@ fun WortWelleGameScreen(
                                     PuzzleSaveManager.savePuzzle(context, PuzzleSave(
                                         id = saveIdRef, gameType = "wortwelle", variant = "random",
                                         difficulty = difficulty, seed = 0L,
-                                        puzzleState = serializeWwState(targetWord, guesses, input, gameStatus),
+                                        puzzleState = serializeWwState(targetWord, guesses, cells.joinToString(""), gameStatus),
                                         startedAt = System.currentTimeMillis(), elapsedSeconds = elapsed,
                                     ))
                                 }
@@ -484,7 +517,7 @@ fun WortWelleGameScreen(
                                         PuzzleSaveManager.savePuzzle(context, PuzzleSave(
                                             id = saveIdRef, gameType = "wortwelle", variant = "random",
                                             difficulty = difficulty, seed = 0L,
-                                            puzzleState = serializeWwState(targetWord, guesses, input, gameStatus),
+                                            puzzleState = serializeWwState(targetWord, guesses, cells.joinToString(""), gameStatus),
                                             startedAt = System.currentTimeMillis(), elapsedSeconds = elapsed,
                                         ))
                                     }

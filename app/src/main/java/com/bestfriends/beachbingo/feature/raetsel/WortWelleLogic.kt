@@ -79,6 +79,8 @@ object WwWordBank {
 
     val isReady: Boolean get() = initialized
 
+    private val UMLAUT_RE = Regex("[äöüÄÖÜß]")
+
     @Synchronized
     fun init(context: Context) {
         if (initialized) return
@@ -94,7 +96,7 @@ object WwWordBank {
 
     private fun loadLines(context: Context, path: String): List<String> =
         context.assets.open(path).bufferedReader().readLines()
-            .map { it.trim() }.filter { it.isNotEmpty() }
+            .map { it.trim() }.filter { it.isNotEmpty() && !UMLAUT_RE.containsMatchIn(it) }
 
     fun getTargets(len: Int): List<String> = when (len) { 4 -> targets4; 5 -> targets5; else -> targets6 }
     fun getPool(len: Int): Set<String>     = when (len) { 4 -> pool4;    5 -> pool5;    else -> pool6    }
@@ -178,7 +180,7 @@ fun validateWwHardMode(newGuess: String, previousGuesses: List<String>, target: 
         val statuses = computeWwStatuses(prev, target)
         for (i in prev.indices) {
             if (statuses[i] == WwLetterStatus.CORRECT && g.getOrNull(i) != prev[i]) {
-                return "Position ${i + 1} muss \"${prev[i]}\" sein (gruener Buchstabe)."
+                return "Position ${i + 1} muss \"${prev[i]}\" sein (grüner Buchstabe)."
             }
         }
         for (i in prev.indices) {
