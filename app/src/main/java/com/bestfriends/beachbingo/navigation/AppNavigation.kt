@@ -164,12 +164,12 @@ fun AppNavigation() {
                 onNavigateToWortWelleLobby = { navController.navigate(Screen.WortWelleLobby) },
                 onNavigateToRaetselGame = { save ->
                     when (save.gameType) {
-                        "duenenschatten" -> navController.navigate(Screen.DuenenschattenGame(save.difficulty, save.seed, save.id))
-                        "inselbruecke"   -> navController.navigate(Screen.InselbrueckeGame(save.difficulty, save.seed, save.id))
-                        "strandoku"      -> navController.navigate(Screen.StrandokuGame(save.variant, save.difficulty, save.seed, save.id))
-                        "wellensumme"    -> navController.navigate(Screen.WellensummeGame(save.difficulty, save.seed, save.id))
-                        "kuestenkrieg"   -> navController.navigate(Screen.KuestenkriegGame(save.difficulty, save.seed, save.id))
-                        "wortwelle"      -> navController.navigate(Screen.WortWelleGame(save.difficulty, saveId = save.id))
+                        "duenenschatten" -> navController.navigate(Screen.DuenenschattenLobby)
+                        "inselbruecke"   -> navController.navigate(Screen.InselbrueckeLobby)
+                        "strandoku"      -> navController.navigate(Screen.StrandokuLobby)
+                        "wellensumme"    -> navController.navigate(Screen.WellensummeLobby)
+                        "kuestenkrieg"   -> navController.navigate(Screen.KuestenkriegLobby)
+                        "wortwelle"      -> navController.navigate(Screen.WortWelleLobby)
                     }
                 },
                 onRejoinGame = { type, gameId ->
