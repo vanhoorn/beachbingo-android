@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.bestfriends.beachbingo.feature.brandung.ui.CardBackScene
+import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.Danger
 import com.bestfriends.beachbingo.ui.theme.SandGold
@@ -69,12 +70,18 @@ import com.bestfriends.beachbingo.ui.theme.SurfaceDark
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
 import com.bestfriends.beachbingo.ui.theme.TextSub
+import com.bestfriends.beachbingo.feature.raetsel.GameSave
+import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlin.random.Random
 
 // ── Constants & Models ────────────────────────────────────────────────────────
@@ -88,8 +95,10 @@ private val MM_RANKS = listOf("7", "8", "9", "10", "J", "Q", "K", "A")
 private val MM_RED_SUITS = setOf("♥", "♦")
 private val MM_CARD_POINTS = mapOf("7" to 7, "8" to 8, "9" to 9, "10" to 10, "J" to 20, "Q" to 10, "K" to 10, "A" to 11)
 
+@Serializable
 data class MMCard(val suit: String, val rank: String, val id: String)
 
+@Serializable
 data class MMPlayer(
     val userId: String,
     val displayName: String,
@@ -100,10 +109,13 @@ data class MMPlayer(
     val eliminated: Boolean,
 )
 
+@Serializable
 data class MMSettings(val reverseOn9: Boolean, val stopperOn8: Boolean, val wildOn10: Boolean)
 
+@Serializable
 data class MoveLogEntry(val round: Int, val playerName: String, val detail: String, val ts: Long)
 
+@Serializable
 data class MMState(
     val players: List<MMPlayer>,
     val drawPile: List<MMCard>,
@@ -548,12 +560,14 @@ fun MeermauGameScreen(
     gameId: String?,
     aiCount: Int,
     difficulty: String,
+    saveId: String? = null,
     onNavigateBack: () -> Unit,
 ) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid ?: ""
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
     val logSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var localState by remember { mutableStateOf<MMState?>(null) }
@@ -563,36 +577,75 @@ fun MeermauGameScreen(
     var showLog by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
 
-    BackHandler(enabled = mode == "online") { showQuitDialog = true }
+    BackHandler { showQuitDialog = true }
 
+    // ── Restore from save ──────────────────────────────────────────────────────
+    LaunchedEffect(saveId) {
+        if (saveId == null) return@LaunchedEffect
+        val save = PuzzleSaveManager.getGameSave(context, "meermau")
+        if (save == null || save.id != saveId) return@LaunchedEffect
+        try {
+            val restored = Json.decodeFromString<MMState>(save.gameState)
+            localState = restored.copy(aiThinking = false)
+        } catch (_: Exception) {}
+    }
+
+    // ── Quit dialog ────────────────────────────────────────────────────────────
     if (showQuitDialog) {
-        Dialog(onDismissRequest = { showQuitDialog = false }) {
-            androidx.compose.material3.Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = SurfaceDark,
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text("🏳️", fontSize = 36.sp)
-                    Text("Spiel verlassen?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
-                    Text(
-                        "Du kannst über den Code wieder beitreten.",
-                        fontSize = 13.sp, color = TextMuted, textAlign = TextAlign.Center,
+        val st = localState
+        if (mode == "ai" && st != null) {
+            GameSaveQuitDialog(
+                emoji = "🂠",
+                message = "Runde ${st.round} · ${st.players.size} Spieler · ${st.players.firstOrNull()?.totalScore ?: 0}P",
+                onContinue = { showQuitDialog = false },
+                onSaveAndQuit = {
+                    val saveData = GameSave(
+                        id = java.util.UUID.randomUUID().toString(),
+                        gameType = "meermau",
+                        difficulty = st.difficulty,
+                        gameState = Json.encodeToString(st.copy(aiThinking = false)),
+                        displayLabel = "Runde ${st.round} · ${st.players.size} Spieler · ${st.players.firstOrNull()?.totalScore ?: 0}P",
+                        savedAt = System.currentTimeMillis(),
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        OutlinedButton(
-                            onClick = { showQuitDialog = false },
-                            modifier = Modifier.weight(1f).height(44.dp),
-                        ) { Text("Bleiben", color = TextPrimary) }
-                        Button(
-                            onClick = { showQuitDialog = false; onNavigateBack() },
-                            modifier = Modifier.weight(1f).height(44.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MeermauViolet),
-                            shape = RoundedCornerShape(10.dp),
-                        ) { Text("Verlassen", color = Color.White) }
+                    PuzzleSaveManager.saveGame(context, saveData)
+                    showQuitDialog = false
+                    onNavigateBack()
+                },
+                onQuitWithoutSave = {
+                    PuzzleSaveManager.deleteGameSave(context, "meermau")
+                    showQuitDialog = false
+                    onNavigateBack()
+                },
+            )
+        } else {
+            Dialog(onDismissRequest = { showQuitDialog = false }) {
+                androidx.compose.material3.Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = SurfaceDark,
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text("🏳️", fontSize = 36.sp)
+                        Text("Spiel verlassen?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                        Text(
+                            "Du kannst über den Code wieder beitreten.",
+                            fontSize = 13.sp, color = TextMuted, textAlign = TextAlign.Center,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            OutlinedButton(
+                                onClick = { showQuitDialog = false },
+                                modifier = Modifier.weight(1f).height(44.dp),
+                            ) { Text("Bleiben", color = TextPrimary) }
+                            Button(
+                                onClick = { showQuitDialog = false; onNavigateBack() },
+                                modifier = Modifier.weight(1f).height(44.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MeermauViolet),
+                                shape = RoundedCornerShape(10.dp),
+                            ) { Text("Verlassen", color = Color.White) }
+                        }
                     }
                 }
             }
@@ -613,6 +666,7 @@ fun MeermauGameScreen(
 
     // ── Init ──────────────────────────────────────────────────────────────────
     LaunchedEffect(Unit) {
+        if (saveId != null) return@LaunchedEffect
         val userSnap = db.collection("users").document(uid).get().await()
         val displayName = userSnap.getString("displayName") ?: "Du"
         val avatarUrl = userSnap.getString("avatarUrl") ?: "🃏"
@@ -852,7 +906,7 @@ fun MeermauGameScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { if (mode == "online") showQuitDialog = true else onNavigateBack() }) {
+                    IconButton(onClick = { showQuitDialog = true }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück", tint = TextPrimary)
                     }
                 },

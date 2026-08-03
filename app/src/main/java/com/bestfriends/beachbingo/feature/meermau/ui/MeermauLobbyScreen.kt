@@ -74,6 +74,8 @@ import kotlinx.coroutines.tasks.await
 import androidx.compose.material.icons.outlined.HelpOutline
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
+import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import org.json.JSONObject
 
 private val MeermauViolet = Color(0xFF7C3AED)
 
@@ -94,7 +96,7 @@ private fun generateMeermauCode(): String {
 @Composable
 fun MeermauLobbyScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToGame: (mode: String, gameId: String?, aiCount: Int, difficulty: String) -> Unit,
+    onNavigateToGame: (mode: String, gameId: String?, aiCount: Int, difficulty: String, saveId: String?) -> Unit,
     onNavigateToResults: () -> Unit,
     onNavigateToSettings: () -> Unit,
 ) {
@@ -183,7 +185,7 @@ fun MeermauLobbyScreen(
         scope.launch {
             try {
                 db.collection("meermauGames").document(gameDocId).update("status", "RUNNING").await()
-                onNavigateToGame("online", gameDocId, 0, "SNIPER")
+                onNavigateToGame("online", gameDocId, 0, "SNIPER", null)
             } catch (_: Exception) {}
         }
     }
@@ -241,6 +243,37 @@ fun MeermauLobbyScreen(
 
             if (step == "mode") {
                 Text("Spielmodus wählen", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+                val savedMeermau = PuzzleSaveManager.getGameSave(context, "meermau")
+                if (savedMeermau != null) {
+                    val savedLabel = savedMeermau.displayLabel ?: "Gespeichertes Spiel"
+                    val savedAiCount = try {
+                        val json = JSONObject(savedMeermau.gameState)
+                        val playersArr = json.optJSONArray("players")
+                        maxOf(1, (playersArr?.length() ?: 2) - 1)
+                    } catch (_: Exception) { 1 }
+                    Card(
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            onNavigateToGame("ai", null, savedAiCount, savedMeermau.difficulty, savedMeermau.id)
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF6B21A8).copy(alpha = 0.4f)),
+                    ) {
+                        Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFF6B21A8).copy(alpha = 0.15f), modifier = Modifier.size(56.dp)) {
+                                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                    Text("↩️", fontSize = 28.sp)
+                                }
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Fortsetzen", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+                                Text(savedLabel, style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                            }
+                            Text("›", fontSize = 20.sp, color = TextMuted)
+                        }
+                    }
+                }
                 MmModeCard("🤖", "Gegen KI", "Spiel allein gegen KI-Gegner", MeermauViolet) { step = "ai_config" }
                 MmModeCard("📱", "Online – 2-4 Spieler", "Spielt gemeinsam in Echtzeit", Color(0xFF0EA5E9)) { step = "online" }
             }
@@ -299,7 +332,7 @@ fun MeermauLobbyScreen(
                     }
                 }
 
-                Button(onClick = { onNavigateToGame("ai", null, aiCount, difficulty) },
+                Button(onClick = { onNavigateToGame("ai", null, aiCount, difficulty, null) },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MeermauViolet),
                     shape = RoundedCornerShape(12.dp)) {

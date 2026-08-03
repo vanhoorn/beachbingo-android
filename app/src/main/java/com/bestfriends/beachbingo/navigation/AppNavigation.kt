@@ -854,8 +854,8 @@ fun AppNavigation() {
                         popUpTo(Screen.Home) { inclusive = false }
                     }
                 },
-                onNavigateToGame = { mode, gameId, aiCount, difficulty ->
-                    navController.navigate(Screen.MeermauGame(mode, gameId, aiCount, difficulty)) {
+                onNavigateToGame = { mode, gameId, aiCount, difficulty, saveId ->
+                    navController.navigate(Screen.MeermauGame(mode, gameId, aiCount, difficulty, saveId)) {
                         popUpTo(Screen.MeermauLobby)
                     }
                 },
@@ -871,6 +871,7 @@ fun AppNavigation() {
                 gameId = route.gameId,
                 aiCount = route.aiCount,
                 difficulty = route.difficulty,
+                saveId = route.saveId,
                 onNavigateBack = {
                     navController.navigate(Screen.MeermauLobby) {
                         popUpTo(Screen.MeermauLobby) { inclusive = true }

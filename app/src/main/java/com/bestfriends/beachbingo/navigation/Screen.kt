@@ -104,6 +104,7 @@ sealed interface Screen {
         val gameId: String? = null,
         val aiCount: Int = 1,
         val difficulty: String = "SNIPER",
+        val saveId: String? = null,
     ) : Screen
     @Serializable object MeermauSettings : Screen
     @Serializable object MeermauResults : Screen
