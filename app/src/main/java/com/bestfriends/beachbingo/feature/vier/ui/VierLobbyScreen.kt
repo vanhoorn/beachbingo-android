@@ -296,7 +296,7 @@ fun VierLobbyScreen(
                         if (mode == "ai") {
                             val others = DRINKS.filter { it.id != myDrinkId }
                             val aiDrinkId = others.random().id
-                            onNavigateToGame("ai", null, myDrinkId, aiDrinkId, uiState.preferredDifficulty)
+                            onNavigateToGame("ai", null, myDrinkId, aiDrinkId, uiState.preferredDifficulty, null)
                         } else {
                             step = "lobby"
                         }
