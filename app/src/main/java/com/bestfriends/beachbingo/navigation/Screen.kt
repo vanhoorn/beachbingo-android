@@ -42,6 +42,7 @@ sealed interface Screen {
         val difficulty: String,
         val fireRate: Int,
         val controlMode: String,
+        val saveId: String? = null,
     ) : Screen
     @Serializable object PiratesSettings : Screen
     @Serializable object PiratesHighscore : Screen
@@ -50,6 +51,7 @@ sealed interface Screen {
     @Serializable data class WormGame(
         val difficulty: String,
         val controlMode: String,
+        val saveId: String? = null,
     ) : Screen
     @Serializable object WormSettings : Screen
     @Serializable object WormHighscore : Screen
@@ -63,7 +65,11 @@ sealed interface Screen {
     ) : Screen
     // Strandturm
     @Serializable object StrandturmLobby : Screen
-    @Serializable data class StrandturmGame(val controlMode: String, val startLevel: Int = 1) : Screen
+    @Serializable data class StrandturmGame(
+        val controlMode: String,
+        val startLevel: Int = 1,
+        val saveId: String? = null,
+    ) : Screen
     @Serializable object StrandturmSettings : Screen
     @Serializable object StrandturmHighscore : Screen
     @Serializable data class StrandturmResults(

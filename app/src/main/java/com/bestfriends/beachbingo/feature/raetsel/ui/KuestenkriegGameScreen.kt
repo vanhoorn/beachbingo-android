@@ -103,7 +103,7 @@ fun KuestenkriegGameScreen(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = KkAccent) }
             } else {
                 val size = p.size
-                val labelDp: Dp = 22.dp
+                val labelDp: Dp = 28.dp
                 // Dynamic cell size: limited by both available width and height
                 val cellFromW = (screenAvailW - labelDp - 16.dp) / size
                 val cellFromH = (screenAvailH - labelDp - 130.dp) / size
@@ -139,7 +139,7 @@ fun KuestenkriegGameScreen(
                         // Col clues row
                         Row(modifier = Modifier.padding(start = labelDp)) {
                             (0 until size).forEach { c ->
-                                Box(modifier = Modifier.size(width = cellDp, height = labelDp), contentAlignment = Alignment.Center) {
+                                Box(modifier = Modifier.size(width = cellDp, height = labelDp).background(BgDark), contentAlignment = Alignment.Center) {
                                     Text(p.colClues[c].toString(), fontSize = (cellDp.value * 0.38f).sp, fontWeight = FontWeight.ExtraBold,
                                         color = if (errors.cols[c]) Danger else TextPrimary)
                                 }
@@ -150,7 +150,7 @@ fun KuestenkriegGameScreen(
                         (0 until size).forEach { r ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 // Row clue
-                                Box(modifier = Modifier.size(width = labelDp, height = cellDp), contentAlignment = Alignment.Center) {
+                                Box(modifier = Modifier.size(width = labelDp, height = cellDp).background(BgDark), contentAlignment = Alignment.Center) {
                                     Text(p.rowClues[r].toString(), fontSize = (cellDp.value * 0.38f).sp, fontWeight = FontWeight.ExtraBold,
                                         color = if (errors.rows[r]) Danger else TextPrimary)
                                 }

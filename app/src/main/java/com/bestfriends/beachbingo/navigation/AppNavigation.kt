@@ -595,8 +595,8 @@ fun AppNavigation() {
         // ── BeachPirates ───────────────────────────────────────────────────────
         composable<Screen.PiratesLobby> {
             PiratesLobbyScreen(
-                onNavigateToGame = { difficulty, fireRate, controlMode ->
-                    navController.navigate(Screen.PiratesGame(difficulty, fireRate, controlMode)) {
+                onNavigateToGame = { difficulty, fireRate, controlMode, saveId ->
+                    navController.navigate(Screen.PiratesGame(difficulty, fireRate, controlMode, saveId)) {
                         popUpTo(Screen.PiratesLobby)
                     }
                 },
@@ -620,6 +620,7 @@ fun AppNavigation() {
                 difficulty = route.difficulty,
                 fireRate = route.fireRate,
                 controlMode = route.controlMode,
+                saveId = route.saveId,
                 onNavigateToResults = { score, wave, highScore, newHighScore ->
                     navController.navigate(
                         Screen.PiratesResults(score, wave, route.difficulty, highScore, newHighScore)
@@ -664,8 +665,8 @@ fun AppNavigation() {
         // ── Wattwurm ───────────────────────────────────────────────────────────
         composable<Screen.WormLobby> {
             WormLobbyScreen(
-                onNavigateToGame = { difficulty, controlMode ->
-                    navController.navigate(Screen.WormGame(difficulty, controlMode)) {
+                onNavigateToGame = { difficulty, controlMode, saveId ->
+                    navController.navigate(Screen.WormGame(difficulty, controlMode, saveId)) {
                         popUpTo(Screen.WormLobby)
                     }
                 },
@@ -688,6 +689,7 @@ fun AppNavigation() {
             WormGameScreen(
                 difficulty = route.difficulty,
                 controlMode = route.controlMode,
+                saveId = route.saveId,
                 onNavigateToResults = { score, length, highScore, newHighScore ->
                     navController.navigate(
                         Screen.WormResults(score, length, route.difficulty, route.controlMode, highScore, newHighScore)
@@ -732,8 +734,8 @@ fun AppNavigation() {
         // ── Strandturm ─────────────────────────────────────────────────────────
         composable<Screen.StrandturmLobby> {
             StrandturmLobbyScreen(
-                onNavigateToGame = { controlMode, startLevel ->
-                    navController.navigate(Screen.StrandturmGame(controlMode, startLevel)) {
+                onNavigateToGame = { controlMode, startLevel, saveId ->
+                    navController.navigate(Screen.StrandturmGame(controlMode, startLevel, saveId)) {
                         popUpTo(Screen.StrandturmLobby)
                     }
                 },
@@ -756,6 +758,7 @@ fun AppNavigation() {
             StrandturmGameScreen(
                 controlMode = route.controlMode,
                 startLevel  = route.startLevel,
+                saveId      = route.saveId,
                 onNavigateToResults = { score, level, highScore, bestLevel, newHighScore, newBestLevel ->
                     navController.navigate(
                         Screen.StrandturmResults(score, level, highScore, bestLevel, newHighScore, newBestLevel)

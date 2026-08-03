@@ -20,10 +20,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.ui.components.GameHudBar
-import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
+import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
+import com.bestfriends.beachbingo.feature.raetsel.GameSave
+import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import org.json.JSONObject
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.tasks.await
 import kotlin.math.*
@@ -155,17 +158,22 @@ private fun rectsOverlap(ax: Float, ay: Float, aw: Float, ah: Float,
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
+private fun serializePirates(gs: GameState): String =
+    JSONObject().put("score", gs.score).put("lives", gs.lives).put("wave", gs.wave).toString()
+
 @Composable
 fun PiratesGameScreen(
     difficulty: String,
     fireRate: Int,
     controlMode: String,
+    saveId: String? = null,
     onNavigateToResults: (score: Int, wave: Int, highScore: Int, newHighScore: Boolean) -> Unit,
     onNavigateToLobby: () -> Unit,
 ) {
     val auth      = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
     val uid       = auth.currentUser?.uid
+    val context   = androidx.compose.ui.platform.LocalContext.current
 
     val gs    = remember { GameState(difficulty, fireRate) }
     val audio = remember { PiratesAudioManager() }
@@ -175,6 +183,20 @@ fun PiratesGameScreen(
     var showQuitDialog by remember { mutableStateOf(false) }
     var resultHandled  by remember { mutableStateOf(false) }
     var musicStarted   by remember { mutableStateOf(false) }
+
+    // Restore checkpoint save (score + lives + wave)
+    LaunchedEffect(saveId) {
+        if (saveId != null) {
+            val save = PuzzleSaveManager.getGameSave(context, "pirates")
+            if (save != null) try {
+                val obj = JSONObject(save.gameState)
+                gs.score = obj.getInt("score")
+                gs.lives = obj.getInt("lives")
+                gs.wave  = obj.getInt("wave")
+                gs.initWave()
+            } catch (_: Exception) {}
+        }
+    }
 
     LaunchedEffect(Unit) {
         if (uid != null) {
@@ -320,10 +342,25 @@ fun PiratesGameScreen(
 
     // ── Quit dialog ────────────────────────────────────────────────────────
     if (showQuitDialog) {
-        QuitConfirmDialog(
-            message   = "Score: ${gs.score} — Fortschritt geht verloren.",
-            onConfirm = onNavigateToLobby,
-            onDismiss = { showQuitDialog = false; paused = false },
+        GameSaveQuitDialog(
+            emoji = "🏴‍☠️",
+            message = "Score: ${gs.score} · Welle: ${gs.wave} · Leben: ${gs.lives}",
+            onContinue = { showQuitDialog = false; paused = false },
+            onSaveAndQuit = {
+                PuzzleSaveManager.saveGame(context, GameSave(
+                    id = PuzzleSaveManager.generateId(),
+                    gameType = "pirates",
+                    difficulty = difficulty,
+                    gameState = serializePirates(gs),
+                    displayLabel = "Score: ${gs.score} · Welle: ${gs.wave} · Leben: ${gs.lives}",
+                    savedAt = System.currentTimeMillis(),
+                ))
+                onNavigateToLobby()
+            },
+            onQuitWithoutSave = {
+                PuzzleSaveManager.deleteGameSave(context, "pirates")
+                onNavigateToLobby()
+            },
         )
     }
 }

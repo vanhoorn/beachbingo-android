@@ -27,10 +27,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.ui.components.GameHudBar
-import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
+import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
+import com.bestfriends.beachbingo.feature.raetsel.GameSave
+import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import org.json.JSONObject
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.tasks.await
 import kotlin.math.abs
@@ -1125,18 +1128,23 @@ private fun DrawScope.drawGame(gs: StrandturmState, s: Float) {
     drawPlayer(gs, s)
 }
 
+private fun serializeStrandturm(gs: StrandturmState): String =
+    JSONObject().put("score", gs.score).put("lives", gs.lives).put("level", gs.level).toString()
+
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 @Composable
 fun StrandturmGameScreen(
     controlMode: String,
     startLevel: Int = 1,
+    saveId: String? = null,
     onNavigateToResults: (score: Int, level: Int, highScore: Int, bestLevel: Int, newHighScore: Boolean, newBestLevel: Boolean) -> Unit,
     onNavigateToLobby: () -> Unit,
 ) {
     val auth      = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
     val uid       = auth.currentUser?.uid
+    val context   = androidx.compose.ui.platform.LocalContext.current
 
     val gs    = remember { StrandturmState(startLevel) }
     val audio = remember { StrandturmAudioManager() }
@@ -1152,6 +1160,19 @@ fun StrandturmGameScreen(
 
     // true once prefs are loaded and music has been started for the first time
     var musicStarted by remember { mutableStateOf(false) }
+
+    // Restore checkpoint save (score + lives + level)
+    LaunchedEffect(saveId) {
+        if (saveId != null) {
+            val save = PuzzleSaveManager.getGameSave(context, "strandturm")
+            if (save != null) try {
+                val obj = JSONObject(save.gameState)
+                gs.score = obj.getInt("score")
+                gs.lives = obj.getInt("lives")
+                // Level is already set via startLevel param
+            } catch (_: Exception) {}
+        }
+    }
 
     // Load audio preferences and start music
     LaunchedEffect(Unit) {
@@ -1480,10 +1501,25 @@ fun StrandturmGameScreen(
     }
 
     if (showQuitDialog) {
-        QuitConfirmDialog(
-            message   = "Score: ${gs.score} Pts · Level ${gs.level}. Fortschritt geht verloren.",
-            onConfirm = onNavigateToLobby,
-            onDismiss = { showQuitDialog = false; paused = false },
+        GameSaveQuitDialog(
+            emoji = "🏗️",
+            message = "Score: ${gs.score} Pts · Level ${gs.level} · Leben: ${gs.lives}",
+            onContinue = { showQuitDialog = false; paused = false },
+            onSaveAndQuit = {
+                PuzzleSaveManager.saveGame(context, GameSave(
+                    id = PuzzleSaveManager.generateId(),
+                    gameType = "strandturm",
+                    difficulty = "standard",
+                    gameState = serializeStrandturm(gs),
+                    displayLabel = "Score: ${gs.score} · Level ${gs.level} · Leben: ${gs.lives}",
+                    savedAt = System.currentTimeMillis(),
+                ))
+                onNavigateToLobby()
+            },
+            onQuitWithoutSave = {
+                PuzzleSaveManager.deleteGameSave(context, "strandturm")
+                onNavigateToLobby()
+            },
         )
     }
 }

@@ -3,6 +3,7 @@ package com.bestfriends.beachbingo.ui.components
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -119,6 +120,42 @@ private fun HudButton(
             )
         }
     }
+}
+
+/** 3-Option-Dialog für speicherbare Spiele */
+@Composable
+fun GameSaveQuitDialog(
+    emoji: String = "🏳️",
+    message: String = "Möchtest du speichern?",
+    onContinue: () -> Unit,
+    onSaveAndQuit: () -> Unit,
+    onQuitWithoutSave: () -> Unit,
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onContinue,
+        title = { Text("$emoji Spiel beenden?") },
+        text = { Text(message) },
+        confirmButton = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                androidx.compose.material3.Button(
+                    onClick = onSaveAndQuit,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = OceanBlue),
+                ) { Text("💾 Speichern & Beenden") }
+                androidx.compose.material3.Button(
+                    onClick = onQuitWithoutSave,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Danger),
+                ) { Text("✕ Beenden ohne Speichern") }
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onContinue) { Text("Weiterspielen") }
+        },
+        containerColor = SurfaceDark,
+        titleContentColor = TextPrimary,
+        textContentColor = TextPrimary.copy(alpha = 0.8f),
+    )
 }
 
 /** Standard-Abbruch-Bestätigungsdialog */

@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,6 +58,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -950,19 +953,46 @@ fun StrandraeuberGameScreen(
             // ── Opponents ──
             val opponents = currentState.players.filter { it.userId != uid }
             if (opponents.isNotEmpty()) {
-                opponents.forEach { opp ->
-                    val isTarget = opp.userId == targetPlayer?.userId
-                    val isDrawer = opp.userId == drawerPlayer?.userId
-                    val isAiThinking = currentState.phase == SpPhase.AI_THINKING && isDrawer
-
-                    OpponentFan(
-                        player = opp,
-                        isTarget = isTarget && isMyTurn && currentState.phase == SpPhase.PLAYING,
-                        isDrawer = isDrawer,
-                        isAiThinking = isAiThinking,
-                        selectedCardIndex = if (isTarget && isMyTurn) selectedCardIndex else -1,
-                        onCardSelected = { idx -> selectedCardIndex = idx },
-                    )
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val useRowLayout = maxWidth > 600.dp
+                    if (useRowLayout) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            opponents.forEach { opp ->
+                                val isTarget = opp.userId == targetPlayer?.userId
+                                val isDrawer = opp.userId == drawerPlayer?.userId
+                                val isAiThinking = currentState.phase == SpPhase.AI_THINKING && isDrawer
+                                OpponentFan(
+                                    player = opp,
+                                    isTarget = isTarget && isMyTurn && currentState.phase == SpPhase.PLAYING,
+                                    isDrawer = isDrawer,
+                                    isAiThinking = isAiThinking,
+                                    selectedCardIndex = if (isTarget && isMyTurn) selectedCardIndex else -1,
+                                    onCardSelected = { idx -> selectedCardIndex = idx },
+                                    compact = true,
+                                )
+                            }
+                        }
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            opponents.forEach { opp ->
+                                val isTarget = opp.userId == targetPlayer?.userId
+                                val isDrawer = opp.userId == drawerPlayer?.userId
+                                val isAiThinking = currentState.phase == SpPhase.AI_THINKING && isDrawer
+                                OpponentFan(
+                                    player = opp,
+                                    isTarget = isTarget && isMyTurn && currentState.phase == SpPhase.PLAYING,
+                                    isDrawer = isDrawer,
+                                    isAiThinking = isAiThinking,
+                                    selectedCardIndex = if (isTarget && isMyTurn) selectedCardIndex else -1,
+                                    onCardSelected = { idx -> selectedCardIndex = idx },
+                                    compact = false,
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1082,15 +1112,36 @@ fun StrandraeuberGameScreen(
                                 Text("✓ Alle Paare abgelegt!", color = SpCrimson, fontWeight = FontWeight.Bold)
                             }
                         } else {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                humanPlayer.hand.forEach { card ->
-                                    val isStrandraeuber = card.pairId == "strandraeuber"
-                                    SpFaceUpCard(card = card, highlight = isStrandraeuber)
-                                    Spacer(Modifier.width(4.dp))
+                            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                                val isTablet = maxWidth > 600.dp
+                                val cardW = if (isTablet) 72.dp else 54.dp
+                                val cardH = if (isTablet) 100.dp else 76.dp
+                                val gap  = if (isTablet) 6.dp else 4.dp
+                                if (isTablet) {
+                                    val rows = humanPlayer.hand.chunked(9)
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(gap),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                    ) {
+                                        rows.forEach { rowCards ->
+                                            Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                                                rowCards.forEach { card ->
+                                                    SpFaceUpCard(card, card.pairId == "strandraeuber", cardW, cardH)
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(gap),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        humanPlayer.hand.forEach { card ->
+                                            SpFaceUpCard(card, card.pairId == "strandraeuber", cardW, cardH)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1341,10 +1392,11 @@ private fun OpponentFan(
     isAiThinking: Boolean,
     selectedCardIndex: Int,
     onCardSelected: (Int) -> Unit,
+    compact: Boolean = false,
 ) {
     val cardCount = player.hand.size
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = if (compact) Modifier.widthIn(min = 160.dp, max = 260.dp) else Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = when {
@@ -1432,15 +1484,17 @@ private fun OpponentFan(
 }
 
 @Composable
-private fun SpFaceUpCard(card: SpCard, highlight: Boolean = false) {
+private fun SpFaceUpCard(card: SpCard, highlight: Boolean = false, cardWidth: Dp = 54.dp, cardHeight: Dp = 76.dp) {
     val bgColor by animateColorAsState(
         targetValue = if (highlight) SpCrimson.copy(alpha = 0.3f) else Color(0xFF0F3460),
         animationSpec = tween(600),
         label = "cardBg",
     )
+    val emojiSp = (cardWidth.value * 0.37f).sp
+    val nameSp  = (cardWidth.value * 0.14f).sp
     Box(
         modifier = Modifier
-            .size(width = 54.dp, height = 76.dp)
+            .size(width = cardWidth, height = cardHeight)
             .clip(RoundedCornerShape(8.dp))
             .background(bgColor)
             .border(
@@ -1455,13 +1509,13 @@ private fun SpFaceUpCard(card: SpCard, highlight: Boolean = false) {
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.padding(4.dp),
         ) {
-            Text(card.emoji, fontSize = 22.sp)
+            Text(card.emoji, fontSize = emojiSp)
             Text(
                 card.name,
-                fontSize = 8.sp,
+                fontSize = nameSp,
                 color = if (highlight) SpCrimson else TextSub,
                 textAlign = TextAlign.Center,
-                lineHeight = 10.sp,
+                lineHeight = (nameSp.value * 1.25f).sp,
                 fontWeight = if (highlight) FontWeight.Bold else FontWeight.Normal,
             )
         }

@@ -23,12 +23,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.ui.components.GameHudBar
-import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
+import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
+import com.bestfriends.beachbingo.feature.raetsel.GameSave
+import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.tasks.await
+import org.json.JSONArray
+import org.json.JSONObject
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -131,6 +135,36 @@ private fun spawnFood(snake: List<Vec2>): Food {
     return Food(x, y, t.emoji, t.points)
 }
 
+// ── Serialization ─────────────────────────────────────────────────────────────
+
+private fun serializeWorm(gs: WormState): String {
+    val obj = JSONObject()
+    val snakeArr = JSONArray()
+    gs.snake.forEach { v -> snakeArr.put(JSONObject().put("x", v.x).put("y", v.y)) }
+    obj.put("snake", snakeArr)
+    obj.put("dirX", gs.dir.x); obj.put("dirY", gs.dir.y)
+    obj.put("foodX", gs.food.x); obj.put("foodY", gs.food.y)
+    obj.put("foodEmoji", gs.food.emoji); obj.put("foodPoints", gs.food.points)
+    obj.put("score", gs.score)
+    return obj.toString()
+}
+
+private fun restoreWorm(gs: WormState, json: String) {
+    try {
+        val obj = JSONObject(json)
+        gs.snake.clear()
+        val arr = obj.getJSONArray("snake")
+        for (i in 0 until arr.length()) {
+            val s = arr.getJSONObject(i); gs.snake.add(Vec2(s.getInt("x"), s.getInt("y")))
+        }
+        val dx = obj.getInt("dirX"); val dy = obj.getInt("dirY")
+        gs.dir = Vec2(dx, dy); gs.nextDir = Vec2(dx, dy)
+        gs.food = Food(obj.getInt("foodX"), obj.getInt("foodY"), obj.getString("foodEmoji"), obj.getInt("foodPoints"))
+        gs.score = obj.getInt("score")
+        gs.length = gs.snake.size
+    } catch (_: Exception) {}
+}
+
 // ── Draw ──────────────────────────────────────────────────────────────────────
 
 private fun DrawScope.drawGame(gs: WormState, scale: Float) {
@@ -204,12 +238,14 @@ private fun DrawScope.drawGame(gs: WormState, scale: Float) {
 fun WormGameScreen(
     difficulty: String,
     controlMode: String,
+    saveId: String? = null,
     onNavigateToResults: (score: Int, length: Int, highScore: Int, newHighScore: Boolean) -> Unit,
     onNavigateToLobby: () -> Unit,
 ) {
     val auth      = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
     val uid       = auth.currentUser?.uid
+    val context   = androidx.compose.ui.platform.LocalContext.current
 
     val gs    = remember { WormState(difficulty) }
     val audio = remember { WormAudioManager() }
@@ -221,6 +257,15 @@ fun WormGameScreen(
     var showGameOver   by remember { mutableStateOf(false) }
     var savedHighScore by remember { mutableIntStateOf(0) }
     var isNewRecord    by remember { mutableStateOf(false) }
+    var musicStarted   by remember { mutableStateOf(false) }
+
+    // Restore saved game state
+    LaunchedEffect(saveId) {
+        if (saveId != null) {
+            val save = PuzzleSaveManager.getGameSave(context, "worm")
+            if (save != null) restoreWorm(gs, save.gameState)
+        }
+    }
 
     // Load audio prefs and start music
     LaunchedEffect(Unit) {
@@ -232,9 +277,13 @@ fun WormGameScreen(
             } catch (_: Exception) {}
         }
         audio.startMusic()
+        musicStarted = true
     }
     DisposableEffect(Unit) { onDispose { audio.release() } }
-    LaunchedEffect(paused) { if (paused) audio.stopMusic() else audio.startMusic() }
+    LaunchedEffect(paused) {
+        if (!musicStarted) return@LaunchedEffect
+        if (paused) audio.stopMusic() else audio.startMusic()
+    }
 
     // Game loop
     LaunchedEffect(Unit) {
@@ -411,25 +460,27 @@ fun WormGameScreen(
 
         // D-Pad buttons (BUTTONS mode)
         if (controlMode == "BUTTONS") {
-            Box(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 12.dp),
                 contentAlignment = Alignment.Center,
             ) {
+                val isTablet = maxWidth > 600.dp
+                val btnSize  = if (isTablet) 88.dp else 56.dp
                 val btnMod = Modifier
-                    .size(56.dp)
+                    .size(btnSize)
                     .background(SurfaceDark, RoundedCornerShape(10.dp))
                     .border(1.dp, BorderColor, RoundedCornerShape(10.dp))
 
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(if (isTablet) 8.dp else 4.dp),
                 ) {
                     DPadButton(label = "▲", modifier = btnMod) { gs.trySetDir(0, -1) }
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(if (isTablet) 8.dp else 4.dp)) {
                         DPadButton(label = "◄", modifier = btnMod) { gs.trySetDir(-1, 0) }
-                        Spacer(Modifier.size(56.dp))
+                        Spacer(Modifier.size(btnSize))
                         DPadButton(label = "►", modifier = btnMod) { gs.trySetDir(1, 0) }
                     }
                     DPadButton(label = "▼", modifier = btnMod) { gs.trySetDir(0, 1) }
@@ -441,10 +492,25 @@ fun WormGameScreen(
     }
 
     if (showQuitDialog) {
-        QuitConfirmDialog(
-            message = "Score: ${gs.score} Pts. Dein Fortschritt geht verloren.",
-            onConfirm = onNavigateToLobby,
-            onDismiss = { showQuitDialog = false; paused = false },
+        GameSaveQuitDialog(
+            emoji = "🪱",
+            message = "Score: ${gs.score} Pts · Länge: ${gs.length}",
+            onContinue = { showQuitDialog = false; paused = false },
+            onSaveAndQuit = {
+                PuzzleSaveManager.saveGame(context, GameSave(
+                    id = PuzzleSaveManager.generateId(),
+                    gameType = "worm",
+                    difficulty = difficulty,
+                    gameState = serializeWorm(gs),
+                    displayLabel = "Score: ${gs.score} · Länge: ${gs.length}",
+                    savedAt = System.currentTimeMillis(),
+                ))
+                onNavigateToLobby()
+            },
+            onQuitWithoutSave = {
+                PuzzleSaveManager.deleteGameSave(context, "worm")
+                onNavigateToLobby()
+            },
         )
     }
 }

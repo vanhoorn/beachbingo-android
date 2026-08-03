@@ -112,7 +112,7 @@ fun DuenenschattenGameScreen(
             val controlsH = 100f
             val availForGrid = (maxHeight.value - controlsH - 32f).coerceAtLeast(150f)
             val availW = (maxWidth.value - 24f).coerceAtLeast(150f)
-            val cellDp = (minOf(availW, availForGrid) / gridSize).coerceIn(28f, 80f).dp
+            val cellDp = (minOf(availW, availForGrid) / gridSize).coerceIn(28f, 100f).dp
 
             Column(
                 modifier = Modifier.fillMaxSize().padding(12.dp),

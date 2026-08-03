@@ -4,6 +4,19 @@ import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
 
+// ── Game saves (action / solo games) ─────────────────────────────────────────
+
+data class GameSave(
+    val id: String,
+    val gameType: String,   // "worm" | "pirates" | "strandturm"
+    val difficulty: String,
+    val gameState: String,  // JSON-stringified state
+    val displayLabel: String, // e.g. "Score: 240 · Länge: 8"
+    val savedAt: Long,      // ms timestamp
+)
+
+// ── Puzzle saves ──────────────────────────────────────────────────────────────
+
 data class PuzzleSave(
     val id: String,
     val gameType: String,   // "wortwelle" | "strandoku" | "wellensumme" | "kuestenkrieg" | "duenenschatten" | "inselbruecke"
@@ -20,6 +33,58 @@ object PuzzleSaveManager {
     private const val PREFS_NAME = "beachbande_puzzle_saves"
     private const val KEY_SAVES = "saves"
     private const val PREFS_BEST = "beachbande_puzzle_best"
+    private const val PREFS_GAME  = "beachbande_game_saves"
+    private const val KEY_GAME    = "saves"
+
+    // ── Game save CRUD ────────────────────────────────────────────────────────
+
+    fun getGameSaves(context: Context): List<GameSave> {
+        val prefs = context.getSharedPreferences(PREFS_GAME, Context.MODE_PRIVATE)
+        val raw = prefs.getString(KEY_GAME, null) ?: return emptyList()
+        return try {
+            val arr = JSONArray(raw)
+            (0 until arr.length()).map { i ->
+                val obj = arr.getJSONObject(i)
+                GameSave(
+                    id           = obj.getString("id"),
+                    gameType     = obj.getString("gameType"),
+                    difficulty   = obj.getString("difficulty"),
+                    gameState    = obj.getString("gameState"),
+                    displayLabel = obj.getString("displayLabel"),
+                    savedAt      = obj.getLong("savedAt"),
+                )
+            }
+        } catch (_: Exception) { emptyList() }
+    }
+
+    fun getGameSave(context: Context, gameType: String): GameSave? =
+        getGameSaves(context).firstOrNull { it.gameType == gameType }
+
+    fun saveGame(context: Context, save: GameSave) {
+        val saves = getGameSaves(context).filter { it.gameType != save.gameType }.toMutableList()
+        saves.add(0, save)
+        storeGameSaves(context, saves)
+    }
+
+    fun deleteGameSave(context: Context, gameType: String) {
+        storeGameSaves(context, getGameSaves(context).filter { it.gameType != gameType })
+    }
+
+    private fun storeGameSaves(context: Context, saves: List<GameSave>) {
+        val arr = JSONArray()
+        saves.forEach { s ->
+            arr.put(JSONObject().apply {
+                put("id",           s.id)
+                put("gameType",     s.gameType)
+                put("difficulty",   s.difficulty)
+                put("gameState",    s.gameState)
+                put("displayLabel", s.displayLabel)
+                put("savedAt",      s.savedAt)
+            })
+        }
+        context.getSharedPreferences(PREFS_GAME, Context.MODE_PRIVATE)
+            .edit().putString(KEY_GAME, arr.toString()).apply()
+    }
 
     fun getSaves(context: Context): List<PuzzleSave> {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

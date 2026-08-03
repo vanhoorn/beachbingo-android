@@ -108,7 +108,7 @@ fun WellensummeGameScreen(
             val controlsH = 130f
             val availForGrid = (maxHeight.value - controlsH - 24f).coerceAtLeast(150f)
             val availW = (maxWidth.value - 24f).coerceAtLeast(150f)
-            val cellDp = (minOf(availW, availForGrid) / gridSize).coerceIn(28f, 72f).dp
+            val cellDp = (minOf(availW, availForGrid) / gridSize).coerceIn(28f, 100f).dp
 
             Column(
                 modifier = Modifier.fillMaxSize().padding(8.dp),

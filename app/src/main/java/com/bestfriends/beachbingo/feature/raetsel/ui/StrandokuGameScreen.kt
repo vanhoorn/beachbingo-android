@@ -124,7 +124,7 @@ fun StrandokuGameScreen(
                 else -> 32f
             }
             // Use full available width as primary dimension; limit by height so controls fit
-            val cellDp = (minOf(availW, availForGrid) / gridSize).coerceIn(minCellDp, 90f).dp
+            val cellDp = (minOf(availW, availForGrid) / gridSize).coerceIn(minCellDp, 110f).dp
 
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -496,7 +496,7 @@ private fun StrandokuCell(
             Text(
                 killerCage.sum.toString(),
                 fontSize = (fontSp.value * 0.52f).sp,
-                color = TextMuted,
+                color = Color.White,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.TopStart).padding(start = 1.dp, top = 1.dp),
                 lineHeight = fontSp,

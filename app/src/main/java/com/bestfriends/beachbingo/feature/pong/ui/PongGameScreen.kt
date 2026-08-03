@@ -20,12 +20,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import com.bestfriends.beachbingo.ui.components.GameHudBar
 import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
 import kotlinx.coroutines.tasks.await
 import androidx.compose.runtime.Composable
@@ -236,13 +238,18 @@ fun PongGameScreen(
                         }
                     }
                 }
-                Text(
-                    "/$scoreLimit",
-                    fontSize = 10.sp,
-                    color = TextMuted,
-                    modifier = Modifier.width(36.dp),
-                    textAlign = TextAlign.End
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { manualPaused = !manualPaused }) {
+                        Icon(
+                            if (manualPaused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                            contentDescription = if (manualPaused) "Weiterspielen" else "Pause",
+                            tint = TextMuted,
+                        )
+                    }
+                    IconButton(onClick = { manualPaused = true; showQuitDialog = true }) {
+                        Icon(Icons.Filled.Close, contentDescription = "Beenden", tint = TextMuted)
+                    }
+                }
             }
 
             // ── Canvas ────────────────────────────────────────────────────────
@@ -345,33 +352,6 @@ fun PongGameScreen(
                             } else {
                                 Box(Modifier.width(32.dp).height(3.dp).background(paddleColor, RoundedCornerShape(2.dp)))
                                 Text("↔", fontSize = 11.sp, color = Color(0xFF444444), fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ── HUD bar ───────────────────────────────────────────────────────
-            GameHudBar(
-                paused = manualPaused,
-                onPauseToggle = { manualPaused = !manualPaused },
-                onQuit = { manualPaused = true; showQuitDialog = true },
-            ) {
-                androidx.compose.foundation.layout.Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        activeSides.forEachIndexed { idx, side ->
-                            if (idx > 0) Text("·", color = Surface2Dark, fontSize = 14.sp, fontWeight = FontWeight.Black)
-                            androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(labelForSide(side).uppercase(), fontSize = 8.sp, color = SIDE_COLOR[side] ?: TextMuted, fontWeight = FontWeight.Bold)
-                                Text("${PongGameViewModel.scoreOf(gs, side)}", fontSize = 16.sp, fontWeight = FontWeight.Black,
-                                    color = if (PongGameViewModel.scoreOf(gs, side) >= scoreLimit - 1) Coral else TextPrimary)
                             }
                         }
                     }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -1085,53 +1086,113 @@ fun BrandungGameScreen(
                 ) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Gegner", style = MaterialTheme.typography.labelSmall, color = TextMuted)
-                        opponents.forEach { opponent ->
-                            val isCurrentTurn = currentState.players.getOrNull(currentState.currentTurnIndex)?.userId == opponent.userId
+                        if (screenWidthDp > 600) {
+                            // Tablet: compact horizontal tiles side by side
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = if (isCurrentTurn) BrandungTeal.copy(alpha = 0.2f) else Surface2Dark,
-                                    modifier = Modifier.size(40.dp),
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Text(opponent.avatarUrl, fontSize = 20.sp)
+                                opponents.forEach { opponent ->
+                                    val isCurrentTurn = currentState.players.getOrNull(currentState.currentTurnIndex)?.userId == opponent.userId
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (isCurrentTurn) BrandungTeal.copy(alpha = 0.2f) else Surface2Dark,
+                                        modifier = Modifier.border(1.5.dp, if (isCurrentTurn) BrandungTeal else Color(0xFF1E3050), RoundedCornerShape(10.dp)),
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(10.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                                        ) {
+                                            Text(opponent.avatarUrl, fontSize = 22.sp)
+                                            Text(
+                                                opponent.displayName + if (isCurrentTurn) " ← Zug" else "",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = if (isCurrentTurn) BrandungTeal else TextPrimary,
+                                                fontWeight = if (isCurrentTurn) FontWeight.SemiBold else FontWeight.Normal,
+                                            )
+                                            Text(
+                                                "🌊".repeat(opponent.lives) + if (opponent.eliminated) " ❌" else "",
+                                                fontSize = 13.sp,
+                                            )
+                                            if (opponent.isAI && currentState.aiThinking && isCurrentTurn) {
+                                                Text("…", color = BrandungTeal, fontSize = 16.sp)
+                                            }
+                                            Box(
+                                                modifier = Modifier
+                                                    .padding(top = 4.dp)
+                                                    .width((scaledHiddenW.value * 2.5f).dp)
+                                                    .height((scaledHiddenH.value + 8).dp),
+                                            ) {
+                                                listOf(-14f, 0f, 14f).forEachIndexed { i, angle ->
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .align(Alignment.BottomCenter)
+                                                            .offset(x = ((i - 1) * scaledHiddenW.value * 0.5f).dp)
+                                                            .size(width = scaledHiddenW, height = scaledHiddenH)
+                                                            .rotate(angle)
+                                                            .clip(RoundedCornerShape(4.dp))
+                                                            .border(1.dp, BrandungTeal, RoundedCornerShape(4.dp)),
+                                                    ) {
+                                                        CardBackScene(modifier = Modifier.fillMaxSize())
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        opponent.displayName + if (isCurrentTurn) " ← Zug" else "",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = if (isCurrentTurn) BrandungTeal else TextPrimary,
-                                        fontWeight = if (isCurrentTurn) FontWeight.Bold else FontWeight.Normal,
-                                    )
-                                    Text(
-                                        "🌊".repeat(opponent.lives) + if (opponent.eliminated) " ❌" else "",
-                                        fontSize = 14.sp,
-                                    )
-                                }
-                                if (opponent.isAI && currentState.aiThinking && isCurrentTurn) {
-                                    Text("…", color = BrandungTeal, fontSize = 18.sp)
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .width((scaledHiddenW.value * 2.5f).dp)
-                                        .height((scaledHiddenH.value + 8).dp),
+                            }
+                        } else {
+                            // Phone: compact row per opponent (no stretching gap)
+                            opponents.forEach { opponent ->
+                                val isCurrentTurn = currentState.players.getOrNull(currentState.currentTurnIndex)?.userId == opponent.userId
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
-                                    listOf(-14f, 0f, 14f).forEachIndexed { i, angle ->
-                                        Box(
-                                            modifier = Modifier
-                                                .align(Alignment.BottomCenter)
-                                                .offset(x = ((i - 1) * scaledHiddenW.value * 0.5f).dp)
-                                                .size(width = scaledHiddenW, height = scaledHiddenH)
-                                                .rotate(angle)
-                                                .clip(RoundedCornerShape(4.dp))
-                                                .border(1.dp, BrandungTeal, RoundedCornerShape(4.dp)),
-                                        ) {
-                                            CardBackScene(modifier = Modifier.fillMaxSize())
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = if (isCurrentTurn) BrandungTeal.copy(alpha = 0.2f) else Surface2Dark,
+                                        modifier = Modifier.size(40.dp),
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text(opponent.avatarUrl, fontSize = 20.sp)
+                                        }
+                                    }
+                                    Column {
+                                        Text(
+                                            opponent.displayName + if (isCurrentTurn) " ← Zug" else "",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = if (isCurrentTurn) BrandungTeal else TextPrimary,
+                                            fontWeight = if (isCurrentTurn) FontWeight.Bold else FontWeight.Normal,
+                                        )
+                                        Text(
+                                            "🌊".repeat(opponent.lives) + if (opponent.eliminated) " ❌" else "",
+                                            fontSize = 14.sp,
+                                        )
+                                    }
+                                    Spacer(Modifier.weight(1f))
+                                    if (opponent.isAI && currentState.aiThinking && isCurrentTurn) {
+                                        Text("…", color = BrandungTeal, fontSize = 18.sp)
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .width((scaledHiddenW.value * 2.5f).dp)
+                                            .height((scaledHiddenH.value + 8).dp),
+                                    ) {
+                                        listOf(-14f, 0f, 14f).forEachIndexed { i, angle ->
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.BottomCenter)
+                                                    .offset(x = ((i - 1) * scaledHiddenW.value * 0.5f).dp)
+                                                    .size(width = scaledHiddenW, height = scaledHiddenH)
+                                                    .rotate(angle)
+                                                    .clip(RoundedCornerShape(4.dp))
+                                                    .border(1.dp, BrandungTeal, RoundedCornerShape(4.dp)),
+                                            ) {
+                                                CardBackScene(modifier = Modifier.fillMaxSize())
+                                            }
                                         }
                                     }
                                 }

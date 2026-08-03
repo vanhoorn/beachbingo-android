@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.ui.theme.*
+import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -43,7 +44,7 @@ private val DIFF_OPTIONS = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PiratesLobbyScreen(
-    onNavigateToGame: (difficulty: String, fireRate: Int, controlMode: String) -> Unit,
+    onNavigateToGame: (difficulty: String, fireRate: Int, controlMode: String, saveId: String?) -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToHome: () -> Unit,
     onNavigateToResults: () -> Unit = {},
@@ -51,6 +52,7 @@ fun PiratesLobbyScreen(
     val auth = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     var difficulty by remember { mutableStateOf("ROOKIE") }
     var fireRate by remember { mutableIntStateOf(5) }
@@ -58,6 +60,7 @@ fun PiratesLobbyScreen(
     var loading by remember { mutableStateOf(true) }
     var isFavorite by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
+    val savedGame = remember { PuzzleSaveManager.getGameSave(context, "pirates") }
 
     LaunchedEffect(uid) {
         if (uid == null) { loading = false; return@LaunchedEffect }
@@ -206,9 +209,35 @@ fun PiratesLobbyScreen(
                     }
                 }
 
+                // Saved game card
+                if (savedGame != null) {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Purple.copy(alpha = 0.08f),
+                        modifier = Modifier.fillMaxWidth().border(1.dp, Purple.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("💾", fontSize = 28.sp)
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Gespeichertes Spiel", fontSize = 12.sp, color = TextMuted, fontWeight = FontWeight.Bold)
+                                Text(savedGame.displayLabel, fontSize = 14.sp, color = TextPrimary)
+                            }
+                            Button(
+                                onClick = { onNavigateToGame(savedGame.difficulty, fireRate, controlMode, savedGame.id) },
+                                colors = ButtonDefaults.buttonColors(containerColor = Purple),
+                                shape = RoundedCornerShape(10.dp),
+                            ) { Text("Fortsetzen", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                        }
+                    }
+                }
+
                 // Play button
                 Button(
-                    onClick = { onNavigateToGame(difficulty, fireRate, controlMode) },
+                    onClick = { onNavigateToGame(difficulty, fireRate, controlMode, null) },
                     enabled = !loading,
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Purple),
