@@ -22,8 +22,8 @@ data class WwDifficultyConfig(
 val WW_CONFIG: Map<String, WwDifficultyConfig> = mapOf(
     "leicht"  to WwDifficultyConfig(4, 7, false, "Leicht",  "4 Buchstaben · 7 Versuche"),
     "mittel"  to WwDifficultyConfig(5, 6, false, "Mittel",  "5 Buchstaben · 6 Versuche"),
-    "schwer"  to WwDifficultyConfig(5, 5, false, "Schwer",  "5 Buchstaben · 5 Versuche"),
-    "experte" to WwDifficultyConfig(6, 5, true,  "Experte", "6 Buchstaben · 5 Versuche · Hard Mode"),
+    "schwer"  to WwDifficultyConfig(6, 6, false, "Schwer",  "6 Buchstaben · 6 Versuche"),
+    "experte" to WwDifficultyConfig(7, 6, false, "Experte", "7 Buchstaben · 6 Versuche"),
 )
 
 val WW_DIFFICULTIES = listOf("leicht", "mittel", "schwer", "experte")
@@ -64,42 +64,56 @@ internal fun wwToUpper(s: String) = buildString {
 }
 
 // ── Wortlisten-Singleton ───────────────────────────────────────────────────────
-// Lädt 6 Asset-Dateien einmalig; danach nullkosten-Zugriff.
+// Lädt 8 Asset-Dateien einmalig; danach nullkosten-Zugriff.
 // Quellen: enz/german-wordlist (CC0) + caco3/wordle-de Targets 5 (MIT)
+// Umlaute werden substituiert: ä→ae, ö→oe, ü→ue, ß→ss
 
 object WwWordBank {
     @Volatile private var initialized = false
 
-    private var targets4: List<String> = emptyList()
-    private var targets5: List<String> = emptyList()
-    private var targets6: List<String> = emptyList()
-    private var pool4: Set<String> = emptySet()
-    private var pool5: Set<String> = emptySet()
-    private var pool6: Set<String> = emptySet()
+    private val targetsMap = mutableMapOf<Int, MutableList<String>>()
+    private val poolMap    = mutableMapOf<Int, MutableSet<String>>()
 
     val isReady: Boolean get() = initialized
-
-    private val UMLAUT_RE = Regex("[äöüÄÖÜß]")
 
     @Synchronized
     fun init(context: Context) {
         if (initialized) return
-        targets4 = loadLines(context, "wortwelle/targets_4.txt")
-        targets5 = loadLines(context, "wortwelle/targets_5.txt")
-        targets6 = loadLines(context, "wortwelle/targets_6.txt")
-        // Pool = eigene Pool-Datei + Targets (Targets sind immer gültige Ratewörter)
-        pool4 = (loadLines(context, "wortwelle/pool_4.txt") + targets4).toHashSet()
-        pool5 = (loadLines(context, "wortwelle/pool_5.txt") + targets5).toHashSet()
-        pool6 = (loadLines(context, "wortwelle/pool_6.txt") + targets6).toHashSet()
+        val t4 = loadLines(context, "wortwelle/targets_4.txt")
+        val t5 = loadLines(context, "wortwelle/targets_5.txt")
+        val t6 = loadLines(context, "wortwelle/targets_6.txt")
+        val t7 = loadLines(context, "wortwelle/targets_7.txt")
+        val p4 = loadLines(context, "wortwelle/pool_4.txt")
+        val p5 = loadLines(context, "wortwelle/pool_5.txt")
+        val p6 = loadLines(context, "wortwelle/pool_6.txt")
+        val p7 = loadLines(context, "wortwelle/pool_7.txt")
+
+        // Wörter nach Länge (nach Substitution) gruppieren
+        for (w in t4 + t5 + t6 + t7) {
+            val len = w.length
+            if (len < 4 || len > 7) continue
+            targetsMap.getOrPut(len) { mutableListOf() }.add(w)
+        }
+        for (w in p4 + p5 + p6 + p7 + t4 + t5 + t6 + t7) {
+            val len = w.length
+            if (len < 4 || len > 7) continue
+            poolMap.getOrPut(len) { mutableSetOf() }.add(w)
+        }
         initialized = true
     }
 
+    private fun substituteUmlauts(word: String): String = word
+        .replace("ä", "ae").replace("ö", "oe").replace("ü", "ue")
+        .replace("Ä", "AE").replace("Ö", "OE").replace("Ü", "UE")
+        .replace("ß", "ss").replace("ẞ", "SS")
+
     private fun loadLines(context: Context, path: String): List<String> =
         context.assets.open(path).bufferedReader().readLines()
-            .map { it.trim() }.filter { it.isNotEmpty() && !UMLAUT_RE.containsMatchIn(it) }
+            .map { substituteUmlauts(it.trim()).uppercase() }
+            .filter { it.isNotEmpty() && it.all { c -> c in 'A'..'Z' } }
 
-    fun getTargets(len: Int): List<String> = when (len) { 4 -> targets4; 5 -> targets5; else -> targets6 }
-    fun getPool(len: Int): Set<String>     = when (len) { 4 -> pool4;    5 -> pool5;    else -> pool6    }
+    fun getTargets(len: Int): List<String> = targetsMap[len] ?: emptyList()
+    fun getPool(len: Int): Set<String>     = poolMap[len]    ?: emptySet()
 }
 
 // ── Wortlisten-Zugriff ─────────────────────────────────────────────────────────

@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.bestfriends.beachbingo.feature.raetsel.*
+import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -525,10 +526,8 @@ fun WortWelleGameScreen(
                         Text("✅ Grün: Buchstabe ist richtig und an der richtigen Position.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
                         Text("🟡 Gelb: Buchstabe kommt vor, steht aber an anderer Stelle.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
                         Text("⬛ Grau: Buchstabe ist nicht im Wort.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
-                        if (cfg.hardMode) {
-                            Spacer(Modifier.fillMaxWidth().height(1.dp).background(BorderColor))
-                            Text("Hard Mode: Grüne Buchstaben müssen an ihrer Position bleiben. Gelbe müssen wiederverwendet werden.", fontSize = 12.sp, color = WwGameAccent, lineHeight = 17.sp)
-                        }
+                        Spacer(Modifier.fillMaxWidth().height(1.dp).background(BorderColor))
+                        Text("Umlaute werden ersetzt: Ä=AE, Ö=OE, Ü=UE, ß=SS (z.B. BOESE statt BÖSE).", fontSize = 12.sp, color = TextMuted, lineHeight = 17.sp)
                     }
                     Spacer(Modifier.height(16.dp))
                     Button(
@@ -543,47 +542,25 @@ fun WortWelleGameScreen(
 
     // ── Beenden-Dialog ────────────────────────────────────────────────────────
     if (showQuit) {
-        Dialog(onDismissRequest = { running = true; showQuit = false }) {
-            Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
-                Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("🏖️", fontSize = 36.sp)
-                    Spacer(Modifier.height(8.dp))
-                    Text("Spiel beenden?", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-                    Spacer(Modifier.height(20.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                        OutlinedButton(
-                            onClick = { running = true; showQuit = false },
-                            modifier = Modifier.fillMaxWidth(),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, TextSub.copy(alpha = 0.4f)),
-                        ) { Text("Weiterspielen", color = TextSub, fontWeight = FontWeight.Bold) }
-                        if (!isDaily) {
-                            Button(
-                                onClick = {
-                                    if (saveIdRef.isNotEmpty()) {
-                                        PuzzleSaveManager.savePuzzle(context, PuzzleSave(
-                                            id = saveIdRef, gameType = "wortwelle", variant = "random",
-                                            difficulty = difficulty, seed = 0L,
-                                            puzzleState = serializeWwState(targetWord, guesses, cells.joinToString(""), gameStatus),
-                                            startedAt = System.currentTimeMillis(), elapsedSeconds = elapsed,
-                                        ))
-                                    }
-                                    onNavigateBack()
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = OceanBlue),
-                            ) { Text("💾 Speichern & Beenden", fontWeight = FontWeight.Bold) }
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                if (!isDaily && saveIdRef.isNotEmpty()) PuzzleSaveManager.deleteSave(context, saveIdRef)
-                                onNavigateBack()
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Danger.copy(alpha = 0.5f)),
-                        ) { Text("✕ Beenden ohne Speichern", color = Danger, fontWeight = FontWeight.Bold) }
-                    }
+        GameSaveQuitDialog(
+            emoji = "🏖️",
+            hideSave = isDaily,
+            onContinue = { running = true; showQuit = false },
+            onSaveAndQuit = {
+                if (saveIdRef.isNotEmpty()) {
+                    PuzzleSaveManager.savePuzzle(context, PuzzleSave(
+                        id = saveIdRef, gameType = "wortwelle", variant = "random",
+                        difficulty = difficulty, seed = 0L,
+                        puzzleState = serializeWwState(targetWord, guesses, cells.joinToString(""), gameStatus),
+                        startedAt = System.currentTimeMillis(), elapsedSeconds = elapsed,
+                    ))
                 }
-            }
-        }
+                onNavigateBack()
+            },
+            onQuitWithoutSave = {
+                if (!isDaily && saveIdRef.isNotEmpty()) PuzzleSaveManager.deleteSave(context, saveIdRef)
+                onNavigateBack()
+            },
+        )
     }
 }

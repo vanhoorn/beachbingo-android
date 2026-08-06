@@ -152,9 +152,6 @@ fun WortWelleLobbyScreen(
                             Column(modifier = Modifier.padding(14.dp)) {
                                 Text(c.label, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (isSel) WwAccent else TextPrimary)
                                 Text(c.description, fontSize = 11.sp, color = TextMuted, modifier = Modifier.padding(top = 3.dp))
-                                if (c.hardMode) {
-                                    Text("Hard Mode", fontSize = 10.sp, color = WwAccent.copy(alpha = 0.8f), modifier = Modifier.padding(top = 2.dp), fontWeight = FontWeight.Bold)
-                                }
                             }
                         }
                     }
@@ -374,7 +371,7 @@ fun WortWelleLobbyScreen(
                             Text("Grau: Nicht im Wort.", fontSize = 13.sp, color = TextMuted)
                         }
                         Spacer(Modifier.fillMaxWidth().height(1.dp).background(BorderColor))
-                        Text("Hard Mode (Experte): Bestätigte grüne Buchstaben müssen an ihrer Position bleiben; gelbe Buchstaben müssen wieder verwendet werden.", fontSize = 12.sp, color = TextMuted, lineHeight = 17.sp)
+                        Text("Umlaute werden ersetzt: Ä=AE, Ö=OE, Ü=UE, ß=SS (z.B. BOESE statt BÖSE).", fontSize = 12.sp, color = TextMuted, lineHeight = 17.sp)
                         Text("Wort des Tages: Weltweit dasselbe Wort — einmal täglich pro Schwierigkeit.", fontSize = 12.sp, color = TextMuted, lineHeight = 17.sp)
                     }
 
