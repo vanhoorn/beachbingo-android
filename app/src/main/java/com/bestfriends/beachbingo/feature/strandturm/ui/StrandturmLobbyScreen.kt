@@ -31,6 +31,7 @@ import kotlinx.coroutines.tasks.await
 import androidx.compose.material.icons.outlined.HelpOutline
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
+import com.bestfriends.beachbingo.feature.home.ui.SavedGameRow
 
 private val StrandturmRed = Color(0xFFDC2626)
 
@@ -54,7 +55,7 @@ fun StrandturmLobbyScreen(
     var isFavorite   by remember { mutableStateOf(false) }
     var showRules    by remember { mutableStateOf(false) }
     var loading      by remember { mutableStateOf(true) }
-    val savedGame    = remember { PuzzleSaveManager.getGameSave(context, "strandturm") }
+    var savedGame by remember { mutableStateOf(PuzzleSaveManager.getGameSave(context, "strandturm")) }
 
     LaunchedEffect(uid) {
         if (uid == null) { loading = false; return@LaunchedEffect }
@@ -179,30 +180,15 @@ fun StrandturmLobbyScreen(
             }
 
             // Saved game card
-            if (savedGame != null) {
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = StrandturmRed.copy(alpha = 0.08f),
-                    modifier = Modifier.fillMaxWidth().border(1.dp, StrandturmRed.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("💾", fontSize = 28.sp)
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Gespeichertes Spiel", fontSize = 12.sp, color = TextMuted, fontWeight = FontWeight.Bold)
-                            Text(savedGame.displayLabel, fontSize = 14.sp, color = TextPrimary)
-                        }
-                        val savedLevel = try { org.json.JSONObject(savedGame.gameState).getInt("level") } catch (_: Exception) { 1 }
-                        Button(
-                            onClick = { onNavigateToGame(controlMode, savedLevel, savedGame.id) },
-                            colors = ButtonDefaults.buttonColors(containerColor = StrandturmRed),
-                            shape = RoundedCornerShape(10.dp),
-                        ) { Text("Fortsetzen", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
-                    }
-                }
+            savedGame?.let { sg ->
+                val savedLevel = try { org.json.JSONObject(sg.gameState).getInt("level") } catch (_: Exception) { 1 }
+                SavedGameRow(
+                    title = "Strandturm",
+                    subtitle = sg.displayLabel,
+                    color = StrandturmRed,
+                    onResume = { onNavigateToGame(controlMode, savedLevel, sg.id) },
+                    onDelete = { PuzzleSaveManager.deleteGameSave(context, "strandturm"); savedGame = null },
+                )
             }
 
             // Play button

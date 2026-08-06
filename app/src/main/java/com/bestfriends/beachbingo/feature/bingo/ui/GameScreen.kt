@@ -213,6 +213,7 @@ fun GameScreen(
 
     if (showQuitDialog) {
         QuitConfirmDialog(
+            emoji = "🎱",
             message = "Du verlässt das Spiel.",
             onConfirm = { viewModel.leaveGame(); onNavigateBack() },
             onDismiss = { showQuitDialog = false },

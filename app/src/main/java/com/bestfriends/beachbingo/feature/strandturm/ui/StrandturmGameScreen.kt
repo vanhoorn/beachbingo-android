@@ -1502,7 +1502,7 @@ fun StrandturmGameScreen(
 
     if (showQuitDialog) {
         GameSaveQuitDialog(
-            emoji = "🏗️",
+            emoji = "🗼",
             message = "Score: ${gs.score} Pts · Level ${gs.level} · Leben: ${gs.lives}",
             onContinue = { showQuitDialog = false; paused = false },
             onSaveAndQuit = {

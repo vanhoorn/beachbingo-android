@@ -362,6 +362,7 @@ fun PongGameScreen(
 
         if (showQuitDialog) {
             QuitConfirmDialog(
+                emoji = "🏓",
                 message = "Das laufende Spiel wird beendet.",
                 onConfirm = { onNavigateToLobby() },
                 onDismiss = { showQuitDialog = false; manualPaused = false },

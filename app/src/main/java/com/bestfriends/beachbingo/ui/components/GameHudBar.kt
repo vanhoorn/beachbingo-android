@@ -1,15 +1,21 @@
 package com.bestfriends.beachbingo.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,14 +23,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.bestfriends.beachbingo.ui.theme.BorderColor
 import com.bestfriends.beachbingo.ui.theme.Danger
 import com.bestfriends.beachbingo.ui.theme.OceanBlue
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
+import com.bestfriends.beachbingo.ui.theme.TextSub
 
 /**
  * Wiederverwendbare HUD-Leiste für alle Spiel-Screens.
@@ -126,63 +135,111 @@ private fun HudButton(
 @Composable
 fun GameSaveQuitDialog(
     emoji: String = "🏳️",
-    message: String = "Möchtest du speichern?",
+    message: String = "",
+    hideSave: Boolean = false,
     onContinue: () -> Unit,
     onSaveAndQuit: () -> Unit,
     onQuitWithoutSave: () -> Unit,
 ) {
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onContinue,
-        title = { Text("$emoji Spiel beenden?") },
-        text = { Text(message) },
-        confirmButton = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                androidx.compose.material3.Button(
-                    onClick = onSaveAndQuit,
+    Dialog(onDismissRequest = onContinue) {
+        Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(emoji, fontSize = 40.sp)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Spiel beenden?",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = TextPrimary,
+                )
+                Spacer(Modifier.height(4.dp))
+                if (message.isNotEmpty()) {
+                    Text(
+                        message,
+                        fontSize = 13.sp,
+                        color = TextSub,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                Spacer(Modifier.height(20.dp))
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth(),
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = OceanBlue),
-                ) { Text("💾 Speichern & Beenden") }
-                androidx.compose.material3.Button(
-                    onClick = onQuitWithoutSave,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Danger),
-                ) { Text("✕ Beenden ohne Speichern") }
+                ) {
+                    OutlinedButton(
+                        onClick = onContinue,
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(1.dp, TextSub.copy(alpha = 0.4f)),
+                    ) { Text("Weiterspielen", color = TextSub, fontWeight = FontWeight.Bold) }
+                    if (!hideSave) {
+                        Button(
+                            onClick = onSaveAndQuit,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = OceanBlue),
+                        ) { Text("💾 Speichern & Beenden") }
+                    }
+                    OutlinedButton(
+                        onClick = onQuitWithoutSave,
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(1.dp, Danger.copy(alpha = 0.5f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Danger),
+                    ) { Text("✕ Beenden ohne Speichern", fontWeight = FontWeight.Bold) }
+                }
             }
-        },
-        dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onContinue) { Text("Weiterspielen") }
-        },
-        containerColor = SurfaceDark,
-        titleContentColor = TextPrimary,
-        textContentColor = TextPrimary.copy(alpha = 0.8f),
-    )
+        }
+    }
 }
 
-/** Standard-Abbruch-Bestätigungsdialog */
+/** Standard-Abbruch-Bestätigungsdialog (ohne Speichern-Option) */
 @Composable
 fun QuitConfirmDialog(
-    title: String = "Spiel abbrechen?",
+    emoji: String = "🏳️",
     message: String = "Dein Fortschritt geht verloren.",
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("🏳️ $title") },
-        text = { Text(message) },
-        confirmButton = {
-            androidx.compose.material3.Button(
-                onClick = onConfirm,
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                    containerColor = Danger,
-                ),
-            ) { Text("Abbrechen") }
-        },
-        dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Weiterspielen") }
-        },
-        containerColor = SurfaceDark,
-        titleContentColor = TextPrimary,
-        textContentColor = TextPrimary.copy(alpha = 0.8f),
-    )
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(emoji, fontSize = 40.sp)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Spiel beenden?",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = TextPrimary,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    message,
+                    fontSize = 13.sp,
+                    color = TextSub,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(20.dp))
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(1.dp, TextSub.copy(alpha = 0.4f)),
+                    ) { Text("Weiterspielen", color = TextSub, fontWeight = FontWeight.Bold) }
+                    OutlinedButton(
+                        onClick = onConfirm,
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(1.dp, Danger.copy(alpha = 0.5f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Danger),
+                    ) { Text("✕ Beenden", fontWeight = FontWeight.Bold) }
+                }
+            }
+        }
+    }
 }

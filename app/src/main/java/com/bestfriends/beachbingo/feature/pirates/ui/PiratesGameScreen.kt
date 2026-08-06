@@ -343,7 +343,7 @@ fun PiratesGameScreen(
     // ── Quit dialog ────────────────────────────────────────────────────────
     if (showQuitDialog) {
         GameSaveQuitDialog(
-            emoji = "🏴‍☠️",
+            emoji = "🐙",
             message = "Score: ${gs.score} · Welle: ${gs.wave} · Leben: ${gs.lives}",
             onContinue = { showQuitDialog = false; paused = false },
             onSaveAndQuit = {

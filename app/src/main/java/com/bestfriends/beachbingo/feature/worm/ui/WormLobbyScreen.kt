@@ -30,6 +30,7 @@ import kotlinx.coroutines.tasks.await
 import androidx.compose.material.icons.outlined.HelpOutline
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
+import com.bestfriends.beachbingo.feature.home.ui.SavedGameRow
 
 private val WormGreen     = Color(0xFF22C55E)
 private val WormGreenDark = Color(0xFF15803D)
@@ -59,7 +60,7 @@ fun WormLobbyScreen(
     var loading      by remember { mutableStateOf(true) }
     var isFavorite   by remember { mutableStateOf(false) }
     var showRules    by remember { mutableStateOf(false) }
-    val savedGame    = remember { PuzzleSaveManager.getGameSave(context, "worm") }
+    var savedGame by remember { mutableStateOf(PuzzleSaveManager.getGameSave(context, "worm")) }
 
     LaunchedEffect(uid) {
         if (uid == null) { loading = false; return@LaunchedEffect }
@@ -188,29 +189,14 @@ fun WormLobbyScreen(
             )
 
             // Saved game card
-            if (savedGame != null) {
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = WormGreen.copy(alpha = 0.08f),
-                    modifier = Modifier.fillMaxWidth().border(1.dp, WormGreen.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("💾", fontSize = 28.sp)
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Gespeichertes Spiel", fontSize = 12.sp, color = TextMuted, fontWeight = FontWeight.Bold)
-                            Text(savedGame.displayLabel, fontSize = 14.sp, color = TextPrimary)
-                        }
-                        Button(
-                            onClick = { onNavigateToGame(savedGame.difficulty, controlMode, savedGame.id) },
-                            colors = ButtonDefaults.buttonColors(containerColor = WormGreen),
-                            shape = RoundedCornerShape(10.dp),
-                        ) { Text("Fortsetzen", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
-                    }
-                }
+            savedGame?.let { sg ->
+                SavedGameRow(
+                    title = "Wattwurm",
+                    subtitle = sg.displayLabel,
+                    color = WormGreen,
+                    onResume = { onNavigateToGame(sg.difficulty, controlMode, sg.id) },
+                    onDelete = { PuzzleSaveManager.deleteGameSave(context, "worm"); savedGame = null },
+                )
             }
 
             // Play button

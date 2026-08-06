@@ -74,6 +74,7 @@ import kotlinx.coroutines.tasks.await
 import androidx.compose.material.icons.outlined.HelpOutline
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
+import com.bestfriends.beachbingo.feature.home.ui.SavedGameRow
 import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
 import org.json.JSONObject
 
@@ -117,6 +118,7 @@ fun MeermauLobbyScreen(
     var waitingPlayers by remember { mutableStateOf<List<String>>(emptyList()) }
     var creating by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
+    var savedMeermau by remember { mutableStateOf(PuzzleSaveManager.getGameSave(context, "meermau")) }
 
     LaunchedEffect(uid) {
         if (uid == null) return@LaunchedEffect
@@ -243,36 +245,17 @@ fun MeermauLobbyScreen(
 
             if (step == "mode") {
                 Text("Spielmodus wählen", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
-                val savedMeermau = PuzzleSaveManager.getGameSave(context, "meermau")
-                if (savedMeermau != null) {
-                    val savedLabel = savedMeermau.displayLabel ?: "Gespeichertes Spiel"
+                savedMeermau?.let { sg ->
                     val savedAiCount = try {
-                        val json = JSONObject(savedMeermau.gameState)
-                        val playersArr = json.optJSONArray("players")
-                        maxOf(1, (playersArr?.length() ?: 2) - 1)
+                        maxOf(1, (JSONObject(sg.gameState).optJSONArray("players")?.length() ?: 2) - 1)
                     } catch (_: Exception) { 1 }
-                    Card(
-                        modifier = Modifier.fillMaxWidth().clickable {
-                            onNavigateToGame("ai", null, savedAiCount, savedMeermau.difficulty, savedMeermau.id)
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
-                        border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF6B21A8).copy(alpha = 0.4f)),
-                    ) {
-                        Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFF6B21A8).copy(alpha = 0.15f), modifier = Modifier.size(56.dp)) {
-                                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                                    Text("↩️", fontSize = 28.sp)
-                                }
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Fortsetzen", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
-                                Text(savedLabel, style = MaterialTheme.typography.bodySmall, color = TextMuted)
-                            }
-                            Text("›", fontSize = 20.sp, color = TextMuted)
-                        }
-                    }
+                    SavedGameRow(
+                        title = "MeerMau",
+                        subtitle = sg.displayLabel,
+                        color = MeermauViolet,
+                        onResume = { onNavigateToGame("ai", null, savedAiCount, sg.difficulty, sg.id) },
+                        onDelete = { PuzzleSaveManager.deleteGameSave(context, "meermau"); savedMeermau = null },
+                    )
                 }
                 MmModeCard("🤖", "Gegen KI", "Spiel allein gegen KI-Gegner", MeermauViolet) { step = "ai_config" }
                 MmModeCard("📱", "Online – 2-4 Spieler", "Spielt gemeinsam in Echtzeit", Color(0xFF0EA5E9)) { step = "online" }

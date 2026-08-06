@@ -243,6 +243,7 @@ fun VierGameScreen(
             )
         } else {
             QuitConfirmDialog(
+                emoji = "🍺",
                 message = "Das laufende Spiel wird beendet.",
                 onConfirm = { onNavigateBack() },
                 onDismiss = { showQuitDialog = false; manualPaused = false },

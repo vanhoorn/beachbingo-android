@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.bingo.ui.components.QrCodeImage
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
+import com.bestfriends.beachbingo.feature.home.ui.SavedGameRow
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.SandGold
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
@@ -110,6 +111,7 @@ fun StrandraeuberLobbyScreen(
     var totalRounds by remember { mutableIntStateOf(3) }
     var isFavorite by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
+    var savedSp by remember { mutableStateOf(PuzzleSaveManager.getGameSave(context, "strandraeuber")) }
 
     // Online lobby state
     var onlineStep by remember { mutableStateOf("choose") }
@@ -268,20 +270,15 @@ fun StrandraeuberLobbyScreen(
                 Text("Spielmodus wählen", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
 
                 // Fortsetzen card
-                val savedSp = remember { PuzzleSaveManager.getGameSave(context, "strandraeuber") }
-                if (savedSp != null) {
-                    val savedAiCount = remember(savedSp) {
-                        try { maxOf(1, JSONObject(savedSp.gameState).getJSONArray("players").length() - 1) } catch (_: Exception) { 1 }
-                    }
-                    val savedTotalRounds = remember(savedSp) {
-                        try { JSONObject(savedSp.gameState).optInt("totalRounds", 3) } catch (_: Exception) { 3 }
-                    }
-                    SpModeCard(
-                        emoji = "▶️",
-                        title = "Fortsetzen",
-                        description = savedSp.displayLabel,
+                savedSp?.let { sg ->
+                    val savedAiCount = try { maxOf(1, JSONObject(sg.gameState).getJSONArray("players").length() - 1) } catch (_: Exception) { 1 }
+                    val savedTotalRounds = try { JSONObject(sg.gameState).optInt("totalRounds", 3) } catch (_: Exception) { 3 }
+                    SavedGameRow(
+                        title = "Strandräuber",
+                        subtitle = sg.displayLabel,
                         color = SpCrimson,
-                        onClick = { onNavigateToGame("AI", null, savedAiCount, savedSp.difficulty, savedTotalRounds, savedSp.id) },
+                        onResume = { onNavigateToGame("AI", null, savedAiCount, sg.difficulty, savedTotalRounds, sg.id) },
+                        onDelete = { PuzzleSaveManager.deleteGameSave(context, "strandraeuber"); savedSp = null },
                     )
                 }
 

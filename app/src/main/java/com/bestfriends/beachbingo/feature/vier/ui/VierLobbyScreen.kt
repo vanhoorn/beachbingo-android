@@ -65,6 +65,7 @@ import com.bestfriends.beachbingo.feature.vier.viewmodel.VierLobbyViewModel
 import androidx.compose.material.icons.outlined.HelpOutline
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
+import com.bestfriends.beachbingo.feature.home.ui.SavedGameRow
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -134,6 +135,7 @@ fun VierLobbyScreen(
     }
 
     val context = LocalContext.current
+    var savedVierGame by remember { mutableStateOf(PuzzleSaveManager.getGameSave(context, "vier")) }
 
     Scaffold(
         containerColor = BgDark,
@@ -184,34 +186,17 @@ fun VierLobbyScreen(
 
             // ── Step: Mode ──
             if (step == "mode") {
-                val savedVierGame = remember { PuzzleSaveManager.getGameSave(context, "vier") }
-                if (savedVierGame != null) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0x1AC2410C),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Row(
-                            Modifier.padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            Text("💾", fontSize = 26.sp)
-                            Column(Modifier.weight(1f)) {
-                                Text("Gespeichertes Spiel", fontSize = 11.sp, color = TextMuted, fontWeight = FontWeight.Bold)
-                                Text(savedVierGame.displayLabel, fontSize = 14.sp, color = TextPrimary)
-                            }
-                            Button(
-                                onClick = {
-                                    val savedState = try { JSONObject(savedVierGame.gameState) } catch (_: Exception) { null }
-                                    val savedMyDrinkId = savedState?.optString("myDrinkId") ?: "lager"
-                                    val savedAiDrinkId = savedState?.optString("aiDrinkId") ?: "whisky"
-                                    onNavigateToGame("ai", null, savedMyDrinkId, savedAiDrinkId, savedVierGame.difficulty, savedVierGame.id)
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = BeerOrange),
-                            ) { Text("Fortsetzen", fontSize = 13.sp) }
-                        }
-                    }
+                savedVierGame?.let { sg ->
+                    val savedState = try { JSONObject(sg.gameState) } catch (_: Exception) { null }
+                    val savedMyDrinkId = savedState?.optString("myDrinkId") ?: "lager"
+                    val savedAiDrinkId = savedState?.optString("aiDrinkId") ?: "whisky"
+                    SavedGameRow(
+                        title = "Vier4Bier",
+                        subtitle = sg.displayLabel,
+                        color = BeerOrange,
+                        onResume = { onNavigateToGame("ai", null, savedMyDrinkId, savedAiDrinkId, sg.difficulty, sg.id) },
+                        onDelete = { PuzzleSaveManager.deleteGameSave(context, "vier"); savedVierGame = null },
+                    )
                 }
                 Text(
                     text = "Spielmodus wählen",

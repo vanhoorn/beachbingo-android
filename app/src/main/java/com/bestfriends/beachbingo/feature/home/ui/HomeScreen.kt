@@ -64,6 +64,7 @@ import com.bestfriends.beachbingo.core.model.GameGenre
 import com.bestfriends.beachbingo.core.model.GameMetadata
 import com.bestfriends.beachbingo.core.model.PlayerCount
 import com.bestfriends.beachbingo.core.model.RIDDLE_GAMES
+import com.bestfriends.beachbingo.feature.raetsel.GameSave
 import com.bestfriends.beachbingo.feature.raetsel.PUZZLE_DIFFICULTY_LABELS
 import com.bestfriends.beachbingo.feature.raetsel.PUZZLE_GAME_INFO
 import com.bestfriends.beachbingo.feature.raetsel.PuzzleSave
@@ -147,6 +148,7 @@ fun HomeScreen(
     var favoriteIds by remember { mutableStateOf<List<String>>(emptyList()) }
     var activeGame by remember { mutableStateOf<ActiveGameInfo?>(null) }
     var savedPuzzles by remember { mutableStateOf<List<PuzzleSave>>(emptyList()) }
+    var savedGames by remember { mutableStateOf<List<GameSave>>(emptyList()) }
     var showTour by remember { mutableStateOf(false) }
     var tourSlide by remember { mutableStateOf(0) }
 
@@ -156,6 +158,7 @@ fun HomeScreen(
 
     LaunchedEffect(Unit) {
         savedPuzzles = PuzzleSaveManager.getSaves(context)
+        savedGames = PuzzleSaveManager.getGameSaves(context)
         val tourSeen = context.getSharedPreferences("beachbande_prefs", 0).getBoolean("tour_seen", false)
         if (!tourSeen) showTour = true
     }
@@ -533,7 +536,7 @@ fun HomeScreen(
         }
 
         // ── Gespeicherte Spiele ───────────────────────────────────────────────────
-        if (savedPuzzles.isNotEmpty()) {
+        if (savedPuzzles.isNotEmpty() || savedGames.isNotEmpty()) {
             SectionHeader(
                 title = "GESPEICHERTE SPIELE", emoji = "💾",
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp)
@@ -544,10 +547,37 @@ fun HomeScreen(
                     .padding(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                savedGames.forEach { save ->
+                    val navigateTo: () -> Unit = when (save.gameType) {
+                        "pirates"       -> onNavigateToPiratesLobby
+                        "worm"          -> onNavigateToWormLobby
+                        "strandturm"    -> onNavigateToStrandturmLobby
+                        "vier"          -> onNavigateToVierLobby
+                        "brandung"      -> onNavigateToBrandungLobby
+                        "meermau"       -> onNavigateToMeermauLobby
+                        "strandraeuber" -> onNavigateToStrandraeuberLobby
+                        else -> ({})
+                    }
+                    SavedGameHomeCard(
+                        save = save,
+                        onClick = navigateTo,
+                        onDelete = {
+                            PuzzleSaveManager.deleteGameSave(context, save.gameType)
+                            savedGames = savedGames.filter { it.gameType != save.gameType }
+                        },
+                    )
+                }
                 savedPuzzles.forEach { save ->
                     val info = PUZZLE_GAME_INFO[save.gameType]
                     if (info != null) {
-                        SavedPuzzleCard(save = save, info = info, onClick = { onNavigateToRaetselGame(save) })
+                        SavedPuzzleCard(
+                            save = save, info = info,
+                            onClick = { onNavigateToRaetselGame(save) },
+                            onDelete = {
+                                PuzzleSaveManager.deleteSave(context, save.id)
+                                savedPuzzles = savedPuzzles.filter { it.id != save.id }
+                            },
+                        )
                     }
                 }
             }
@@ -741,37 +771,111 @@ private fun SavedPuzzleCard(
     save: PuzzleSave,
     info: Triple<String, String, Long>,
     onClick: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val accentColor = Color(info.third)
     val diffLabel = PUZZLE_DIFFICULTY_LABELS[save.difficulty] ?: save.difficulty
     val elapsed = PuzzleSaveManager.formatElapsed(save.elapsedSeconds)
 
-    Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = SurfaceDark,
-        modifier = Modifier
-            .width(140.dp)
-            .border(1.5.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
-            .clickable { onClick() }
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Text(text = info.second, fontSize = 26.sp)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = info.first,
-                fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                color = TextPrimary, lineHeight = 15.sp,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = "$diffLabel · ${save.variant}",
-                fontSize = 10.sp, fontWeight = FontWeight.Bold, color = accentColor,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "⏱ $elapsed",
-                fontSize = 10.sp, color = TextMuted,
-            )
+    Box(modifier = Modifier.width(140.dp)) {
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = SurfaceDark,
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.5.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                .clickable { onClick() }
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Text(text = info.second, fontSize = 26.sp)
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = info.first,
+                    fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                    color = TextPrimary, lineHeight = 15.sp,
+                    modifier = Modifier.padding(end = 22.dp),
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = "$diffLabel · ${save.variant}",
+                    fontSize = 10.sp, fontWeight = FontWeight.Bold, color = accentColor,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "⏱ $elapsed",
+                    fontSize = 10.sp, color = TextMuted,
+                )
+            }
+        }
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(6.dp)
+                .size(22.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFEF4444).copy(alpha = 0.15f))
+                .clickable { onDelete() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("✕", fontSize = 10.sp, color = Color(0xFFEF4444))
+        }
+    }
+}
+
+@Composable
+private fun SavedGameHomeCard(
+    save: GameSave,
+    onClick: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val gameInfo = ALL_GAMES.find { it.id == save.gameType } ?: return
+    val accentColor = Color(gameInfo.color)
+
+    Box(modifier = Modifier.width(140.dp)) {
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = SurfaceDark,
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.5.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                .clickable { onClick() }
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                if (gameInfo.id == "meermau") {
+                    Image(
+                        painter = painterResource(R.drawable.ic_meermau_logo),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(26.dp),
+                    )
+                } else {
+                    Text(text = gameInfo.emoji, fontSize = 26.sp)
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = gameInfo.title,
+                    fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                    color = TextPrimary, lineHeight = 15.sp,
+                    modifier = Modifier.padding(end = 22.dp),
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = save.displayLabel,
+                    fontSize = 10.sp, color = TextMuted,
+                )
+            }
+        }
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(6.dp)
+                .size(22.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFEF4444).copy(alpha = 0.15f))
+                .clickable { onDelete() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("✕", fontSize = 10.sp, color = Color(0xFFEF4444))
         }
     }
 }

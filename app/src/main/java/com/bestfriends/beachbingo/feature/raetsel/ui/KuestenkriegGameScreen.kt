@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.bestfriends.beachbingo.feature.raetsel.*
+import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -231,36 +232,13 @@ fun KuestenkriegGameScreen(
             }
         }
     }
+    // ── Quit dialog ───────────────────────────────────────────────────────────
     if (showQuit) {
-        Dialog(onDismissRequest = { running = true; showQuit = false }) {
-            Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
-                Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("⚓", fontSize = 36.sp)
-                    Spacer(Modifier.height(8.dp))
-                    Text("Spiel beenden?", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-                    Spacer(Modifier.height(20.dp))
-                    Button(
-                        onClick = { running = true; showQuit = false },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Surface2Dark),
-                        shape = RoundedCornerShape(10.dp),
-                    ) { Text("Weiterspielen", color = TextPrimary, fontWeight = FontWeight.Bold) }
-                    Spacer(Modifier.height(8.dp))
-                    Button(
-                        onClick = onNavigateBack,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = KkAccent),
-                        shape = RoundedCornerShape(10.dp),
-                    ) { Text("💾 Speichern & Beenden", color = BgDark, fontWeight = FontWeight.Bold) }
-                    Spacer(Modifier.height(8.dp))
-                    Button(
-                        onClick = { PuzzleSaveManager.deleteSave(context, saveIdRef); onNavigateBack() },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Danger),
-                        shape = RoundedCornerShape(10.dp),
-                    ) { Text("✕ Beenden ohne Speichern", color = Color.White, fontWeight = FontWeight.Bold) }
-                }
-            }
-        }
+        GameSaveQuitDialog(
+            emoji = "⚓",
+            onContinue = { running = true; showQuit = false },
+            onSaveAndQuit = onNavigateBack,
+            onQuitWithoutSave = { PuzzleSaveManager.deleteSave(context, saveIdRef); onNavigateBack() },
+        )
     }
 }
