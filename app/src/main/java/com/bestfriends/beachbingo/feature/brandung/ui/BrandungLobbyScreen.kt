@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -33,11 +34,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -71,6 +76,7 @@ import kotlinx.coroutines.tasks.await
 import androidx.compose.material.icons.outlined.HelpOutline
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
+import com.bestfriends.beachbingo.feature.home.ui.SavedGameRow
 import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
 import org.json.JSONObject
 
@@ -109,6 +115,7 @@ fun BrandungLobbyScreen(
     var difficulty by remember { mutableStateOf("SNIPER") }
     var isFavorite by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
+    var savedBrandung by remember { mutableStateOf(PuzzleSaveManager.getGameSave(context, "brandung")) }
 
     // Online lobby state
     var onlineStep by remember { mutableStateOf("choose") } // choose | waiting
@@ -116,6 +123,9 @@ fun BrandungLobbyScreen(
     var gameDocId by remember { mutableStateOf("") }
     var waitingPlayers by remember { mutableStateOf<List<String>>(emptyList()) }
     var creating by remember { mutableStateOf(false) }
+    var isJoiner by remember { mutableStateOf(false) }
+    var joinCode by remember { mutableStateOf("") }
+    var joinError by remember { mutableStateOf("") }
 
     LaunchedEffect(uid) {
         if (uid == null) return@LaunchedEffect
@@ -126,7 +136,7 @@ fun BrandungLobbyScreen(
         } catch (_: Exception) {}
     }
 
-    // Listen for players joining online game
+    // Listen for players joining and game start
     LaunchedEffect(gameDocId) {
         if (gameDocId.isBlank()) return@LaunchedEffect
         db.collection("brandungGames").document(gameDocId)
@@ -135,6 +145,9 @@ fun BrandungLobbyScreen(
                 @Suppress("UNCHECKED_CAST")
                 val players = (snap.get("playerIds") as? List<String>) ?: emptyList()
                 waitingPlayers = players
+                if (snap.getString("status") == "RUNNING") {
+                    onNavigateToGame("online", gameDocId, 0, "SNIPER", null)
+                }
             }
     }
 
@@ -155,16 +168,20 @@ fun BrandungLobbyScreen(
                 val code = generateGameCode()
                 val data = mapOf(
                     "gameCode" to code,
-                    "status" to "WAITING",
+                    "status" to "LOBBY",
                     "adminId" to uid,
                     "playerIds" to listOf(uid),
-                    "players" to listOf(mapOf(
-                        "userId" to uid,
-                        "displayName" to displayName,
-                        "avatarUrl" to avatarUrl,
-                        "lives" to 3,
-                        "isAI" to false,
-                    )),
+                    "players" to mapOf(
+                        uid to mapOf(
+                            "userId" to uid,
+                            "displayName" to displayName,
+                            "avatarUrl" to avatarUrl,
+                            "hand" to emptyList<Any>(),
+                            "lives" to 3,
+                            "eliminated" to false,
+                            "isAI" to false,
+                        )
+                    ),
                     "createdAt" to System.currentTimeMillis(),
                 )
                 db.collection("brandungGames").document(code).set(data).await()
@@ -190,13 +207,61 @@ fun BrandungLobbyScreen(
     }
 
     fun cancelWaiting() {
-        if (gameDocId.isNotBlank()) {
+        if (gameDocId.isNotBlank() && !isJoiner) {
             db.collection("brandungGames").document(gameDocId).delete()
         }
         gameDocId = ""
         gameCode = ""
         waitingPlayers = emptyList()
+        isJoiner = false
+        joinCode = ""
+        joinError = ""
         onlineStep = "choose"
+    }
+
+    fun joinExistingGame(code: String) {
+        if (uid == null) return
+        joinError = ""
+        scope.launch {
+            try {
+                val normalizedCode = code.trim().uppercase()
+                val gameSnap = db.collection("brandungGames").document(normalizedCode).get().await()
+                if (!gameSnap.exists()) {
+                    joinError = "Spiel nicht gefunden."
+                    return@launch
+                }
+                val status = gameSnap.getString("status") ?: ""
+                if (status != "LOBBY" && status != "WAITING") {
+                    joinError = "Spiel läuft bereits."
+                    return@launch
+                }
+                val userSnap = db.collection("users").document(uid).get().await()
+                val displayName = userSnap.getString("displayName") ?: "Spieler"
+                val avatarUrl = userSnap.getString("avatarUrl") ?: "🏄"
+                val me = mapOf(
+                    "userId" to uid,
+                    "displayName" to displayName,
+                    "avatarUrl" to avatarUrl,
+                    "hand" to emptyList<Any>(),
+                    "lives" to 3,
+                    "eliminated" to false,
+                    "isAI" to false,
+                )
+                db.collection("brandungGames").document(normalizedCode)
+                    .update(
+                        mapOf(
+                            "players.$uid" to me,
+                            "playerIds" to FieldValue.arrayUnion(uid),
+                        )
+                    ).await()
+                gameDocId = normalizedCode
+                gameCode = normalizedCode
+                isJoiner = true
+                onlineStep = "waiting"
+            } catch (_: Exception) {
+                joinError = "Fehler beim Beitreten. Bitte erneut versuchen."
+            }
+        }
     }
 
     Scaffold(
@@ -251,18 +316,14 @@ fun BrandungLobbyScreen(
                 Text("Spielmodus wählen", style = MaterialTheme.typography.titleMedium, color = TextPrimary)
 
                 // Fortsetzen card
-                val savedBrandung = remember { PuzzleSaveManager.getGameSave(context, "brandung") }
-                if (savedBrandung != null) {
-                    val savedAiCount = remember(savedBrandung) {
-                        try { JSONObject(savedBrandung.gameState).getJSONArray("players").length() - 1 } catch (_: Exception) { 1 }
-                    }
-                    val savedDifficulty = savedBrandung.difficulty
-                    BrandungModeCard(
-                        emoji = "▶️",
-                        title = "Fortsetzen",
-                        description = savedBrandung.displayLabel,
-                        color = Color(0xFF0D9488),
-                        onClick = { onNavigateToGame("ai", null, savedAiCount, savedDifficulty, savedBrandung.id) },
+                savedBrandung?.let { sg ->
+                    val savedAiCount = try { JSONObject(sg.gameState).getJSONArray("players").length() - 1 } catch (_: Exception) { 1 }
+                    SavedGameRow(
+                        title = "Brandung",
+                        subtitle = sg.displayLabel,
+                        color = BrandungTeal,
+                        onResume = { onNavigateToGame("ai", null, savedAiCount, sg.difficulty, sg.id) },
+                        onDelete = { PuzzleSaveManager.deleteGameSave(context, "brandung"); savedBrandung = null },
                     )
                 }
 
@@ -415,6 +476,52 @@ fun BrandungLobbyScreen(
                             }
                         }
                     }
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+                    ) {
+                        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("Spiel beitreten", style = MaterialTheme.typography.titleSmall, color = TextPrimary)
+                            Text(
+                                "Gib den 6-stelligen Code des Spielers ein, der eingeladen hat.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextMuted,
+                            )
+                            OutlinedTextField(
+                                value = joinCode,
+                                onValueChange = { joinCode = it.uppercase().take(6); joinError = "" },
+                                label = { Text("Spielcode") },
+                                placeholder = { Text("z.B. ABC123") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                keyboardOptions = KeyboardOptions(
+                                    capitalization = KeyboardCapitalization.Characters,
+                                    keyboardType = KeyboardType.Ascii,
+                                ),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = BrandungTeal,
+                                    focusedLabelColor = BrandungTeal,
+                                    cursorColor = BrandungTeal,
+                                    unfocusedTextColor = TextPrimary,
+                                    focusedTextColor = TextPrimary,
+                                ),
+                            )
+                            if (joinError.isNotBlank()) {
+                                Text(joinError, style = MaterialTheme.typography.bodySmall, color = Color(0xFFEF4444))
+                            }
+                            Button(
+                                onClick = { if (joinCode.length == 6) joinExistingGame(joinCode) },
+                                enabled = joinCode.length == 6,
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0EA5E9)),
+                                shape = RoundedCornerShape(12.dp),
+                            ) {
+                                Text("Beitreten")
+                            }
+                        }
+                    }
                 }
 
                 if (onlineStep == "waiting") {
@@ -424,56 +531,58 @@ fun BrandungLobbyScreen(
                         verticalArrangement = Arrangement.spacedBy(20.dp),
                     ) {
                         Text(
-                            "⏳ Warte auf Spieler…",
+                            if (isJoiner) "🌊 Beigetreten!" else "⏳ Warte auf Spieler…",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.ExtraBold,
                             color = TextPrimary,
                         )
 
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            color = Surface2Dark,
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                        if (!isJoiner) {
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                color = Surface2Dark,
                             ) {
-                                Text("SPIELCODE", style = MaterialTheme.typography.labelSmall, color = TextMuted, letterSpacing = 1.5.sp)
-                                Text(
-                                    text = gameCode,
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 36.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = BrandungTeal,
-                                    letterSpacing = 6.sp,
-                                )
-                                OutlinedButton(
-                                    onClick = {
-                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                        clipboard.setPrimaryClip(ClipData.newPlainText("Spielcode", gameCode))
-                                    },
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSub),
-                                ) { Text("📋 Kopieren") }
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Text("SPIELCODE", style = MaterialTheme.typography.labelSmall, color = TextMuted, letterSpacing = 1.5.sp)
+                                    Text(
+                                        text = gameCode,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 36.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = BrandungTeal,
+                                        letterSpacing = 6.sp,
+                                    )
+                                    OutlinedButton(
+                                        onClick = {
+                                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                            clipboard.setPrimaryClip(ClipData.newPlainText("Spielcode", gameCode))
+                                        },
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSub),
+                                    ) { Text("📋 Kopieren") }
+                                }
                             }
-                        }
 
-                        // QR Code
-                        Surface(shape = RoundedCornerShape(12.dp), color = Color.White, modifier = Modifier.padding(4.dp)) {
-                            QrCodeImage(
-                                content = "https://thebeachbingo.netlify.app/brandung/lobby?join=$gameCode",
-                                size = 160.dp,
+                            // QR Code
+                            Surface(shape = RoundedCornerShape(12.dp), color = Color.White, modifier = Modifier.padding(4.dp)) {
+                                QrCodeImage(
+                                    content = "https://beachbande.de/brandung/lobby?join=$gameCode",
+                                    size = 160.dp,
+                                )
+                            }
+
+                            Text(
+                                "Spieler scannen den QR-Code oder geben den Code im App ein",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextMuted,
+                                textAlign = TextAlign.Center,
                             )
                         }
-
-                        Text(
-                            "Spieler scannen den QR-Code oder geben den Code ein",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextMuted,
-                            textAlign = TextAlign.Center,
-                        )
 
                         // Player list
                         Card(
@@ -487,11 +596,18 @@ fun BrandungLobbyScreen(
                                     style = MaterialTheme.typography.titleSmall,
                                     color = TextPrimary,
                                 )
-                                waitingPlayers.forEachIndexed { idx, _ ->
+                                waitingPlayers.forEachIndexed { idx, playerId ->
+                                    val isMe = playerId == uid
+                                    val isHost = idx == 0
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Text("🌊", fontSize = 18.sp)
                                         Text(
-                                            if (idx == 0) "Du (Host)" else "Spieler ${idx + 1}",
+                                            when {
+                                                isMe && isHost -> "Du (Host) 👑"
+                                                isMe -> "Du"
+                                                isHost -> "Host 👑"
+                                                else -> "Spieler ${idx + 1}"
+                                            },
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = TextPrimary,
                                         )
@@ -501,7 +617,7 @@ fun BrandungLobbyScreen(
                         }
 
                         // Start button (only for host, need >= 2 players)
-                        if (waitingPlayers.size >= 2) {
+                        if (!isJoiner && waitingPlayers.size >= 2) {
                             Button(
                                 onClick = { startOnlineGame() },
                                 modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -510,6 +626,14 @@ fun BrandungLobbyScreen(
                             ) {
                                 Text("Spiel starten (${waitingPlayers.size} Spieler) 🌊", fontWeight = FontWeight.Bold)
                             }
+                        } else if (isJoiner) {
+                            Text(
+                                "Warte auf Spielstart durch den Host...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextMuted,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
                         }
                     }
                 }
