@@ -5,10 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.bestfriends.beachbingo.core.data.repository.AuthRepository
 import com.bestfriends.beachbingo.core.model.PongDifficulty
 import com.bestfriends.beachbingo.core.model.PongPlayer
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,6 +36,7 @@ const val PADDLE_LEN = 90f
 const val MARGIN = 20f
 const val BALL_R = 9f
 const val BASE_SPEED = 5.0
+const val WALL_H = 18f
 
 /** Returns a launch angle that avoids near-vertical: tilt 10°–80° from horizontal. */
 private fun launchAngle(): Double {
@@ -110,6 +114,10 @@ class PongGameViewModel @Inject constructor(
     private var firestoreListenerRemover: (() -> Unit)? = null
     private var aiResultWritten = false
 
+    private val _hostDisconnected = MutableStateFlow(false)
+    val hostDisconnected: StateFlow<Boolean> = _hostDisconnected.asStateFlow()
+    private var heartbeatJob: Job? = null
+
     private val _isGameActive = MutableStateFlow(false)
     val isGameActive: StateFlow<Boolean> = _isGameActive.asStateFlow()
 
@@ -168,9 +176,8 @@ class PongGameViewModel @Inject constructor(
             currentUid = user.uid
             currentDisplayName = user.displayName
             currentAvatarUrl = user.avatarUrl
+            if (gameId != null) observeGame(gameId)
         }
-
-        if (gameId != null) observeGame(gameId)
 
         // Host immediately marks the game as running
         if (isHost && gameId != null) {
@@ -209,9 +216,15 @@ class PongGameViewModel @Inject constructor(
                 guestSides = players.filter { it.userId != currentUid }.map { it.side }
 
                 // Guest activates once host sets IN_PROGRESS
+                val gameStatus = data["status"] as? String
+                val winnerIdVal = data["winnerId"] as? String
+                if (winnerIdVal != null) _winnerId.value = winnerIdVal
+
                 if (!isHost) {
-                    val status = data["status"] as? String
-                    if (status == "IN_PROGRESS") _isGameActive.value = true
+                    if (gameStatus == "IN_PROGRESS") {
+                        _isGameActive.value = true
+                        _loserSide.value = null
+                    }
                     // Sync wallSide from host
                     val remoteWall = data["wallSide"] as? String
                     if (remoteWall != null && _gs.value.wallSide != remoteWall) {
@@ -219,21 +232,29 @@ class PongGameViewModel @Inject constructor(
                     }
                 }
 
-                val winnerIdVal = data["winnerId"] as? String
-                if (winnerIdVal != null) {
-                    _winnerId.value = winnerIdVal
-                    val g = _gs.value
+                // Detect game over via status (handles winnerId=null when human loses)
+                if (gameStatus == "FINISHED" && _loserSide.value == null) {
+                    val sL = (data["scoreLeft"] as? Long)?.toInt() ?: _gs.value.scoreLeft
+                    val sR = (data["scoreRight"] as? Long)?.toInt() ?: _gs.value.scoreRight
+                    val sT = (data["scoreTop"] as? Long)?.toInt() ?: _gs.value.scoreTop
+                    val sB = (data["scoreBottom"] as? Long)?.toInt() ?: _gs.value.scoreBottom
                     val loser = when {
-                        g.scoreLeft >= scoreLimit -> "left"
-                        g.scoreRight >= scoreLimit -> "right"
-                        g.scoreTop >= scoreLimit -> "top"
-                        g.scoreBottom >= scoreLimit -> "bottom"
+                        sL >= scoreLimit -> "left"
+                        sR >= scoreLimit -> "right"
+                        sT >= scoreLimit -> "top"
+                        sB >= scoreLimit -> "bottom"
                         else -> null
                     }
                     _loserSide.value = loser
                 }
 
                 if (!isHost) {
+                    _hostDisconnected.value = false
+                    heartbeatJob?.cancel()
+                    heartbeatJob = viewModelScope.launch {
+                        delay(15_000L)
+                        if (_loserSide.value == null) _hostDisconnected.value = true
+                    }
                     remoteState = RemoteState(
                         bx = (data["ballX"] as? Double) ?: 200.0,
                         by = (data["ballY"] as? Double) ?: 200.0,
@@ -255,6 +276,8 @@ class PongGameViewModel @Inject constructor(
                         scoreRight = remoteState!!.scoreRight,
                         scoreTop = remoteState!!.scoreTop,
                         scoreBottom = remoteState!!.scoreBottom,
+                        paused = remoteState!!.paused,
+                        pauseTimer = remoteState!!.pauseTimer,
                     ) }
                 } else {
                     // Host reads guest paddle positions
@@ -298,10 +321,12 @@ class PongGameViewModel @Inject constructor(
             val isMyHumanSide = side == mySide
             val isGuestSide = guestSides.contains(side)
             if (!isMyHumanSide && !isGuestSide) {
-                val target = if (side == "left" || side == "right") g.by else g.bx
-                val size = if (side == "left" || side == "right") ch else cw
+                val isVert = side == "left" || side == "right"
+                val target = if (isVert) g.by else g.bx
+                val size = if (isVert) ch else cw
+                val wallOff = if (is2P && isVert) WALL_H.toDouble() else 0.0
                 val current = paddleOf(g, side)
-                val moved = moveAI(current, target, aiSpeed, aiError, size)
+                val moved = moveAI(current, target, aiSpeed, aiError, PADDLE_LEN / 2.0 + wallOff, size - PADDLE_LEN / 2.0 - wallOff)
                 setPaddle(g, side, moved)
             }
         }
@@ -363,7 +388,7 @@ class PongGameViewModel @Inject constructor(
         }
 
         // Throttled Firestore write (every 3 frames)
-        if (gameId != null && frameCount % 3 == 0) {
+        if (gameId != null && frameCount % 4 == 0) {
             pushToFirestore()
         }
 
@@ -403,8 +428,10 @@ class PongGameViewModel @Inject constructor(
         val is2P = totalPaddles == 2
         val ch = if (is2P) H2.toDouble() else SQ.toDouble()
         val cw = if (is2P) W2.toDouble() else SQ.toDouble()
-        val size = if (mySide == "left" || mySide == "right") ch else cw
-        val clamped = position.coerceIn(PADDLE_LEN / 2.0, size - PADDLE_LEN / 2.0)
+        val isVert = mySide == "left" || mySide == "right"
+        val size = if (isVert) ch else cw
+        val wallOff = if (is2P && isVert) WALL_H.toDouble() else 0.0
+        val clamped = position.coerceIn(PADDLE_LEN / 2.0 + wallOff, size - PADDLE_LEN / 2.0 - wallOff)
         _gs.update { gs ->
             when (mySide) {
                 "left" -> gs.copy(paddleLeft = clamped)
@@ -422,7 +449,7 @@ class PongGameViewModel @Inject constructor(
         val cw = if (is2P) W2.toDouble() else SQ.toDouble()
         val isVertical = side == "left" || side == "right"
         val axisSize = if (isVertical) ch else cw
-        val wallOff = if (is2P && isVertical) MARGIN.toDouble() else 0.0
+        val wallOff = if (is2P && isVertical) WALL_H.toDouble() else 0.0
         val clamped = position.coerceIn(PADDLE_LEN / 2.0 + wallOff, axisSize - PADDLE_LEN / 2.0 - wallOff)
         _gs.update { gs ->
             when (side) {
@@ -439,9 +466,12 @@ class PongGameViewModel @Inject constructor(
         val is2P = totalPaddles == 2
         val cw = if (is2P) W2.toDouble() else SQ.toDouble()
         val ch = if (is2P) H2.toDouble() else SQ.toDouble()
-        val wall = if (totalPaddles == 3) listOf("left", "right", "top", "bottom").random() else null
+        val humanSides = sidesForPaddles(totalPaddles, null).take(humanCount)
+        val wall = if (totalPaddles == 3) {
+            listOf("left", "right", "top", "bottom").filter { it !in humanSides }.random()
+        } else null
         val angle = launchAngle()
-        _gs.value = PongGS(
+        val newGs = PongGS(
             bx = cw / 2, by = ch / 2,
             bvx = BASE_SPEED * cos(angle), bvy = BASE_SPEED * sin(angle),
             speed = BASE_SPEED,
@@ -449,32 +479,49 @@ class PongGameViewModel @Inject constructor(
             paddleTop = cw / 2, paddleBottom = cw / 2,
             wallSide = wall,
         )
+        _gs.value = newGs
         _loserSide.value = null
         _winnerId.value = null
+        aiResultWritten = false
+        val gid = gameId ?: return
+        viewModelScope.launch {
+            try {
+                db.collection("pongGames").document(gid).update(mapOf(
+                    "status" to "IN_PROGRESS",
+                    "winnerId" to null,
+                    "scoreLeft" to 0, "scoreRight" to 0,
+                    "scoreTop" to 0, "scoreBottom" to 0,
+                    "ballX" to newGs.bx, "ballY" to newGs.by,
+                    "ballVX" to newGs.bvx, "ballVY" to newGs.bvy,
+                    "paused" to true, "pauseTimer" to 90,
+                    "wallSide" to wall,
+                )).await()
+            } catch (_: Exception) {}
+        }
     }
 
     private fun pushToFirestore() {
         val gid = gameId ?: return
         val gs = _gs.value
+        val fields = HashMap<String, Any>().apply {
+            put("ballX", gs.bx); put("ballY", gs.by)
+            put("ballVX", gs.bvx); put("ballVY", gs.bvy); put("speed", gs.speed)
+            put("scoreLeft", gs.scoreLeft); put("scoreRight", gs.scoreRight)
+            put("scoreTop", gs.scoreTop); put("scoreBottom", gs.scoreBottom)
+            put("paused", gs.paused); put("pauseTimer", gs.pauseTimer)
+            put("lastHeartbeat", FieldValue.serverTimestamp())
+            listOf("left", "right", "top", "bottom").forEach { side ->
+                if (!guestSides.contains(side)) {
+                    put("paddle${side.replaceFirstChar { it.uppercase() }}", when (side) {
+                        "left" -> gs.paddleLeft; "right" -> gs.paddleRight
+                        "top" -> gs.paddleTop; else -> gs.paddleBottom
+                    })
+                }
+            }
+        }
         viewModelScope.launch {
             try {
-                db.collection("pongGames").document(gid).update(mapOf(
-                    "ballX" to gs.bx,
-                    "ballY" to gs.by,
-                    "ballVX" to gs.bvx,
-                    "ballVY" to gs.bvy,
-                    "speed" to gs.speed,
-                    "paddleLeft" to gs.paddleLeft,
-                    "paddleRight" to gs.paddleRight,
-                    "paddleTop" to gs.paddleTop,
-                    "paddleBottom" to gs.paddleBottom,
-                    "scoreLeft" to gs.scoreLeft,
-                    "scoreRight" to gs.scoreRight,
-                    "scoreTop" to gs.scoreTop,
-                    "scoreBottom" to gs.scoreBottom,
-                    "paused" to gs.paused,
-                    "pauseTimer" to gs.pauseTimer,
-                )).await()
+                db.collection("pongGames").document(gid).update(fields).await()
             } catch (_: Exception) {}
         }
     }
@@ -488,11 +535,13 @@ class PongGameViewModel @Inject constructor(
         val pt = PADDLE_THICK.toDouble()
         val mg = MARGIN.toDouble()
 
-        if (g.by - br < 0) { g.by = br; g.bvy = abs(g.bvy) }
-        if (g.by + br > ch) { g.by = ch - br; g.bvy = -abs(g.bvy) }
+        val wallH = WALL_H.toDouble()
+        if (g.by - br < wallH) { g.by = wallH + br; g.bvy = abs(g.bvy) }
+        if (g.by + br > ch - wallH) { g.by = ch - wallH - br; g.bvy = -abs(g.bvy) }
 
         val lpx = mg + pt
-        if (g.bvx < 0 && g.bx - br < lpx && g.bx - br > mg - 2 &&
+        val prevBxL = g.bx - g.bvx
+        if (g.bvx < 0 && g.bx - br < lpx && prevBxL - br >= mg - 2 &&
             inRange(g.by, g.paddleLeft - pl / 2 - br, g.paddleLeft + pl / 2 + br)) {
             val rel = (g.by - g.paddleLeft) / (pl / 2)
             g.speed = min(g.speed + 0.35, MAX_SPEED)
@@ -502,7 +551,8 @@ class PongGameViewModel @Inject constructor(
         }
 
         val rpx = cw - mg - pt
-        if (g.bvx > 0 && g.bx + br > rpx && g.bx + br < cw - mg + 2 &&
+        val prevBxR = g.bx - g.bvx
+        if (g.bvx > 0 && g.bx + br > rpx && prevBxR + br <= cw - mg + 2 &&
             inRange(g.by, g.paddleRight - pl / 2 - br, g.paddleRight + pl / 2 + br)) {
             val rel = (g.by - g.paddleRight) / (pl / 2)
             g.speed = min(g.speed + 0.35, MAX_SPEED)
@@ -535,7 +585,7 @@ class PongGameViewModel @Inject constructor(
         val lx = mg + pt
         if (g.bvx < 0 && g.bx - br < lx) {
             if (wall == "left") { g.bvx = abs(g.bvx); g.bx = lx + br }
-            else if (inRange(g.bx - br, mg - 2, lx) &&
+            else if (inRange(g.bx - g.bvx - br, mg - 2, lx) &&
                 inRange(g.by, g.paddleLeft - pl / 2 - br, g.paddleLeft + pl / 2 + br)) {
                 val rel = (g.by - g.paddleLeft) / (pl / 2)
                 g.speed = min(g.speed + 0.3, MAX_SPEED)
@@ -548,7 +598,7 @@ class PongGameViewModel @Inject constructor(
         val rx = size - mg - pt
         if (g.bvx > 0 && g.bx + br > rx) {
             if (wall == "right") { g.bvx = -abs(g.bvx); g.bx = rx - br }
-            else if (inRange(g.bx + br, rx, size - mg + 2) &&
+            else if (inRange(g.bx - g.bvx + br, rx, size - mg + 2) &&
                 inRange(g.by, g.paddleRight - pl / 2 - br, g.paddleRight + pl / 2 + br)) {
                 val rel = (g.by - g.paddleRight) / (pl / 2)
                 g.speed = min(g.speed + 0.3, MAX_SPEED)
@@ -561,7 +611,7 @@ class PongGameViewModel @Inject constructor(
         val ty = mg + pt
         if (g.bvy < 0 && g.by - br < ty) {
             if (wall == "top") { g.bvy = abs(g.bvy); g.by = ty + br }
-            else if (inRange(g.by - br, mg - 2, ty) &&
+            else if (inRange(g.by - g.bvy - br, mg - 2, ty) &&
                 inRange(g.bx, g.paddleTop - pl / 2 - br, g.paddleTop + pl / 2 + br)) {
                 val rel = (g.bx - g.paddleTop) / (pl / 2)
                 g.speed = min(g.speed + 0.3, MAX_SPEED)
@@ -574,7 +624,7 @@ class PongGameViewModel @Inject constructor(
         val by_ = size - mg - pt
         if (g.bvy > 0 && g.by + br > by_) {
             if (wall == "bottom") { g.bvy = -abs(g.bvy); g.by = by_ - br }
-            else if (inRange(g.by + br, by_, size - mg + 2) &&
+            else if (inRange(g.by - g.bvy + br, by_, size - mg + 2) &&
                 inRange(g.bx, g.paddleBottom - pl / 2 - br, g.paddleBottom + pl / 2 + br)) {
                 val rel = (g.bx - g.paddleBottom) / (pl / 2)
                 g.speed = min(g.speed + 0.3, MAX_SPEED)
@@ -636,11 +686,11 @@ class PongGameViewModel @Inject constructor(
             }
         }
 
-        fun moveAI(current: Double, target: Double, speed: Double, error: Double, size: Double): Double {
+        fun moveAI(current: Double, target: Double, speed: Double, error: Double, minPos: Double, maxPos: Double): Double {
             val t = target + (Math.random() - 0.5) * error * 2
             val diff = t - current
             val next = current + sign(diff) * min(abs(diff), speed)
-            return next.coerceIn(PADDLE_LEN / 2.0, size - PADDLE_LEN / 2.0)
+            return next.coerceIn(minPos, maxPos)
         }
 
         fun paddleOf(gs: PongGS, side: String) = when (side) {

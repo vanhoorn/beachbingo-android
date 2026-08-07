@@ -103,6 +103,7 @@ fun PongGameScreen(
     val loserSide by viewModel.loserSide.collectAsStateWithLifecycle()
     val opponentNames by viewModel.opponentNames.collectAsStateWithLifecycle()
     val isGameActive by viewModel.isGameActive.collectAsStateWithLifecycle()
+    val hostDisconnected by viewModel.hostDisconnected.collectAsStateWithLifecycle()
 
     val is2P = totalPaddles == 2
     val cw = if (is2P) W2 else SQ
@@ -367,6 +368,42 @@ fun PongGameScreen(
                 onConfirm = { onNavigateToLobby() },
                 onDismiss = { showQuitDialog = false; manualPaused = false },
             )
+        }
+
+        // ── Host-disconnect overlay (guest only) ─────────────────────────────
+        if (hostDisconnected && loserSide == null && isGameActive) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(BgDark.copy(alpha = 0.93f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.padding(32.dp)
+                ) {
+                    Text("🔌", fontSize = 56.sp)
+                    Text(
+                        "Host nicht erreichbar",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = TextPrimary,
+                    )
+                    Text(
+                        "Verbindung zum Host unterbrochen.",
+                        fontSize = 13.sp,
+                        color = TextMuted,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Button(
+                        onClick = onNavigateToLobby,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Surface2Dark)
+                    ) { Text("Zur Lobby", color = TextPrimary) }
+                }
+            }
         }
 
         // ── Waiting-for-host overlay (guest only, before IN_PROGRESS) ────────

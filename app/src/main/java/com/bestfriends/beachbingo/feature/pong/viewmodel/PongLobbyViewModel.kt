@@ -154,61 +154,52 @@ class PongLobbyViewModel @Inject constructor(
         viewModelScope.launch {
             val user = authRepository.currentUser.first { it != null } ?: return@launch
             _uiState.update { it.copy(isJoining = true, joinError = null) }
+            val docRef = db.collection("pongGames").document(gameId.trim())
             try {
-                val snap = db.collection("pongGames").document(gameId.trim()).get().await()
-                if (!snap.exists()) {
-                    _uiState.update { it.copy(isJoining = false, joinError = "Spiel nicht gefunden.") }
-                    return@launch
-                }
-                val data = snap.data!!
-                val status = data["status"] as? String
-                if (status != "LOBBY") {
-                    _uiState.update { it.copy(isJoining = false, joinError = "Spiel läuft bereits.") }
-                    return@launch
-                }
-                val playerIds = (data["playerIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
-                val players = (data["players"] as? List<*>)?.mapNotNull { p ->
-                    (p as? Map<*, *>)?.let { m ->
-                        PongPlayer(
-                            userId = m["userId"] as? String ?: "",
-                            displayName = m["displayName"] as? String ?: "",
-                            avatarUrl = m["avatarUrl"] as? String ?: "",
-                            side = m["side"] as? String ?: "left",
-                        )
-                    }
-                } ?: emptyList()
-                val humanCount = (data["humanCount"] as? Long)?.toInt() ?: 2
-                val totalPaddles = (data["totalPaddles"] as? Long)?.toInt() ?: 2
-                val difficulty = runCatching { PongDifficulty.valueOf(data["difficulty"] as? String ?: "ROOKIE") }.getOrDefault(PongDifficulty.ROOKIE)
-                val scoreLimit = (data["scoreLimit"] as? Long)?.toInt() ?: 7
-                val adminId = data["adminId"] as? String ?: ""
-
-                if (playerIds.contains(user.uid)) {
-                    val mySide = players.find { it.userId == user.uid }?.side ?: "left"
-                    _uiState.update { it.copy(isJoining = false) }
-                    onSuccess(snap.id, totalPaddles, humanCount, difficulty, scoreLimit, adminId == user.uid, mySide)
-                    return@launch
-                }
-                if (players.size >= humanCount) {
-                    _uiState.update { it.copy(isJoining = false, joinError = "Spiel ist voll.") }
-                    return@launch
-                }
-                val takenSides = players.map { it.side }
-                val freeSide = sidesForPaddles(totalPaddles).firstOrNull { it !in takenSides } ?: "right"
-                val newPlayer = mapOf(
-                    "userId" to user.uid,
-                    "displayName" to user.displayName,
-                    "avatarUrl" to user.avatarUrl,
-                    "side" to freeSide,
-                )
-                db.collection("pongGames").document(snap.id).update(mapOf(
-                    "players" to FieldValue.arrayUnion(newPlayer),
-                    "playerIds" to FieldValue.arrayUnion(user.uid),
-                )).await()
+                val joinedSide = db.runTransaction { tx ->
+                    val snap = tx.get(docRef)
+                    if (!snap.exists()) throw Exception("not_found")
+                    val data = snap.data!!
+                    if (data["status"] as? String != "LOBBY") throw Exception("not_lobby")
+                    val playerIds = (data["playerIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+                    val sideMap = (data["players"] as? List<*>)?.mapNotNull { p ->
+                        val m = p as? Map<*, *> ?: return@mapNotNull null
+                        val uid = m["userId"] as? String ?: return@mapNotNull null
+                        uid to (m["side"] as? String ?: "left")
+                    }?.toMap() ?: emptyMap()
+                    val humanCount = (data["humanCount"] as? Long)?.toInt() ?: 2
+                    val totalPaddles = (data["totalPaddles"] as? Long)?.toInt() ?: 2
+                    if (playerIds.contains(user.uid)) return@runTransaction sideMap[user.uid] ?: "left"
+                    if (playerIds.size >= humanCount) throw Exception("full")
+                    val freeSide = sidesForPaddles(totalPaddles).firstOrNull { it !in sideMap.values } ?: "right"
+                    tx.update(docRef, mapOf<String, Any>(
+                        "players" to FieldValue.arrayUnion(mapOf(
+                            "userId" to user.uid,
+                            "displayName" to user.displayName,
+                            "avatarUrl" to user.avatarUrl,
+                            "side" to freeSide,
+                        )),
+                        "playerIds" to FieldValue.arrayUnion(user.uid),
+                    ))
+                    freeSide
+                }.await()
+                val snap = docRef.get().await()
+                val data = snap.data ?: throw Exception("no_data")
+                val tp   = (data["totalPaddles"] as? Long)?.toInt() ?: 2
+                val hc   = (data["humanCount"] as? Long)?.toInt() ?: 2
+                val diff = runCatching { PongDifficulty.valueOf(data["difficulty"] as? String ?: "ROOKIE") }.getOrDefault(PongDifficulty.ROOKIE)
+                val sl   = (data["scoreLimit"] as? Long)?.toInt() ?: 7
+                val adm  = data["adminId"] as? String ?: ""
                 _uiState.update { it.copy(isJoining = false) }
-                onSuccess(snap.id, totalPaddles, humanCount, difficulty, scoreLimit, false, freeSide)
+                onSuccess(snap.id, tp, hc, diff, sl, adm == user.uid, joinedSide)
             } catch (e: Exception) {
-                _uiState.update { it.copy(isJoining = false, joinError = "Fehler beim Beitreten.") }
+                val msg = when (e.message) {
+                    "not_found" -> "Spiel nicht gefunden."
+                    "not_lobby" -> "Spiel läuft bereits."
+                    "full"      -> "Spiel ist voll."
+                    else        -> "Fehler beim Beitreten."
+                }
+                _uiState.update { it.copy(isJoining = false, joinError = msg) }
             }
         }
     }
