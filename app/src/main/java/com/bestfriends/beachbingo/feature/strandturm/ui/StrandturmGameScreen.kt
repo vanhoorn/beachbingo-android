@@ -195,6 +195,7 @@ private class StrandturmState(startLevel: Int = 1) {
     var upHeld      = false
     var downHeld    = false
     var jumpPressed = false   // edge-triggered, consumed once per press
+    var touchTargetX: Float? = null  // game-X where finger is held (null = no touch)
 
     // Coconuts
     val cocos      = mutableListOf<Coco>()
@@ -340,6 +341,13 @@ private class StrandturmState(startLevel: Int = 1) {
         }
 
         totalFrame++
+
+        // Update horizontal input from stored touch position (TOUCH mode)
+        touchTargetX?.let { tx ->
+            val threshold = 15f
+            leftHeld  = tx < px - threshold
+            rightHeld = tx > px + threshold
+        }
 
         // ── Elevator movement (Level 3 mechanic) ──────────────────────────
         for (el in elevators) {
@@ -1293,26 +1301,36 @@ fun StrandturmGameScreen(
                 val pxW   = with(density) { maxWidth.toPx() }
                 val scale = pxW / VIRT_W
 
+                // Zones: top 25% = up/jump, bottom 25% = down, middle 50% = horizontal
                 val touchMod = if (controlMode == "TOUCH") {
                     Modifier.pointerInput(Unit) {
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent(PointerEventPass.Main)
                                 val wasUp = gs.upHeld
-                                var newLeft = false; var newRight = false; var newUp = false
+                                var newUp = false
+                                var newDown = false
+                                var hasHorizTouch = false
                                 event.changes.filter { it.pressed }.forEach { ch ->
                                     val ly = ch.position.y
                                     val lx = ch.position.x
                                     when {
-                                        ly < size.height * 0.35f -> newUp    = true
-                                        lx < size.width  / 2f   -> newLeft  = true
-                                        else                     -> newRight = true
+                                        ly < size.height * 0.25f -> newUp = true
+                                        ly > size.height * 0.75f -> newDown = true
+                                        else -> {
+                                            gs.touchTargetX = lx / size.width * VIRT_W
+                                            hasHorizTouch = true
+                                        }
                                     }
                                 }
+                                if (!hasHorizTouch) {
+                                    gs.touchTargetX = null
+                                    gs.leftHeld  = false
+                                    gs.rightHeld = false
+                                }
                                 if (newUp && !wasUp) gs.jumpPressed = true
-                                gs.upHeld    = newUp
-                                gs.leftHeld  = newLeft
-                                gs.rightHeld = newRight
+                                gs.upHeld   = newUp
+                                gs.downHeld = newDown
                             }
                         }
                     }
@@ -1494,7 +1512,7 @@ fun StrandturmGameScreen(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("Links / Rechts tippen  ·  Oben tippen = Springen / Klettern",
+                Text("Oben = Springen/Hoch  ·  Mitte = Laufen  ·  Unten = Leiter runter",
                     fontSize = 11.sp, color = TextMuted)
             }
         }
