@@ -44,7 +44,8 @@ private fun cellBg(v: CellView): Color = when (v) {
 
 private fun cellLabel(v: CellView): String = when (v) {
     CellView.MISS -> "•"
-    CellView.HIT, CellView.SUNK -> "✕"
+    CellView.HIT  -> "●"
+    CellView.SUNK -> "✕"
     else -> ""
 }
 

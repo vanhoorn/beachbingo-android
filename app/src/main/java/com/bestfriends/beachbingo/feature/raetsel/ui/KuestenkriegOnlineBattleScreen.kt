@@ -315,7 +315,7 @@ private fun OnlineKriegGrid(
                         OnlineCellView.MYSHIP -> Color(0x88FB7185)
                         OnlineCellView.UNKNOWN -> SurfaceDark
                     }
-                    val label = when (v) { OnlineCellView.MISS -> "•"; OnlineCellView.HIT, OnlineCellView.SUNK -> "✕"; else -> "" }
+                    val label = when (v) { OnlineCellView.MISS -> "•"; OnlineCellView.HIT -> "●"; OnlineCellView.SUNK -> "✕"; else -> "" }
                     Box(
                         modifier = Modifier
                             .size(cellDp)
