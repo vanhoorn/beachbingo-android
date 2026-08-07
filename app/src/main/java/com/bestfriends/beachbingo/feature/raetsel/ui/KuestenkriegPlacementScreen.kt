@@ -48,9 +48,6 @@ fun KuestenkriegPlacementScreen(
     var gridWidthPx by remember { mutableStateOf(0) }
 
     val density = LocalDensity.current
-    val cellDp = 28.dp
-    val cellPxF = with(density) { cellDp.toPx() }
-    val labelColPxF = with(density) { 20.dp.toPx() }
 
     val activeIdx = fleet.size
     val allPlaced = fleet.size == FLEET_DEFS.size
@@ -116,13 +113,11 @@ fun KuestenkriegPlacementScreen(
         canPlaceShip(occupied, ds.current.first, ds.current.second, currentDef.size, dragIsH)
     else false
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .background(BgDark)
-        .statusBarsPadding()
-        .navigationBarsPadding()
-        .verticalScroll(rememberScrollState())
-    ) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(BgDark).statusBarsPadding().navigationBarsPadding()) {
+        val cellDp = ((maxWidth - 54.dp) / BATTLE_GRID).coerceIn(18.dp, 52.dp)
+        val cellPxF = with(density) { cellDp.toPx() }
+        val labelColPxF = with(density) { 20.dp.toPx() }
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         // Header
         Box(modifier = Modifier
             .fillMaxWidth()
@@ -329,4 +324,5 @@ fun KuestenkriegPlacementScreen(
         }
         Spacer(Modifier.height(32.dp))
     }
+    } // BoxWithConstraints
 }
