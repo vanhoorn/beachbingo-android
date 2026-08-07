@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.feature.raetsel.*
+import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
 import kotlinx.coroutines.delay
 
@@ -61,6 +62,7 @@ fun KuestenkriegBattleScreen(
     val startedAtRef = remember { System.currentTimeMillis() }
     var state by remember { mutableStateOf(KuestenkriegSession.resumedState ?: createBattleState(KuestenkriegSession.playerFleet)) }
     var aiMsg by remember { mutableStateOf<String?>(null) }
+    var showQuit by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         KuestenkriegSession.resumedState = null
@@ -151,7 +153,7 @@ fun KuestenkriegBattleScreen(
         Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(SurfaceDark, Surface2Dark))).padding(horizontal = 14.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(shape = RoundedCornerShape(10.dp), color = Surface2Dark,
-                    modifier = Modifier.size(36.dp).border(1.dp, BorderColor, RoundedCornerShape(10.dp)).clickable { onNavigateBack() }
+                    modifier = Modifier.size(36.dp).border(1.dp, BorderColor, RoundedCornerShape(10.dp)).clickable { showQuit = true }
                 ) { Box(contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück", tint = TextSub, modifier = Modifier.size(18.dp)) } }
                 Spacer(Modifier.width(10.dp))
                 Text("⚓", fontSize = 22.sp)
@@ -267,6 +269,15 @@ fun KuestenkriegBattleScreen(
             Spacer(Modifier.height(24.dp))
         }
         } // BoxWithConstraints
+    }
+
+    if (showQuit) {
+        GameSaveQuitDialog(
+            emoji = "⚓",
+            onContinue = { showQuit = false },
+            onSaveAndQuit = onNavigateBack,
+            onQuitWithoutSave = { PuzzleSaveManager.deleteSave(context, saveIdRef); onNavigateBack() },
+        )
     }
 }
 
