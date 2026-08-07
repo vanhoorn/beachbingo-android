@@ -109,6 +109,7 @@ private class GameState(diffStr: String, val fireRateArg: Int) {
     var phaseTimer = 0
 
     var keys = booleanArrayOf(false, false) // [left, right]
+    var touchTargetX: Float? = null
 
     // ── Derived difficulty values ─────────────────────────────────────────
     fun currentSpeed()  = min(30, (BASE_SPEED[baseDiff]  ?: 6) + waveBonus(wave))
@@ -298,11 +299,11 @@ fun PiratesGameScreen(
                                             val event = awaitPointerEvent()
                                             val pressed = event.changes.any { it.pressed }
                                             if (pressed) {
-                                                val x = event.changes.firstOrNull()?.position?.x ?: 0f
-                                                gs.keys[0] = x < widthPx / 2
-                                                gs.keys[1] = x >= widthPx / 2
+                                                val screenX = event.changes.firstOrNull()?.position?.x ?: 0f
+                                                gs.touchTargetX = (screenX / scale)
+                                                    .coerceIn(PLAYER_W / 2f, CW - PLAYER_W / 2f)
                                             } else {
-                                                gs.keys[0] = false; gs.keys[1] = false
+                                                gs.touchTargetX = null
                                             }
                                             event.changes.forEach { it.consume() }
                                         }
@@ -397,8 +398,15 @@ private fun updateGame(gs: GameState, deltaMs: Float, audio: PiratesAudioManager
     }
 
     // ── Player movement ───────────────────────────────────────────────────
-    if (gs.keys[0]) gs.playerX = max(PLAYER_W / 2f,       gs.playerX - PLAYER_SPEED)
-    if (gs.keys[1]) gs.playerX = min(CW - PLAYER_W / 2f,  gs.playerX + PLAYER_SPEED)
+    val touchTarget = gs.touchTargetX
+    if (touchTarget != null) {
+        val diff = touchTarget - gs.playerX
+        val step = 10f
+        gs.playerX = if (abs(diff) <= step) touchTarget else gs.playerX + step * sign(diff)
+    } else {
+        if (gs.keys[0]) gs.playerX = max(PLAYER_W / 2f,       gs.playerX - PLAYER_SPEED)
+        if (gs.keys[1]) gs.playerX = min(CW - PLAYER_W / 2f,  gs.playerX + PLAYER_SPEED)
+    }
 
     // ── Auto fire — clamped cooldown avoids burst ─────────────────────────
     gs.fireCooldown++
