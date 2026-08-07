@@ -108,7 +108,7 @@ fun KuestenkriegGameScreen(
                 // Dynamic cell size: limited by both available width and height
                 val cellFromW = (screenAvailW - labelDp - 16.dp) / size
                 val cellFromH = (screenAvailH - labelDp - 130.dp) / size
-                val cellDp: Dp = minOf(cellFromW, cellFromH).coerceAtLeast(24.dp)
+                val cellDp: Dp = minOf(cellFromW, cellFromH).coerceIn(24.dp, 40.dp)
                 val errors = computeKriegErrors(state)
 
                 val density = LocalDensity.current

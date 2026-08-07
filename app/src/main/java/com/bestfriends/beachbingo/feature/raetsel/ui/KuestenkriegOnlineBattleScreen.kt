@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.feature.raetsel.BATTLE_GRID
@@ -147,7 +148,8 @@ fun KuestenkriegOnlineBattleScreen(
         lastMsg = when { sunk -> "$colLabel${r + 1} — Versenkt! 💥"; cellVal == "hit" -> "$colLabel${r + 1} — Treffer! 🎯"; else -> "$colLabel${r + 1} — Wasser!" }
         scope.launch {
             try {
-                val updates = mutableMapOf<String, Any>("shots.$uid" to newShots, "turn" to if (isWinner) uid else oppId)
+                val isHit = cellVal != "miss"
+                val updates = mutableMapOf<String, Any>("shots.$uid" to newShots, "turn" to if (isWinner) uid else if (isHit) uid else oppId)
                 if (isWinner) { updates["winner"] = uid; updates["status"] = "FINISHED" }
                 db.collection("kuestenkriegGames").document(gameCode).update(updates).await()
             } catch (_: Exception) {}
@@ -187,13 +189,9 @@ fun KuestenkriegOnlineBattleScreen(
         else -> "$oppName schießt…"
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(BgDark)
-            .statusBarsPadding()
-            .navigationBarsPadding(),
-    ) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(BgDark).statusBarsPadding().navigationBarsPadding()) {
+        val cellDp = ((maxWidth - 46.dp) / BATTLE_GRID).coerceIn(18.dp, 52.dp)
+    Column(modifier = Modifier.fillMaxSize()) {
         // Header
         Box(
             modifier = Modifier
@@ -245,12 +243,12 @@ fun KuestenkriegOnlineBattleScreen(
                 color = if (isMyTurn && !isOver) KkBattleAccent else TextMuted,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(), letterSpacing = 1.sp,
             )
-            OnlineKriegGrid(grid = enemyGrid, onCell = ::handleShoot, clickable = isMyTurn && !isOver && !shooting)
+            OnlineKriegGrid(grid = enemyGrid, onCell = ::handleShoot, clickable = isMyTurn && !isOver && !shooting, cellDp = cellDp)
 
             // My grid
             Text("Dein Gewässer", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(), letterSpacing = 1.sp)
-            OnlineKriegGrid(grid = myGrid, onCell = { _, _ -> }, clickable = false)
+            OnlineKriegGrid(grid = myGrid, onCell = { _, _ -> }, clickable = false, cellDp = cellDp)
 
             // Game over card
             if (isOver) {
@@ -284,6 +282,7 @@ fun KuestenkriegOnlineBattleScreen(
             }
         }
     }
+    } // BoxWithConstraints
 }
 
 @Composable
@@ -291,8 +290,8 @@ private fun OnlineKriegGrid(
     grid: Array<Array<OnlineCellView>>,
     onCell: (Int, Int) -> Unit,
     clickable: Boolean,
+    cellDp: Dp,
 ) {
-    val cellDp = 28.dp
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.padding(start = 22.dp)) {
             repeat(BATTLE_GRID) { c ->
