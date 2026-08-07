@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -108,6 +109,7 @@ fun PongGameScreen(
     val is2P = totalPaddles == 2
     val cw = if (is2P) W2 else SQ
     val ch = if (is2P) H2 else SQ
+    val zoneHeight = if (LocalConfiguration.current.screenWidthDp >= 600) 160.dp else 120.dp
 
     var frameCount by remember { mutableIntStateOf(0) }
     val isPhysicsOwner = humanCount == 1 || isHost
@@ -303,7 +305,7 @@ fun PongGameScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(80.dp)
+                    .height(zoneHeight)
                     .background(Color(0xFF0D0D0D))
                     .pointerInput(mySide, humanCount, is2P, cw, ch) {
                         while (true) {
