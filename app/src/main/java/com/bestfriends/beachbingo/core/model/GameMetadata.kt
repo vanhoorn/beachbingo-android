@@ -107,6 +107,15 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         playerCounts = listOf(PlayerCount.ONE_TWO, PlayerCount.TWO_FOUR),
         genres = listOf(GameGenre.PARTY, GameGenre.CARD),
     ),
+    GameMetadata(
+        id = "mahjong",
+        emoji = "🀄",
+        title = "GezeitenSteine",
+        description = "Mahjong Solitaire am Strand — entferne alle Steine durch Paare.",
+        color = 0xFFD4A820,
+        playerCounts = listOf(PlayerCount.ONE_TWO),
+        genres = listOf(GameGenre.COUCH, GameGenre.LOGICAL),
+    ),
     // ── Rätsel-Spiele ──────────────────────────────────────────────────────────
     GameMetadata(
         id = "strandoku",

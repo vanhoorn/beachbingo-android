@@ -54,6 +54,7 @@ fun CouchGamesScreen(
     onNavigateToBingoLobby: () -> Unit,
     onNavigateToVierLobby: () -> Unit,
     onNavigateToWormLobby: () -> Unit,
+    onNavigateToMahjongLobby: () -> Unit = {},
 ) {
     val games = COUCH_GAMES.sortedBy { it.title }
     var rulesGameId by remember { mutableStateOf<String?>(null) }
@@ -137,9 +138,10 @@ fun CouchGamesScreen(
                         modifier = Modifier
                             .clickable {
                                 when (game.id) {
-                                    "bingo" -> onNavigateToBingoLobby()
-                                    "vier"  -> onNavigateToVierLobby()
-                                    "worm"  -> onNavigateToWormLobby()
+                                    "bingo"    -> onNavigateToBingoLobby()
+                                    "vier"     -> onNavigateToVierLobby()
+                                    "worm"     -> onNavigateToWormLobby()
+                                    "mahjong"  -> onNavigateToMahjongLobby()
                                 }
                             }
                             .padding(20.dp),

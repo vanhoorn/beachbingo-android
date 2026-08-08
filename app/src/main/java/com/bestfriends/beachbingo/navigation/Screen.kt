@@ -174,4 +174,13 @@ sealed interface Screen {
         val dateStr: String = "",
         val saveId: String? = null,
     ) : Screen
+    // GezeitenSteine (Mahjong)
+    @Serializable object MahjongLobby : Screen
+    @Serializable object MahjongSettings : Screen
+    @Serializable data class MahjongGame(
+        val layout: String,
+        val difficulty: String,
+        val seed: Long,
+        val saveId: String? = null,
+    ) : Screen
 }

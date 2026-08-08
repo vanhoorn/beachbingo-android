@@ -108,7 +108,7 @@ fun KuestenkriegGameScreen(
                 // Dynamic cell size: limited by both available width and height
                 val cellFromW = (screenAvailW - labelDp - 16.dp) / size
                 val cellFromH = (screenAvailH - labelDp - 130.dp) / size
-                val cellDp: Dp = minOf(cellFromW, cellFromH).coerceIn(24.dp, 40.dp)
+                val cellDp: Dp = minOf(cellFromW, cellFromH).coerceAtLeast(24.dp)
                 val errors = computeKriegErrors(state)
 
                 val density = LocalDensity.current
@@ -141,7 +141,7 @@ fun KuestenkriegGameScreen(
                         Row(modifier = Modifier.padding(start = labelDp)) {
                             (0 until size).forEach { c ->
                                 Box(modifier = Modifier.size(width = cellDp, height = labelDp).background(BgDark), contentAlignment = Alignment.Center) {
-                                    Text(p.colClues[c].toString(), fontSize = (cellDp.value * 0.38f).sp, fontWeight = FontWeight.ExtraBold,
+                                    Text(p.colClues[c].toString(), fontSize = (cellDp.value * 0.38f).coerceAtMost(14f).sp, fontWeight = FontWeight.ExtraBold,
                                         color = if (errors.cols[c]) Danger else TextPrimary)
                                 }
                             }
@@ -152,7 +152,7 @@ fun KuestenkriegGameScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 // Row clue
                                 Box(modifier = Modifier.size(width = labelDp, height = cellDp).background(BgDark), contentAlignment = Alignment.Center) {
-                                    Text(p.rowClues[r].toString(), fontSize = (cellDp.value * 0.38f).sp, fontWeight = FontWeight.ExtraBold,
+                                    Text(p.rowClues[r].toString(), fontSize = (cellDp.value * 0.38f).coerceAtMost(14f).sp, fontWeight = FontWeight.ExtraBold,
                                         color = if (errors.rows[r]) Danger else TextPrimary)
                                 }
                                 // Cells

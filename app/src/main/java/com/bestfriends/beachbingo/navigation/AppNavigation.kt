@@ -82,6 +82,9 @@ import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegOnlinePlacement
 import com.bestfriends.beachbingo.feature.raetsel.ui.KuestenkriegOnlineBattleScreen
 import com.bestfriends.beachbingo.feature.raetsel.ui.WortWelleLobbyScreen
 import com.bestfriends.beachbingo.feature.raetsel.ui.WortWelleGameScreen
+import com.bestfriends.beachbingo.feature.mahjong.ui.MahjongLobbyScreen
+import com.bestfriends.beachbingo.feature.mahjong.ui.MahjongGameScreen
+import com.bestfriends.beachbingo.feature.mahjong.ui.MahjongSettingsScreen
 import com.bestfriends.beachbingo.feature.raetsel.PuzzleSave
 
 @Composable
@@ -170,6 +173,7 @@ fun AppNavigation() {
                         "wellensumme"    -> navController.navigate(Screen.WellensummeLobby)
                         "kuestenkrieg"   -> navController.navigate(Screen.KuestenkriegLobby)
                         "wortwelle"      -> navController.navigate(Screen.WortWelleLobby)
+                        "mahjong"        -> navController.navigate(Screen.MahjongLobby)
                     }
                 },
                 onRejoinGame = { type, gameId ->
@@ -231,6 +235,7 @@ fun AppNavigation() {
                 onNavigateToBingoLobby = { navController.navigate(Screen.Lobby) },
                 onNavigateToVierLobby = { navController.navigate(Screen.VierLobby) },
                 onNavigateToWormLobby = { navController.navigate(Screen.WormLobby) },
+                onNavigateToMahjongLobby = { navController.navigate(Screen.MahjongLobby) },
             )
         }
 
@@ -381,6 +386,33 @@ fun AppNavigation() {
                 dateStr = route.dateStr.ifEmpty { null },
                 saveId = route.saveId,
                 onNavigateBack = { navController.navigate(Screen.WortWelleLobby) { popUpTo(Screen.WortWelleLobby) { inclusive = true } } }
+            )
+        }
+        // ── GezeitenSteine (Mahjong) ───────────────────────────────────────────
+        composable<Screen.MahjongLobby> {
+            MahjongLobbyScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToSettings = { navController.navigate(Screen.MahjongSettings) },
+                onNavigateToGame = { layout, difficulty, seed, saveId ->
+                    navController.navigate(Screen.MahjongGame(layout, difficulty, seed, saveId)) {
+                        popUpTo(Screen.MahjongLobby)
+                    }
+                }
+            )
+        }
+        composable<Screen.MahjongSettings> {
+            MahjongSettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable<Screen.MahjongGame> { backStack ->
+            val route: Screen.MahjongGame = backStack.toRoute()
+            MahjongGameScreen(
+                layout = route.layout,
+                difficulty = route.difficulty,
+                seed = route.seed,
+                saveId = route.saveId,
+                onNavigateBack = { navController.navigate(Screen.MahjongLobby) { popUpTo(Screen.MahjongLobby) { inclusive = true } } }
             )
         }
         composable<Screen.KuestenkriegPlacement> { backStack ->

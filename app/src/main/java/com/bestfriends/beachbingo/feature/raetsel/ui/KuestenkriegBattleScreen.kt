@@ -63,6 +63,7 @@ fun KuestenkriegBattleScreen(
     var state by remember { mutableStateOf(KuestenkriegSession.resumedState ?: createBattleState(KuestenkriegSession.playerFleet)) }
     var aiMsg by remember { mutableStateOf<String?>(null) }
     var showQuit by remember { mutableStateOf(false) }
+    var aiFireCount by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
         KuestenkriegSession.resumedState = null
@@ -82,8 +83,8 @@ fun KuestenkriegBattleScreen(
         }
     }
 
-    // AI turn handler
-    LaunchedEffect(state.turn, state.gameOver) {
+    // AI turn handler — aiFireCount ensures re-trigger when AI hits (turn stays AI)
+    LaunchedEffect(state.turn, state.gameOver, aiFireCount) {
         if (state.turn == BattleTurn.AI && !state.gameOver) {
             val delayMs = when (aiModeEnum) {
                 AiMode.ADMIRAL   -> 900L
@@ -108,6 +109,10 @@ fun KuestenkriegBattleScreen(
                         aiMsg = null
                     }
                 }
+            }
+            // Re-trigger if AI hit and must shoot again
+            if (next.turn == BattleTurn.AI && !next.gameOver) {
+                aiFireCount++
             }
         }
     }

@@ -34,14 +34,19 @@ fun ZoomableGrid(
     Box(
         modifier = modifier
             .pointerInput(Unit) {
-                detectTransformGestures { _, panDelta, zoomDelta, _ ->
+                detectTransformGestures { centroid, panDelta, zoomDelta, _ ->
+                    val prevZoom = zoom
                     val newZoom = (zoom * zoomDelta).coerceIn(1f, 4f)
+                    // Adjust pan so the pinch centroid stays fixed on screen
+                    val ratio = newZoom / prevZoom
+                    val newPanX = centroid.x + (pan.x - centroid.x) * ratio + panDelta.x
+                    val newPanY = centroid.y + (pan.y - centroid.y) * ratio + panDelta.y
                     val maxPanX = size.width * (1f - newZoom)
                     val maxPanY = size.height * (1f - newZoom)
                     zoom = newZoom
                     pan = Offset(
-                        (pan.x + panDelta.x).coerceIn(maxPanX, 0f),
-                        (pan.y + panDelta.y).coerceIn(maxPanY, 0f),
+                        newPanX.coerceIn(maxPanX, 0f),
+                        newPanY.coerceIn(maxPanY, 0f),
                     )
                 }
             }
