@@ -1,8 +1,20 @@
 package com.bestfriends.beachbingo.core.model
 
 enum class GameType {
-    BINGO
-    // Weitere Spiele kommen hier hinzu, z.B.:
-    // MEMORY,
-    // DART
+    BINGO,
+    PONG,
+    VIER,
+    PIRATES,
+    WORM,
+    STRANDTURM,
+    BRANDUNG,
+    MEERMAU,
+    STRANDRAEUBER,
+    MAHJONG,
+    STRANDOKU,
+    WELLENSUMME,
+    KUESTENKRIEG,
+    DUENENSCHATTEN,
+    INSELBRUECKE,
+    WORTWELLE,
 }

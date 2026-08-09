@@ -45,8 +45,10 @@ import androidx.compose.runtime.setValue
 import com.bestfriends.beachbingo.ui.components.GameHudBar
 import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
 import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
-import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
 import com.bestfriends.beachbingo.feature.raetsel.GameSave
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import androidx.compose.ui.platform.LocalContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -66,7 +68,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestfriends.beachbingo.feature.vier.viewmodel.VierGameViewModel
@@ -74,18 +75,24 @@ import com.bestfriends.beachbingo.feature.vier.viewmodel.COLS
 import com.bestfriends.beachbingo.feature.vier.viewmodel.ROWS
 import com.bestfriends.beachbingo.feature.vier.viewmodel.emptyBoard
 import com.bestfriends.beachbingo.feature.vier.viewmodel.getAvailableRow
+import com.bestfriends.beachbingo.ui.theme.BeerOrange
 import com.bestfriends.beachbingo.ui.theme.BgDark
+import com.bestfriends.beachbingo.ui.theme.BoardBlueDark
+import com.bestfriends.beachbingo.ui.theme.BoardBlueDeep
+import com.bestfriends.beachbingo.ui.theme.BoardBlueMid
+import com.bestfriends.beachbingo.ui.theme.BorderColor
+import com.bestfriends.beachbingo.ui.theme.CellNumber
+import com.bestfriends.beachbingo.ui.theme.ChipLabel
 import com.bestfriends.beachbingo.ui.theme.Coral
+import com.bestfriends.beachbingo.ui.theme.EmojiHuge
+import com.bestfriends.beachbingo.ui.theme.SandGold
+import com.bestfriends.beachbingo.ui.theme.StatusTiny
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
 import com.google.firebase.auth.FirebaseAuth
 import kotlin.math.roundToInt
 
-private val BoardBg = Color(0xFF0C1F3D)
-private val BoardBorder = Color(0xFF1E3A5F)
-private val EmptyCellBg = Color(0xFF091525)
-private val BeerOrange = Color(0xFFC2410C)
 
 private val CELL_DP_MIN = 36.dp
 private val CELL_DP_MAX = 120.dp
@@ -99,6 +106,8 @@ fun VierGameScreen(
     aiDrinkId: String?,
     aiDifficulty: String = "SNIPER",
     saveId: String? = null,
+    soundEnabled: Boolean = true,
+    musicEnabled: Boolean = true,
     onNavigateBack: () -> Unit,
     viewModel: VierGameViewModel = hiltViewModel(),
 ) {
@@ -119,7 +128,7 @@ fun VierGameScreen(
     // Restore from save (AI mode only)
     LaunchedEffect(saveId) {
         if (saveId == null || mode != "ai") return@LaunchedEffect
-        val save = PuzzleSaveManager.getGameSave(context, "vier") ?: return@LaunchedEffect
+        val save = SoloGameSaveManager.getGameSave(context, "vier") ?: return@LaunchedEffect
         try {
             val obj = JSONObject(save.gameState)
             val arr = obj.getJSONArray("board")
@@ -167,6 +176,7 @@ fun VierGameScreen(
 
     var manualPaused by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
+    var showRules by remember { mutableStateOf(false) }
 
     val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
     val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
@@ -176,13 +186,8 @@ fun VierGameScreen(
     var musicStarted by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        if (vierUid != null) {
-            try {
-                val doc = firestore.collection("users").document(vierUid).get().await()
-                audio.soundEnabled = doc.getBoolean("soundEnabled") ?: true
-                audio.musicEnabled = doc.getBoolean("musicEnabled") ?: true
-            } catch (_: Exception) {}
-        }
+        audio.soundEnabled = soundEnabled
+        audio.musicEnabled = musicEnabled
         audio.startMusic()
         musicStarted = true
     }
@@ -210,6 +215,10 @@ fun VierGameScreen(
         else if (gameId != null) viewModel.dropPieceOnline(col, gameId)
     }
 
+    if (showRules) {
+        ALL_GAME_RULES["vier"]?.let { GameRulesBottomSheet(rule = it, onDismiss = { showRules = false }) }
+    }
+
     if (showQuitDialog) {
         if (isAiMode && !gameOver) {
             GameSaveQuitDialog(
@@ -218,7 +227,7 @@ fun VierGameScreen(
                 onContinue = { showQuitDialog = false; manualPaused = false },
                 onSaveAndQuit = {
                     val boardJson = JSONArray(uiState.board.map { it.toLong() })
-                    PuzzleSaveManager.saveGame(
+                    SoloGameSaveManager.saveGame(
                         context,
                         GameSave(
                             id = java.util.UUID.randomUUID().toString(),
@@ -237,7 +246,7 @@ fun VierGameScreen(
                     onNavigateBack()
                 },
                 onQuitWithoutSave = {
-                    PuzzleSaveManager.deleteGameSave(context, "vier")
+                    SoloGameSaveManager.deleteGameSave(context, "vier")
                     onNavigateBack()
                 },
             )
@@ -274,11 +283,12 @@ fun VierGameScreen(
                 paused = manualPaused,
                 onPauseToggle = { manualPaused = !manualPaused },
                 onQuit = { manualPaused = true; showQuitDialog = true },
+                onShowRules = { showRules = true },
             ) {
                 val turnLabel = when { gameOver -> "Fertig"; myTurn -> "Du bist dran"; else -> "Gegner denkt..." }
                 androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(turnLabel, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    Text(if (isAiMode) "vs KI" else "Online", fontSize = 9.sp, color = TextMuted)
+                    Text(turnLabel, fontSize = ChipLabel, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text(if (isAiMode) "vs KI" else "Online", fontSize = StatusTiny, color = TextMuted)
                 }
             }
         },
@@ -337,8 +347,8 @@ fun VierGameScreen(
             Box(
                 modifier = Modifier
                     .shadow(8.dp, RoundedCornerShape(16.dp), clip = false)
-                    .background(BoardBg, RoundedCornerShape(16.dp))
-                    .border(2.dp, BoardBorder, RoundedCornerShape(16.dp))
+                    .background(BoardBlueDark, RoundedCornerShape(16.dp))
+                    .border(2.dp, BoardBlueMid, RoundedCornerShape(16.dp))
             ) {
                 Column(modifier = Modifier.padding(10.dp)) {
                     // Column tap indicators — large, clearly tappable
@@ -367,7 +377,7 @@ fun VierGameScreen(
                                 if (canDrop) {
                                     Text(
                                         text = "▼",
-                                        fontSize = 14.sp,
+                                        fontSize = CellNumber,
                                         color = getDrink(myDrinkId).color,
                                         fontWeight = FontWeight.Bold,
                                     )
@@ -410,8 +420,8 @@ fun VierGameScreen(
                                         Modifier
                                             .size(cellDp)
                                             .clip(CircleShape)
-                                            .background(EmptyCellBg)
-                                            .border(2.dp, BoardBorder, CircleShape)
+                                            .background(BoardBlueDeep)
+                                            .border(2.dp, BoardBlueMid, CircleShape)
                                     )
                                     // Piece layer — NOT clipped, animates from above
                                     if (drinkId != null) {
@@ -460,7 +470,7 @@ fun VierGameScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         if (draw) {
-                            Text("🤝", fontSize = 52.sp)
+                            Text("🤝", fontSize = EmojiHuge)
                             Text(
                                 "Unentschieden!",
                                 style = MaterialTheme.typography.headlineSmall,
@@ -469,7 +479,7 @@ fun VierGameScreen(
                             )
                             Text("Nochmal?", style = MaterialTheme.typography.bodyMedium, color = TextMuted)
                         } else {
-                            Text(if (winnerPlayer == myPiece) "🏆" else "😅", fontSize = 52.sp)
+                            Text(if (winnerPlayer == myPiece) "🏆" else "😅", fontSize = EmojiHuge)
                             Text(
                                 text = when {
                                     winnerPlayer == myPiece -> "Du gewinnst!"
@@ -576,7 +586,7 @@ private fun PlayerBar(
         isActive -> drinkColor.copy(alpha = 0.08f)
         else -> SurfaceDark
     }
-    val borderColor = if (isActive || isWinner) drinkColor else Color(0xFF1E3050)
+    val borderColor = if (isActive || isWinner) drinkColor else BorderColor
 
     Surface(
         modifier = modifier.clip(RoundedCornerShape(8.dp)),
@@ -597,7 +607,7 @@ private fun PlayerBar(
                     if (isActive && !isWinner)
                         Text("Am Zug", style = MaterialTheme.typography.labelSmall, color = drinkColor, fontWeight = FontWeight.Bold)
                     if (isWinner)
-                        Text("🏆 Gewonnen", style = MaterialTheme.typography.labelSmall, color = Color(0xFFF59E0B), fontWeight = FontWeight.Bold)
+                        Text("🏆 Gewonnen", style = MaterialTheme.typography.labelSmall, color = SandGold, fontWeight = FontWeight.Bold)
                 }
             } else {
                 Column(horizontalAlignment = Alignment.End) {
@@ -605,7 +615,7 @@ private fun PlayerBar(
                     if (isActive && !isWinner)
                         Text("Am Zug", style = MaterialTheme.typography.labelSmall, color = drinkColor, fontWeight = FontWeight.Bold)
                     if (isWinner)
-                        Text("🏆 Gewonnen", style = MaterialTheme.typography.labelSmall, color = Color(0xFFF59E0B), fontWeight = FontWeight.Bold)
+                        Text("🏆 Gewonnen", style = MaterialTheme.typography.labelSmall, color = SandGold, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.width(10.dp))
                 DrinkPiece(drinkId = drinkId, size = 36.dp)

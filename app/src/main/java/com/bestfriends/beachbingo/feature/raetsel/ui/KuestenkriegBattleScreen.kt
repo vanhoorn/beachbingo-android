@@ -29,17 +29,14 @@ import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
 import kotlinx.coroutines.delay
 
-private val KkAccent   = Color(0xFFFB7185)
-private val MissColor  = Color(0xFF1E3050)
-private val RedBase    = Color(0xFFEF4444)
 
 private enum class CellView { UNKNOWN, MISS, HIT, SUNK, MYSHIP }
 
 private fun cellBg(v: CellView): Color = when (v) {
-    CellView.MISS    -> MissColor
-    CellView.HIT     -> RedBase.copy(alpha = 0.53f)
-    CellView.SUNK    -> RedBase.copy(alpha = 0.80f)
-    CellView.MYSHIP  -> KkAccent.copy(alpha = 0.53f)
+    CellView.MISS    -> BorderColor
+    CellView.HIT     -> Danger.copy(alpha = 0.53f)
+    CellView.SUNK    -> Danger.copy(alpha = 0.80f)
+    CellView.MYSHIP  -> RoseRed.copy(alpha = 0.53f)
     CellView.UNKNOWN -> Color.White
 }
 
@@ -58,7 +55,7 @@ fun KuestenkriegBattleScreen(
 ) {
     val context = LocalContext.current
     val aiModeEnum = KuestenkriegSession.aiMode
-    val saveIdRef = remember { KuestenkriegSession.resumedSaveId ?: PuzzleSaveManager.generateId() }
+    val saveIdRef = remember { KuestenkriegSession.resumedSaveId ?: SoloGameSaveManager.generateId() }
     val startedAtRef = remember { System.currentTimeMillis() }
     var state by remember { mutableStateOf(KuestenkriegSession.resumedState ?: createBattleState(KuestenkriegSession.playerFleet)) }
     var aiMsg by remember { mutableStateOf<String?>(null) }
@@ -72,9 +69,9 @@ fun KuestenkriegBattleScreen(
 
     LaunchedEffect(state) {
         if (state.gameOver) {
-            PuzzleSaveManager.deleteSave(context, saveIdRef)
+            SoloGameSaveManager.deleteSave(context, saveIdRef)
         } else {
-            PuzzleSaveManager.savePuzzle(context, PuzzleSave(
+            SoloGameSaveManager.savePuzzle(context, PuzzleSave(
                 id = saveIdRef, gameType = "kuestenkrieg_ki",
                 variant = aiModeEnum.name.lowercase(), difficulty = "ki", seed = 0L,
                 puzzleState = serializeBattleState(state),
@@ -161,10 +158,10 @@ fun KuestenkriegBattleScreen(
                     modifier = Modifier.size(36.dp).border(1.dp, BorderColor, RoundedCornerShape(10.dp)).clickable { showQuit = true }
                 ) { Box(contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück", tint = TextSub, modifier = Modifier.size(18.dp)) } }
                 Spacer(Modifier.width(10.dp))
-                Text("⚓", fontSize = 22.sp)
+                Text("⚓", style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("KÜSTENKRIEG · $aiModeLabel", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                    Text("KÜSTENKRIEG · $aiModeLabel", fontSize = ChipLabelTiny, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
                     Text(
                         when {
                             state.gameOver && state.winner == BattleTurn.PLAYER -> "🏆 Sieg!"
@@ -173,12 +170,12 @@ fun KuestenkriegBattleScreen(
                             isMyTurn                                            -> "Dein Schuss 🎯"
                             else                                                -> "KI ist am Zug…"
                         },
-                        fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary
+                        fontSize = CellNumber, fontWeight = FontWeight.Bold, color = TextPrimary
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("Du: $myRemaining ❤️", fontSize = 11.sp, color = TextMuted)
-                    Text("KI: $aiRemaining 💀", fontSize = 11.sp, color = TextMuted)
+                    Text("Du: $myRemaining ❤️", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                    Text("KI: $aiRemaining 💀", style = MaterialTheme.typography.labelSmall, color = TextMuted)
                 }
             }
         }
@@ -196,10 +193,10 @@ fun KuestenkriegBattleScreen(
 
             // AI notification toast
             if (aiMsg != null) {
-                Surface(shape = RoundedCornerShape(10.dp), color = KkAccent.copy(alpha = 0.12f),
-                    modifier = Modifier.fillMaxWidth().border(1.dp, KkAccent.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                Surface(shape = RoundedCornerShape(10.dp), color = RoseRed.copy(alpha = 0.12f),
+                    modifier = Modifier.fillMaxWidth().border(1.dp, RoseRed.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
                 ) {
-                    Text("KI: $aiMsg", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = KkAccent,
+                    Text("KI: $aiMsg", fontSize = CellNumber, fontWeight = FontWeight.Bold, color = RoseRed,
                         textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 10.dp).fillMaxWidth())
                 }
             }
@@ -227,13 +224,13 @@ fun KuestenkriegBattleScreen(
                     val def = FLEET_DEFS.getOrNull(ship.id)
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = if (ship.sunk) RedBase.copy(alpha = 0.1f) else KkAccent.copy(alpha = 0.06f),
-                        modifier = Modifier.border(1.dp, if (ship.sunk) RedBase.copy(alpha = 0.4f) else KkAccent.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                        color = if (ship.sunk) Danger.copy(alpha = 0.1f) else RoseRed.copy(alpha = 0.06f),
+                        modifier = Modifier.border(1.dp, if (ship.sunk) Danger.copy(alpha = 0.4f) else RoseRed.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
                     ) {
                         Text(
                             "${def?.emoji ?: "🚢"} ${def?.name ?: "Schiff"}",
-                            fontSize = 11.sp,
-                            color = if (ship.sunk) RedBase else KkAccent,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (ship.sunk) Danger else RoseRed,
                             textDecoration = if (ship.sunk) TextDecoration.LineThrough else TextDecoration.None,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
@@ -249,23 +246,23 @@ fun KuestenkriegBattleScreen(
                     modifier = Modifier.fillMaxWidth().border(1.dp, BorderColor, RoundedCornerShape(16.dp))
                 ) {
                     Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(if (won) "🏆" else "💀", fontSize = 40.sp)
+                        Text(if (won) "🏆" else "💀", fontSize = EmojiLarge)
                         Text(if (won) "Du hast gewonnen!" else "KI hat gewonnen!",
-                            fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                            fontSize = BingoCallSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
                         Text(if (won) "Alle feindlichen Schiffe versenkt!" else "Deine Flotte wurde vernichtet!",
-                            fontSize = 13.sp, color = TextMuted)
+                            style = MaterialTheme.typography.labelMedium, color = TextMuted)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             OutlinedButton(
                                 onClick = onNavigateBack,
                                 modifier = Modifier.weight(1f).height(46.dp),
                                 shape = RoundedCornerShape(10.dp),
-                            ) { Text("Lobby", fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+                            ) { Text("Lobby", fontSize = CellNumber, fontWeight = FontWeight.Bold) }
                             Button(
                                 onClick = { onNavigateToPlacement(KuestenkriegSession.aiMode.name.lowercase()) },
                                 modifier = Modifier.weight(1f).height(46.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = KkAccent),
+                                colors = ButtonDefaults.buttonColors(containerColor = RoseRed),
                                 shape = RoundedCornerShape(10.dp),
-                            ) { Text("Nochmal!", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = BgDark) }
+                            ) { Text("Nochmal!", fontSize = CellNumber, fontWeight = FontWeight.ExtraBold, color = BgDark) }
                         }
                     }
                 }
@@ -281,7 +278,7 @@ fun KuestenkriegBattleScreen(
             emoji = "⚓",
             onContinue = { showQuit = false },
             onSaveAndQuit = onNavigateBack,
-            onQuitWithoutSave = { PuzzleSaveManager.deleteSave(context, saveIdRef); onNavigateBack() },
+            onQuitWithoutSave = { SoloGameSaveManager.deleteSave(context, saveIdRef); onNavigateBack() },
         )
     }
 }
@@ -296,23 +293,23 @@ private fun BattleGridSection(
 ) {
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 6.dp)) {
-                Text(title, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                Text(title, fontSize = ChipLabel, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
                 if (subtitle != null) {
                     Spacer(Modifier.width(6.dp))
-                    Text(subtitle, fontSize = 12.sp, color = KkAccent)
+                    Text(subtitle, fontSize = ChipLabel, color = RoseRed)
                 }
             }
             Row(modifier = Modifier.padding(start = 22.dp)) {
                 repeat(BATTLE_GRID) { c ->
                     Box(modifier = Modifier.size(cellDp), contentAlignment = Alignment.Center) {
-                        Text(('A' + c).toString(), fontSize = 8.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                        Text(('A' + c).toString(), fontSize = LabelMicro, color = Color.Black, fontWeight = FontWeight.Bold)
                     }
                 }
             }
             repeat(BATTLE_GRID) { r ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.width(20.dp), contentAlignment = Alignment.CenterEnd) {
-                        Text("${r + 1}", fontSize = 8.sp, color = Color.Black, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 2.dp))
+                        Text("${r + 1}", fontSize = LabelMicro, color = Color.Black, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 2.dp))
                     }
                     repeat(BATTLE_GRID) { c ->
                         val v = grid[r][c]
@@ -326,7 +323,7 @@ private fun BattleGridSection(
                         ) {
                             val lbl = cellLabel(v)
                             if (lbl.isNotEmpty()) {
-                                Text(lbl, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold,
+                                Text(lbl, fontSize = StatusTiny, fontWeight = FontWeight.ExtraBold,
                                     color = if (v == CellView.MISS) TextMuted else Color.White)
                             }
                         }

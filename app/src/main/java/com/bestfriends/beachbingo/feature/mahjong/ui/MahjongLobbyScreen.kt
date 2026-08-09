@@ -35,14 +35,12 @@ import com.bestfriends.beachbingo.feature.mahjong.LAYOUT_DEFS
 import com.bestfriends.beachbingo.feature.mahjong.LAYOUT_ORDER
 import com.bestfriends.beachbingo.feature.mahjong.LayoutId
 import com.bestfriends.beachbingo.feature.mahjong.MahjongDifficulty
-import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
 import com.bestfriends.beachbingo.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
-
-private val MjAccent = Color(0xFFD4A820)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,7 +56,7 @@ fun MahjongLobbyScreen(
 
     var difficulty by remember { mutableStateOf(MahjongDifficulty.ROOKIE) }
     var layout by remember { mutableStateOf(LayoutId.SCHILDKROETE) }
-    var saves by remember { mutableStateOf(PuzzleSaveManager.getSaves(context).filter { it.gameType == "mahjong" }) }
+    var saves by remember { mutableStateOf(SoloGameSaveManager.getSaves(context).filter { it.gameType == "mahjong" }) }
     var showStats by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
     var isFavorite by remember { mutableStateOf(false) }
@@ -114,11 +112,11 @@ fun MahjongLobbyScreen(
                     }
                 }
                 Spacer(Modifier.width(14.dp))
-                Text("🀄", fontSize = 32.sp)
+                Text("🀄", fontSize = ScoreLarge)
                 Spacer(Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("SPIEL", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
-                    Text("GezeitenSteine", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Text("SPIEL", fontSize = ChipLabelTiny, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
+                    Text("GezeitenSteine", fontSize = BingoCallSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
                 }
                 // Einstellungen
                 Surface(
@@ -137,43 +135,43 @@ fun MahjongLobbyScreen(
                 // Stats
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = MjAccent.copy(alpha = 0.12f),
+                    color = MahjongGold.copy(alpha = 0.12f),
                     modifier = Modifier
                         .size(36.dp)
-                        .border(1.dp, MjAccent.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                        .border(1.dp, MahjongGold.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                         .clickable { showStats = true },
                 ) {
-                    Box(contentAlignment = Alignment.Center) { Text("🏆", fontSize = 16.sp) }
+                    Box(contentAlignment = Alignment.Center) { Text("🏆", fontSize = MaterialTheme.typography.titleSmall.fontSize) }
                 }
                 Spacer(Modifier.width(8.dp))
                 // Regeln
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = MjAccent.copy(alpha = 0.12f),
+                    color = MahjongGold.copy(alpha = 0.12f),
                     modifier = Modifier
                         .size(36.dp)
-                        .border(1.dp, MjAccent.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                        .border(1.dp, MahjongGold.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                         .clickable { showRules = true },
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Info, null, tint = MjAccent, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Info, null, tint = MahjongGold, modifier = Modifier.size(18.dp))
                     }
                 }
                 Spacer(Modifier.width(8.dp))
                 // Favorit
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = if (isFavorite) MjAccent.copy(0.2f) else Surface2Dark,
+                    color = if (isFavorite) MahjongGold.copy(0.2f) else Surface2Dark,
                     modifier = Modifier
                         .size(36.dp)
-                        .border(1.dp, if (isFavorite) MjAccent else BorderColor, RoundedCornerShape(10.dp))
+                        .border(1.dp, if (isFavorite) MahjongGold else BorderColor, RoundedCornerShape(10.dp))
                         .clickable { toggleFavorite() },
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
                             if (isFavorite) "★" else "☆",
-                            fontSize = 18.sp,
-                            color = if (isFavorite) MjAccent else TextMuted,
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize,
+                            color = if (isFavorite) MahjongGold else TextMuted,
                         )
                     }
                 }
@@ -185,7 +183,7 @@ fun MahjongLobbyScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             // ── Schwierigkeitsgrad ────────────────────────────────────────────
-            Text("Schwierigkeitsgrad", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+            Text("Schwierigkeitsgrad", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
 
             // (label, emoji, desc)
             val difficulties = listOf(
@@ -199,27 +197,27 @@ fun MahjongLobbyScreen(
                 val sel = difficulty == d
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = if (sel) MjAccent.copy(0.15f) else SurfaceDark,
+                    color = if (sel) MahjongGold.copy(0.15f) else SurfaceDark,
                     modifier = Modifier
                         .fillMaxWidth()
                         .border(
                             width = if (sel) 2.dp else 1.dp,
-                            color = if (sel) MjAccent else BorderColor,
+                            color = if (sel) MahjongGold else BorderColor,
                             shape = RoundedCornerShape(14.dp),
                         )
                         .clickable { difficulty = d },
                 ) {
                     Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(emoji, fontSize = 28.sp)
+                        Text(emoji, fontSize = MaterialTheme.typography.headlineMedium.fontSize)
                         Spacer(Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(label, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = if (sel) MjAccent else TextPrimary)
+                            Text(label, fontSize = MaterialTheme.typography.labelLarge.fontSize, fontWeight = FontWeight.ExtraBold, color = if (sel) MahjongGold else TextPrimary)
                             Spacer(Modifier.height(3.dp))
-                            Text(desc, fontSize = 12.sp, color = TextMuted, lineHeight = 16.sp)
+                            Text(desc, fontSize = ChipLabel, color = TextMuted, lineHeight = 16.sp)
                         }
                         if (sel) {
                             Spacer(Modifier.width(8.dp))
-                            Text("✓", fontSize = 18.sp, color = MjAccent, fontWeight = FontWeight.Bold)
+                            Text("✓", fontSize = MaterialTheme.typography.titleMedium.fontSize, color = MahjongGold, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -227,18 +225,18 @@ fun MahjongLobbyScreen(
 
             // ── Layout-Auswahl ────────────────────────────────────────────────
             if (difficulty != MahjongDifficulty.ROOKIE) {
-                Text("Layout", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                Text("Layout", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     LAYOUT_ORDER.forEach { l ->
                         val sel = layout == l
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = if (sel) MjAccent.copy(0.15f) else SurfaceDark,
+                            color = if (sel) MahjongGold.copy(0.15f) else SurfaceDark,
                             modifier = Modifier
                                 .weight(1f)
                                 .border(
                                     width = if (sel) 2.dp else 1.dp,
-                                    color = if (sel) MjAccent else BorderColor,
+                                    color = if (sel) MahjongGold else BorderColor,
                                     shape = RoundedCornerShape(10.dp),
                                 )
                                 .clickable { layout = l },
@@ -255,8 +253,8 @@ fun MahjongLobbyScreen(
                                 Spacer(Modifier.height(4.dp))
                                 Text(
                                     "${l.emoji} ${l.label}",
-                                    fontSize = 9.sp,
-                                    color = if (sel) MjAccent else TextMuted,
+                                    fontSize = StatusTiny,
+                                    color = if (sel) MahjongGold else TextMuted,
                                     fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
                                     textAlign = TextAlign.Center,
                                     maxLines = 1,
@@ -274,26 +272,26 @@ fun MahjongLobbyScreen(
                     onNavigateToGame(chosenLayout.name, difficulty.name, System.currentTimeMillis(), null)
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MjAccent),
+                colors = ButtonDefaults.buttonColors(containerColor = MahjongGold),
                 shape = RoundedCornerShape(14.dp),
             ) {
-                Text("Spiel starten", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+                Text("Spiel starten", fontSize = MaterialTheme.typography.titleSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = Color.Black)
             }
 
             // ── Gespeicherte Spiele ───────────────────────────────────────────
             if (saves.isNotEmpty()) {
-                Text("Gespeicherte Spiele", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                Text("Gespeicherte Spiele", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
                 saves.forEach { save ->
                     val saveLayout = runCatching { LayoutId.valueOf(save.variant) }.getOrNull()
                     val saveDiff   = runCatching { MahjongDifficulty.valueOf(save.difficulty) }.getOrNull()
                     SavedGameRow(
                         title    = "${saveLayout?.emoji ?: "🀄"} ${saveLayout?.label ?: save.variant}",
-                        subtitle = "${saveDiff?.name ?: save.difficulty} · ${PuzzleSaveManager.formatElapsed(save.elapsedSeconds)}",
-                        color    = MjAccent,
+                        subtitle = "${saveDiff?.name ?: save.difficulty} · ${SoloGameSaveManager.formatElapsed(save.elapsedSeconds)}",
+                        color    = MahjongGold,
                         onResume = { onNavigateToGame(save.variant, save.difficulty, save.seed, save.id) },
                         onDelete = {
-                            PuzzleSaveManager.deleteSave(context, save.id)
-                            saves = PuzzleSaveManager.getSaves(context).filter { it.gameType == "mahjong" }
+                            SoloGameSaveManager.deleteSave(context, save.id)
+                            saves = SoloGameSaveManager.getSaves(context).filter { it.gameType == "mahjong" }
                         },
                     )
                 }
@@ -308,19 +306,19 @@ fun MahjongLobbyScreen(
         Dialog(onDismissRequest = { showStats = false }) {
             Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
                 Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("🏆", fontSize = 36.sp)
+                    Text("🏆", fontSize = MaterialTheme.typography.headlineLarge.fontSize)
                     Spacer(Modifier.height(8.dp))
-                    Text("Boss Level · Bestzeiten", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Text("Boss Level · Bestzeiten", fontSize = MaterialTheme.typography.bodyLarge.fontSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
                     Spacer(Modifier.height(16.dp))
                     LAYOUT_ORDER.forEach { l ->
-                        val best = PuzzleSaveManager.getBestTime(context, "mahjong", l.name, MahjongDifficulty.BOSS.name)
+                        val best = SoloGameSaveManager.getBestTime(context, "mahjong", l.name, MahjongDifficulty.BOSS.name)
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text("${l.emoji} ${l.label}", fontSize = 14.sp, color = TextPrimary, modifier = Modifier.weight(1f))
+                            Text("${l.emoji} ${l.label}", fontSize = CellNumber, color = TextPrimary, modifier = Modifier.weight(1f))
                             Text(
-                                if (best != null) PuzzleSaveManager.formatElapsed(best) else "—",
-                                fontSize = 14.sp,
+                                if (best != null) SoloGameSaveManager.formatElapsed(best) else "—",
+                                fontSize = CellNumber,
                                 fontWeight = FontWeight.Bold,
-                                color = if (best != null) MjAccent else TextMuted,
+                                color = if (best != null) MahjongGold else TextMuted,
                             )
                         }
                     }
@@ -364,7 +362,7 @@ private fun LayoutPreview(
 
     val density  = LocalDensity.current
     val maxDotPx = with(density) { 5.dp.toPx() }
-    val dotColor = if (active) Color(0xFFD4A820) else Color(0xFF6B7A8D)
+    val dotColor = if (active) MahjongGold else TextMuted
     val alpha    = if (active) 0.9f else 0.45f
 
     Canvas(modifier = modifier) {

@@ -9,9 +9,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
+import com.bestfriends.beachbingo.ui.components.GameHudBar
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,6 +23,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.bestfriends.beachbingo.feature.raetsel.*
 import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
@@ -31,18 +32,12 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val WwGameAccent    = Color(0xFF06B6D4)
-private val WwCorrectColor  = Color(0xFF22C55E)
-private val WwPresentColor  = Color(0xFFEAB308)
-private val WwAbsentColor   = Color(0xFF374151)
-
 private val KEYBOARD_ROWS = listOf(
-    listOf("Q","W","E","R","T","Z","U","I","O","P","←"),
+    listOf("Q","W","E","R","T","Z","U","I","O","P"),
     listOf("A","S","D","F","G","H","J","K","L"),
-    listOf("Y","X","C","V","B","N","M","↵"),
+    listOf("Y","X","C","V","B","N","M"),
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WortWelleGameScreen(
     difficulty: String,
@@ -60,7 +55,7 @@ fun WortWelleGameScreen(
         when {
             isDaily && !dailyWord.isNullOrEmpty() -> WwInitState(dailyWord, emptyList(), "", "playing", 0)
             saveId != null -> {
-                val save = PuzzleSaveManager.getSaves(context).find { it.id == saveId }
+                val save = SoloGameSaveManager.getSaves(context).find { it.id == saveId }
                 if (save != null) {
                     val s = deserializeWwState(save.puzzleState)
                     s.copy(elapsedSeconds = save.elapsedSeconds)
@@ -95,7 +90,7 @@ fun WortWelleGameScreen(
     var shakeRow    by remember { mutableIntStateOf(-1) }
     val shakeX      = remember { Animatable(0f) }
     val resultSaved = remember { mutableStateOf(false) }
-    val saveIdRef   = remember { if (!isDaily) saveId ?: PuzzleSaveManager.generateId() else "" }
+    val saveIdRef   = remember { if (!isDaily) saveId ?: SoloGameSaveManager.generateId() else "" }
 
     // ── Flip-Animation ───────────────────────────────────────────────────────
     val preRevealedRows = remember { (0 until init.guesses.size).toSet() }
@@ -108,7 +103,7 @@ fun WortWelleGameScreen(
         )
     }
 
-    val bestTime = remember { PuzzleSaveManager.getBestTimeAny(context, "wortwelle", difficulty) }
+    val bestTime = remember { SoloGameSaveManager.getBestTimeAny(context, "wortwelle", difficulty) }
     val keyStatuses = remember(guesses) { computeWwKeyStatuses(guesses, targetWord) }
 
     // ── Timer ───────────────────────────────────────────────────────────────
@@ -122,9 +117,9 @@ fun WortWelleGameScreen(
         if (gameStatus == "won" || gameStatus == "lost") {
             resultSaved.value = true
             running = false
-            if (gameStatus == "won") PuzzleSaveManager.recordBestTime(context, "wortwelle", difficulty, difficulty, elapsed)
+            if (gameStatus == "won") SoloGameSaveManager.recordBestTime(context, "wortwelle", difficulty, difficulty, elapsed)
             recordWwResult(context, difficulty, gameStatus == "won", guesses.size, isDaily, dateStr)
-            if (!isDaily && saveIdRef.isNotEmpty()) PuzzleSaveManager.deleteSave(context, saveIdRef)
+            if (!isDaily && saveIdRef.isNotEmpty()) SoloGameSaveManager.deleteSave(context, saveIdRef)
             delay(cfg.wordLength * 150L + 200L)
             showResult = true
         }
@@ -165,7 +160,7 @@ fun WortWelleGameScreen(
     // ── Auto-Save (Zufallsmodus, bei jedem Raten) ────────────────────────────
     LaunchedEffect(guesses) {
         if (!isDaily && gameStatus == "playing" && saveIdRef.isNotEmpty()) {
-            PuzzleSaveManager.savePuzzle(context, PuzzleSave(
+            SoloGameSaveManager.savePuzzle(context, PuzzleSave(
                 id = saveIdRef, gameType = "wortwelle", variant = "random",
                 difficulty = difficulty, seed = 0L,
                 puzzleState = serializeWwState(targetWord, guesses, cells.joinToString(""), gameStatus),
@@ -223,25 +218,21 @@ fun WortWelleGameScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("WORTWELLE", style = MaterialTheme.typography.labelSmall, color = TextMuted)
-                        val bestLabel = if (bestTime != null) "  ⏱ ${PuzzleSaveManager.formatElapsed(bestTime)}" else ""
-                        Text(
-                            "${cfg.label}${if (isDaily) " · Tageswort" else ""}  ·  ${PuzzleSaveManager.formatElapsed(elapsed)}$bestLabel",
-                            style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.ExtraBold,
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { running = false; showQuit = true }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück", tint = TextSub)
-                    }
-                },
-                actions = {},
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark),
-            )
+            GameHudBar(
+                paused = !running,
+                onPauseToggle = { running = !running },
+                onQuit = { running = false; showQuit = true },
+                onShowRules = { running = false; showRules = true },
+            ) {
+                Column {
+                    Text("WORTWELLE", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                    val bestLabel = if (bestTime != null) "  ⏱ ${SoloGameSaveManager.formatElapsed(bestTime)}" else ""
+                    Text(
+                        "${cfg.label}${if (isDaily) " · Tageswort" else ""}  ·  ${SoloGameSaveManager.formatElapsed(elapsed)}$bestLabel",
+                        style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.ExtraBold,
+                    )
+                }
+            }
         },
         containerColor = BgDark,
     ) { padding ->
@@ -249,7 +240,7 @@ fun WortWelleGameScreen(
             val availW = maxWidth.value
             val availH = maxHeight.value
 
-            val keyboardH   = 168f
+            val keyboardH   = 226f
             val controlsH   = 52f
             val errorH      = 30f
             val gridPad     = 16f
@@ -299,15 +290,15 @@ fun WortWelleGameScreen(
                                     else -> WwLetterStatus.EMPTY
                                 }
                                 val bg = when (status) {
-                                    WwLetterStatus.CORRECT -> WwCorrectColor
-                                    WwLetterStatus.PRESENT -> WwPresentColor
-                                    WwLetterStatus.ABSENT  -> WwAbsentColor
+                                    WwLetterStatus.CORRECT -> Success
+                                    WwLetterStatus.PRESENT -> WwPresent
+                                    WwLetterStatus.ABSENT  -> WwAbsent
                                     else -> Color.Transparent
                                 }
                                 val isCursorCell = isCurrentRow && col == cursorPos && gameStatus == "playing"
                                 val borderColor = when {
-                                    isCursorCell -> WwGameAccent
-                                    status == WwLetterStatus.TYPING -> WwGameAccent
+                                    isCursorCell -> CyanBright
+                                    status == WwLetterStatus.TYPING -> CyanBright
                                     status == WwLetterStatus.EMPTY  -> BorderColor
                                     else -> Color.Transparent
                                 }
@@ -344,8 +335,8 @@ fun WortWelleGameScreen(
                 // ── Fehlermeldung ─────────────────────────────────────────────
                 Box(modifier = Modifier.fillMaxWidth().height(errorH.dp), contentAlignment = Alignment.Center) {
                     if (errorMsg != null) {
-                        Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFF1F2937)) {
-                            Text(errorMsg ?: "", fontSize = 13.sp, color = TextPrimary, fontWeight = FontWeight.Bold,
+                        Surface(shape = RoundedCornerShape(8.dp), color = WwAbsentBg) {
+                            Text(errorMsg ?: "", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextPrimary, fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp), textAlign = TextAlign.Center)
                         }
                     }
@@ -364,7 +355,7 @@ fun WortWelleGameScreen(
                         OutlinedButton(
                             onClick = {
                                 if (saveIdRef.isNotEmpty()) {
-                                    PuzzleSaveManager.savePuzzle(context, PuzzleSave(
+                                    SoloGameSaveManager.savePuzzle(context, PuzzleSave(
                                         id = saveIdRef, gameType = "wortwelle", variant = "random",
                                         difficulty = difficulty, seed = 0L,
                                         puzzleState = serializeWwState(targetWord, guesses, cells.joinToString(""), gameStatus),
@@ -380,19 +371,19 @@ fun WortWelleGameScreen(
                             ),
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                        ) { Text("💾", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                        ) { Text("💾", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold) }
                     }
                     if (gameStatus == "playing") {
                         OutlinedButton(
                             onClick = { paused = !paused },
-                            border = androidx.compose.foundation.BorderStroke(1.dp, WwGameAccent.copy(alpha = 0.33f)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, CyanBright.copy(alpha = 0.33f)),
                             colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = WwGameAccent.copy(alpha = 0.13f),
-                                contentColor = WwGameAccent,
+                                containerColor = CyanBright.copy(alpha = 0.13f),
+                                contentColor = CyanBright,
                             ),
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                        ) { Text(if (paused) "▶" else "⏸", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                        ) { Text(if (paused) "▶" else "⏸", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold) }
                     }
                     OutlinedButton(
                         onClick = { running = false; showRules = true },
@@ -403,7 +394,7 @@ fun WortWelleGameScreen(
                         ),
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    ) { Text("?", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                    ) { Text("?", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold) }
                     OutlinedButton(
                         onClick = { running = false; showQuit = true },
                         border = androidx.compose.foundation.BorderStroke(1.dp, Danger.copy(alpha = 0.33f)),
@@ -413,7 +404,7 @@ fun WortWelleGameScreen(
                         ),
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    ) { Text("✕", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                    ) { Text("✕", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold) }
                 }
 
                 // ── QWERTZ-Tastatur ───────────────────────────────────────────
@@ -423,20 +414,16 @@ fun WortWelleGameScreen(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
                 ) {
                     KEYBOARD_ROWS.forEach { rowKeys ->
-                        val totalRegular = rowKeys.count { it != "←" && it != "↵" }
-                        val totalWide    = rowKeys.count { it == "←" || it == "↵" }
-                        val availKeyW   = (availW - gridPad * 2 - 4f * (rowKeys.size - 1)) / (totalRegular + totalWide * 1.5f)
-                        val keyH = 48.dp
+                        val availKeyW = (availW - gridPad * 2 - 4f * (rowKeys.size - 1)) / rowKeys.size.toFloat()
+                        val keyH = 50.dp
 
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             rowKeys.forEach { key ->
-                                val isWide = key == "←" || key == "↵"
-                                val keyWidth = if (isWide) (availKeyW * 1.5f).dp else availKeyW.dp
                                 val keyStatus = keyStatuses[key.firstOrNull()]
                                 val keyBg = when (keyStatus) {
-                                    WwLetterStatus.CORRECT -> WwCorrectColor
-                                    WwLetterStatus.PRESENT -> WwPresentColor
-                                    WwLetterStatus.ABSENT  -> Color(0xFF1F2937)
+                                    WwLetterStatus.CORRECT -> Success
+                                    WwLetterStatus.PRESENT -> WwPresent
+                                    WwLetterStatus.ABSENT  -> WwAbsentBg
                                     else -> Surface2Dark
                                 }
                                 val keyTextColor = when (keyStatus) {
@@ -445,7 +432,7 @@ fun WortWelleGameScreen(
                                 }
                                 Box(
                                     modifier = Modifier
-                                        .width(keyWidth)
+                                        .width(availKeyW.dp)
                                         .height(keyH)
                                         .background(keyBg, RoundedCornerShape(8.dp))
                                         .clickable(
@@ -456,12 +443,46 @@ fun WortWelleGameScreen(
                                 ) {
                                     Text(
                                         text = key,
-                                        fontSize = if (key.length > 1) 14.sp else 16.sp,
+                                        fontSize = MaterialTheme.typography.titleSmall.fontSize,
                                         fontWeight = FontWeight.Bold,
                                         color = keyTextColor,
                                     )
                                 }
                             }
+                        }
+                    }
+                    // Aktionsleiste
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(2f)
+                                .height(52.dp)
+                                .background(Danger.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+                                .border(1.dp, Danger.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                ) { handleKey("←") },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text("✕  Löschen", fontSize = CellNumber, fontWeight = FontWeight.Bold, color = Danger)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .weight(3f)
+                                .height(52.dp)
+                                .background(Success.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+                                .border(1.dp, Success.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                ) { handleKey("↵") },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text("✓  Bestätigen", fontSize = CellNumber, fontWeight = FontWeight.Bold, color = Success)
                         }
                     }
                 }
@@ -476,37 +497,37 @@ fun WortWelleGameScreen(
         Dialog(onDismissRequest = {}) {
             Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
                 Column(modifier = Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(if (gameStatus == "won") "🎉" else "😔", fontSize = 48.sp)
+                    Text(if (gameStatus == "won") "🎉" else "😔", fontSize = DrawNumberTablet)
                     Spacer(Modifier.height(8.dp))
                     Text(
                         if (gameStatus == "won") "Glückwunsch!" else "Verloren!",
-                        fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
+                        fontSize = MaterialTheme.typography.titleLarge.fontSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
                     )
                     Spacer(Modifier.height(10.dp))
-                    Text("Das Wort war:", fontSize = 13.sp, color = TextMuted)
+                    Text("Das Wort war:", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted)
                     Spacer(Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         targetWord.forEach { ch ->
                             Box(
-                                modifier = Modifier.size(36.dp).background(WwCorrectColor, RoundedCornerShape(6.dp)),
+                                modifier = Modifier.size(36.dp).background(Success, RoundedCornerShape(6.dp)),
                                 contentAlignment = Alignment.Center,
-                            ) { Text(ch.toString(), fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color.White) }
+                            ) { Text(ch.toString(), fontSize = MaterialTheme.typography.titleSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = Color.White) }
                         }
                     }
                     Spacer(Modifier.height(10.dp))
                     Text(
-                        "${PuzzleSaveManager.formatElapsed(elapsed)}  ·  $winPct% Gewonnen  ·  Streak: ${finalStats.currentStreak}",
-                        fontSize = 13.sp, color = WwGameAccent, fontWeight = FontWeight.Bold,
+                        "${SoloGameSaveManager.formatElapsed(elapsed)}  ·  $winPct% Gewonnen  ·  Streak: ${finalStats.currentStreak}",
+                        fontSize = MaterialTheme.typography.labelMedium.fontSize, color = CyanBright, fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                     )
                     if (isDaily && dateStr != null) {
                         Spacer(Modifier.height(8.dp))
-                        Text("Tageswort vom $dateStr", fontSize = 11.sp, color = TextMuted)
+                        Text("Tageswort vom $dateStr", fontSize = MaterialTheme.typography.labelSmall.fontSize, color = TextMuted)
                     }
                     Spacer(Modifier.height(16.dp))
                     Button(
                         onClick = onNavigateBack, modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = WwGameAccent),
+                        colors = ButtonDefaults.buttonColors(containerColor = CyanBright),
                         shape = RoundedCornerShape(10.dp),
                     ) { Text("Zurück zur Lobby", fontWeight = FontWeight.Bold, color = BgDark) }
                 }
@@ -516,28 +537,7 @@ fun WortWelleGameScreen(
 
     // ── Regeln-Dialog ─────────────────────────────────────────────────────────
     if (showRules) {
-        Dialog(onDismissRequest = { showRules = false; running = true }) {
-            Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Text("🌊 WortWelle — Regeln", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold,
-                        color = TextPrimary, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Errate das Wort in ${cfg.maxGuesses} Versuchen.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
-                        Text("✅ Grün: Buchstabe ist richtig und an der richtigen Position.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
-                        Text("🟡 Gelb: Buchstabe kommt vor, steht aber an anderer Stelle.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
-                        Text("⬛ Grau: Buchstabe ist nicht im Wort.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
-                        Spacer(Modifier.fillMaxWidth().height(1.dp).background(BorderColor))
-                        Text("Umlaute werden ersetzt: Ä=AE, Ö=OE, Ü=UE, ß=SS (z.B. BOESE statt BÖSE).", fontSize = 12.sp, color = TextMuted, lineHeight = 17.sp)
-                    }
-                    Spacer(Modifier.height(16.dp))
-                    Button(
-                        onClick = { showRules = false; running = true }, modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = WwGameAccent),
-                        shape = RoundedCornerShape(10.dp),
-                    ) { Text("Verstanden!", fontWeight = FontWeight.Bold, color = BgDark) }
-                }
-            }
-        }
+        ALL_GAME_RULES["wortwelle"]?.let { GameRulesBottomSheet(rule = it, onDismiss = { showRules = false; running = true }) }
     }
 
     // ── Beenden-Dialog ────────────────────────────────────────────────────────
@@ -548,7 +548,7 @@ fun WortWelleGameScreen(
             onContinue = { running = true; showQuit = false },
             onSaveAndQuit = {
                 if (saveIdRef.isNotEmpty()) {
-                    PuzzleSaveManager.savePuzzle(context, PuzzleSave(
+                    SoloGameSaveManager.savePuzzle(context, PuzzleSave(
                         id = saveIdRef, gameType = "wortwelle", variant = "random",
                         difficulty = difficulty, seed = 0L,
                         puzzleState = serializeWwState(targetWord, guesses, cells.joinToString(""), gameStatus),
@@ -558,7 +558,7 @@ fun WortWelleGameScreen(
                 onNavigateBack()
             },
             onQuitWithoutSave = {
-                if (!isDaily && saveIdRef.isNotEmpty()) PuzzleSaveManager.deleteSave(context, saveIdRef)
+                if (!isDaily && saveIdRef.isNotEmpty()) SoloGameSaveManager.deleteSave(context, saveIdRef)
                 onNavigateBack()
             },
         )

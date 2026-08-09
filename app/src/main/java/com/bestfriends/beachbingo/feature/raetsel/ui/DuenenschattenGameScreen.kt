@@ -6,13 +6,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
+import com.bestfriends.beachbingo.ui.components.GameHudBar
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -21,6 +19,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.bestfriends.beachbingo.feature.raetsel.*
 import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
@@ -28,9 +28,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-private val DsAccent = Color(0xFFFBBF24)
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DuenenschattenGameScreen(
     difficulty: String,
@@ -46,14 +43,14 @@ fun DuenenschattenGameScreen(
     var showWin by remember { mutableStateOf(false) }
     var showQuit by remember { mutableStateOf(false) }
     var showHelp by remember { mutableStateOf(false) }
-    val saveIdRef = remember { saveId ?: PuzzleSaveManager.generateId() }
+    val saveIdRef = remember { saveId ?: SoloGameSaveManager.generateId() }
 
     LaunchedEffect(seed) {
         val p = withContext(Dispatchers.Default) { generateHitori(difficulty, seed.toInt()) }
         puzzle = p
-        val savedState = if (saveId != null) PuzzleSaveManager.getSaves(context).find { it.id == saveId }?.puzzleState else null
+        val savedState = if (saveId != null) SoloGameSaveManager.getSaves(context).find { it.id == saveId }?.puzzleState else null
         gs = if (savedState != null) deserializeHitoriState(p, savedState) else createHitoriState(p)
-        val savedElapsed = if (saveId != null) PuzzleSaveManager.getSaves(context).find { it.id == saveId }?.elapsedSeconds ?: 0 else 0
+        val savedElapsed = if (saveId != null) SoloGameSaveManager.getSaves(context).find { it.id == saveId }?.elapsedSeconds ?: 0 else 0
         elapsed = savedElapsed
         running = true
     }
@@ -65,8 +62,8 @@ fun DuenenschattenGameScreen(
     LaunchedEffect(gs?.solved) {
         if (gs?.solved == true && !showWin) {
             running = false
-            PuzzleSaveManager.recordBestTime(context, "duenenschatten", "standard", difficulty, elapsed)
-            PuzzleSaveManager.deleteSave(context, saveIdRef)
+            SoloGameSaveManager.recordBestTime(context, "duenenschatten", "standard", difficulty, elapsed)
+            SoloGameSaveManager.deleteSave(context, saveIdRef)
             showWin = true
         }
     }
@@ -75,7 +72,7 @@ fun DuenenschattenGameScreen(
         val state = gs ?: return@LaunchedEffect
         if (state.solved || showWin) return@LaunchedEffect
         val p = puzzle ?: return@LaunchedEffect
-        PuzzleSaveManager.savePuzzle(context, PuzzleSave(
+        SoloGameSaveManager.savePuzzle(context, PuzzleSave(
             id = saveIdRef, gameType = "duenenschatten", variant = "standard",
             difficulty = difficulty, seed = seed, puzzleState = serializeHitoriState(state),
             startedAt = System.currentTimeMillis(), elapsedSeconds = elapsed,
@@ -87,23 +84,20 @@ fun DuenenschattenGameScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("DÜNENSC­HATTEN", style = MaterialTheme.typography.labelSmall, color = TextMuted)
-                        Text(
-                            "${difficulty.replaceFirstChar { it.uppercase() }} · ${PuzzleSaveManager.formatElapsed(elapsed)}",
-                            style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.ExtraBold,
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { running = false; showQuit = true }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück", tint = TextSub)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark),
-            )
+            GameHudBar(
+                paused = !running,
+                onPauseToggle = { running = !running },
+                onQuit = { running = false; showQuit = true },
+                onShowRules = { running = false; showHelp = true },
+            ) {
+                Column {
+                    Text("DÜNENSC­HATTEN", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                    Text(
+                        "${difficulty.replaceFirstChar { it.uppercase() }} · ${SoloGameSaveManager.formatElapsed(elapsed)}",
+                        style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.ExtraBold,
+                    )
+                }
+            }
         },
         containerColor = BgDark,
     ) { padding ->
@@ -121,7 +115,7 @@ fun DuenenschattenGameScreen(
             ) {
                 if (p == null || state == null) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = DsAccent)
+                        CircularProgressIndicator(color = SandGoldLight)
                     }
                 } else {
                     val conflicts = computeConflicts(state)
@@ -154,7 +148,7 @@ fun DuenenschattenGameScreen(
                         },
                     ) {
                         Surface(
-                            color = Color(0xFF0A1929),
+                            color = BgNavyCell,
                             border = BorderStroke(2.dp, TextMuted.copy(alpha = 0.6f)),
                             shape = RoundedCornerShape(4.dp),
                         ) {
@@ -170,7 +164,7 @@ fun DuenenschattenGameScreen(
                                             val isDot = mark == CellMark.DOT
                                             val isConflict = (r to c) in conflicts.adjacentBlacks || (r to c) in conflicts.duplicateWhites
                                             val bgColor = when {
-                                                isBlack    -> Color(0xFF111827)
+                                                isBlack    -> BgNightBlue
                                                 isConflict -> Danger.copy(alpha = 0.15f)
                                                 else       -> SurfaceDark
                                             }
@@ -200,7 +194,7 @@ fun DuenenschattenGameScreen(
                                                             .size(cellDp * 0.28f)
                                                             .align(Alignment.BottomEnd)
                                                             .offset((-3).dp, (-3).dp)
-                                                            .background(DsAccent, CircleShape),
+                                                            .background(SandGoldLight, CircleShape),
                                                     )
                                                 }
                                             }
@@ -214,7 +208,7 @@ fun DuenenschattenGameScreen(
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "Tippen = schwarz/Punkt · Lang drücken = Punkt",
-                        fontSize = 11.sp, color = TextMuted, textAlign = TextAlign.Center,
+                        fontSize = MaterialTheme.typography.labelSmall.fontSize, color = TextMuted, textAlign = TextAlign.Center,
                     )
 
                     Spacer(Modifier.height(12.dp))
@@ -233,8 +227,8 @@ fun DuenenschattenGameScreen(
                                     gs = setMark(state, hint.first, hint.second, correct)
                                 }
                             },
-                            border = BorderStroke(1.dp, DsAccent.copy(alpha = 0.5f)),
-                        ) { Text("💡", color = DsAccent, fontWeight = FontWeight.Bold) }
+                            border = BorderStroke(1.dp, SandGoldLight.copy(alpha = 0.5f)),
+                        ) { Text("💡", color = SandGoldLight, fontWeight = FontWeight.Bold) }
                         OutlinedButton(
                             onClick = { running = false; showHelp = true },
                             border = BorderStroke(1.dp, TextSub.copy(alpha = 0.5f)),
@@ -254,10 +248,10 @@ fun DuenenschattenGameScreen(
         Dialog(onDismissRequest = {}) {
             Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
                 Column(modifier = Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("🏆", fontSize = 48.sp)
+                    Text("🏆", fontSize = DrawNumberTablet)
                     Spacer(Modifier.height(8.dp))
-                    Text("Rätsel gelöst!", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-                    Text("Zeit: ${PuzzleSaveManager.formatElapsed(elapsed)}", fontSize = 14.sp, color = DsAccent, modifier = Modifier.padding(top = 4.dp))
+                    Text("Rätsel gelöst!", fontSize = MaterialTheme.typography.titleLarge.fontSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Text("Zeit: ${SoloGameSaveManager.formatElapsed(elapsed)}", fontSize = CellNumber, color = SandGoldLight, modifier = Modifier.padding(top = 4.dp))
                     Spacer(Modifier.height(20.dp))
                     Button(
                         onClick = onNavigateBack, modifier = Modifier.fillMaxWidth(),
@@ -270,36 +264,7 @@ fun DuenenschattenGameScreen(
 
     // ── Rules dialog ────────────────────────────────────────────────────────────
     if (showHelp) {
-        Dialog(onDismissRequest = { showHelp = false; running = true }) {
-            Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Text(
-                        "🏖️ Hitori",
-                        fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
-                        modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
-                    )
-                    Text(
-                        "Dünenschatten — Regeln",
-                        fontSize = 13.sp, fontWeight = FontWeight.Bold, color = DsAccent,
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 16.dp),
-                        textAlign = TextAlign.Center,
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("⬛ Schwärze Zellen so, dass jede Zahl in jeder Zeile und Spalte maximal einmal vorkommt.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
-                        Text("🚫 Zwei schwarze Zellen dürfen nicht waagerecht oder senkrecht nebeneinander stehen.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
-                        Text("🔗 Alle weißen Zellen müssen ein zusammenhängendes Gebiet bilden.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
-                        Spacer(Modifier.fillMaxWidth().height(1.dp).background(BorderColor))
-                        Text("Tippen = schwärzen / weiß. Lang drücken = Kreis (sicher weiß).", fontSize = 12.sp, color = TextMuted, lineHeight = 16.sp)
-                    }
-                    Spacer(Modifier.height(16.dp))
-                    Button(
-                        onClick = { showHelp = false; running = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = DsAccent),
-                    ) { Text("Verstanden!", fontWeight = FontWeight.Bold, color = BgDark) }
-                }
-            }
-        }
+        ALL_GAME_RULES["duenenschatten"]?.let { GameRulesBottomSheet(rule = it, onDismiss = { showHelp = false; running = true }) }
     }
 
     // ── Quit dialog ───────────────────────────────────────────────────────────
@@ -308,7 +273,7 @@ fun DuenenschattenGameScreen(
             emoji = "🏖️",
             onContinue = { running = true; showQuit = false },
             onSaveAndQuit = onNavigateBack,
-            onQuitWithoutSave = { PuzzleSaveManager.deleteSave(context, saveIdRef); onNavigateBack() },
+            onQuitWithoutSave = { SoloGameSaveManager.deleteSave(context, saveIdRef); onNavigateBack() },
         )
     }
 }

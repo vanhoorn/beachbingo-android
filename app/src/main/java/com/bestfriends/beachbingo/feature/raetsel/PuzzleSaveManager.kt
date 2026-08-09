@@ -28,7 +28,7 @@ data class PuzzleSave(
     val elapsedSeconds: Int,
 )
 
-object PuzzleSaveManager {
+object SoloGameSaveManager {
 
     private const val PREFS_NAME = "beachbande_puzzle_saves"
     private const val KEY_SAVES = "saves"
@@ -173,7 +173,7 @@ object PuzzleSaveManager {
 }
 
 val PUZZLE_GAME_INFO = mapOf(
-    "wortwelle"      to Triple("WortWelle",      "🌊", 0xFF06B6D4L),
+    "wortwelle"      to Triple("WortWelle",      "💬", 0xFF06B6D4L),
     "strandoku"      to Triple("Strandoku",      "🔢", 0xFF38BDF8L),
     "wellensumme"    to Triple("WellenSumme",    "➕", 0xFFC084FCL),
     "kuestenkrieg"   to Triple("Küstenkrieg",    "⚓", 0xFFFB7185L),

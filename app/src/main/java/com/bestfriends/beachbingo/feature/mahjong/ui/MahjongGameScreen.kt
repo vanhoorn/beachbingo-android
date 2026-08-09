@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,12 +16,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.bestfriends.beachbingo.feature.mahjong.*
-import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
 import com.bestfriends.beachbingo.feature.raetsel.PuzzleSave
+import com.bestfriends.beachbingo.ui.components.GameHudBar
 import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
@@ -32,8 +31,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-private val MjGameAccent = Color(0xFFD4A820)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MahjongGameScreen(
@@ -41,6 +38,8 @@ fun MahjongGameScreen(
     difficulty: String,
     seed: Long,
     saveId: String?,
+    soundEnabled: Boolean = true,
+    musicEnabled: Boolean = true,
     onNavigateBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -52,19 +51,17 @@ fun MahjongGameScreen(
     val audio = remember { MahjongAudioManager() }
     DisposableEffect(Unit) { onDispose { audio.release() } }
 
-    var soundEnabled by remember { mutableStateOf(true) }
-    var musicEnabled by remember { mutableStateOf(true) }
 
     val layoutId   = remember { runCatching { LayoutId.valueOf(layout) }.getOrElse { LayoutId.SCHILDKROETE } }
     val diff       = remember { runCatching { MahjongDifficulty.valueOf(difficulty) }.getOrElse { MahjongDifficulty.ROOKIE } }
     val localSeed  = remember { (seed % Int.MAX_VALUE).toInt().coerceAtLeast(1) }
-    val saveIdRef  = remember { saveId ?: PuzzleSaveManager.generateId() }
+    val saveIdRef  = remember { saveId ?: SoloGameSaveManager.generateId() }
 
     // ── Initialzustand ───────────────────────────────────────────────────────
     var state by remember {
         mutableStateOf(
             if (saveId != null) {
-                val save = PuzzleSaveManager.getSaves(context).find { it.id == saveId }
+                val save = SoloGameSaveManager.getSaves(context).find { it.id == saveId }
                 if (save != null) deserializeMahjong(save.puzzleState)
                 else createMahjongState(layoutId, diff, localSeed)
             } else {
@@ -75,7 +72,7 @@ fun MahjongGameScreen(
 
     var elapsed  by remember {
         val savedSec = if (saveId != null)
-            PuzzleSaveManager.getSaves(context).find { it.id == saveId }?.elapsedSeconds ?: 0
+            SoloGameSaveManager.getSaves(context).find { it.id == saveId }?.elapsedSeconds ?: 0
         else 0
         mutableIntStateOf(savedSec)
     }
@@ -90,7 +87,7 @@ fun MahjongGameScreen(
     val useTimer    = diff != MahjongDifficulty.ROOKIE
     val bestWin     = remember(state.won) {
         if (state.won && diff == MahjongDifficulty.BOSS)
-            PuzzleSaveManager.getBestTime(context, "mahjong", layoutId.name, diff.name) else null
+            SoloGameSaveManager.getBestTime(context, "mahjong", layoutId.name, diff.name) else null
     }
 
     // ── Timer ────────────────────────────────────────────────────────────────
@@ -103,21 +100,14 @@ fun MahjongGameScreen(
     }
 
     // ── Settings + Musik ─────────────────────────────────────────────────────
-    LaunchedEffect(uid) {
-        if (uid.isNotEmpty()) {
-            try {
-                val snap = db.collection("users").document(uid).get().await()
-                soundEnabled = snap.getBoolean("soundEnabled") ?: true
-                musicEnabled = snap.getBoolean("musicEnabled") ?: true
-            } catch (_: Exception) {}
-        }
+    LaunchedEffect(Unit) {
         audio.startMusic(soundEnabled, musicEnabled)
     }
 
     // ── Auto-Save ────────────────────────────────────────────────────────────
     LaunchedEffect(state) {
         if (state.won || state.gameOver) return@LaunchedEffect
-        PuzzleSaveManager.savePuzzle(
+        SoloGameSaveManager.savePuzzle(
             context,
             PuzzleSave(
                 id             = saveIdRef,
@@ -135,10 +125,10 @@ fun MahjongGameScreen(
     // ── Win-Handling ─────────────────────────────────────────────────────────
     LaunchedEffect(state.won) {
         if (!state.won) return@LaunchedEffect
-        PuzzleSaveManager.deleteSave(context, saveIdRef)
+        SoloGameSaveManager.deleteSave(context, saveIdRef)
         if (diff == MahjongDifficulty.BOSS) {
-            val prevBest = PuzzleSaveManager.getBestTime(context, "mahjong", layoutId.name, diff.name)
-            PuzzleSaveManager.recordBestTime(context, "mahjong", layoutId.name, diff.name, elapsed)
+            val prevBest = SoloGameSaveManager.getBestTime(context, "mahjong", layoutId.name, diff.name)
+            SoloGameSaveManager.recordBestTime(context, "mahjong", layoutId.name, diff.name, elapsed)
             if ((prevBest == null || elapsed < prevBest) && uid.isNotEmpty()) {
                 try {
                     db.collection("users").document(uid)
@@ -151,41 +141,34 @@ fun MahjongGameScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(layoutId.emoji, fontSize = 22.sp)
-                        Spacer(Modifier.width(8.dp))
-                        Column {
-                            Text("GEZEITENSTEINE", style = MaterialTheme.typography.labelSmall, color = TextMuted)
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                val remaining = state.tiles.count { !it.removed }
-                                Text(
-                                    "$remaining Steine",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = TextPrimary,
-                                    fontWeight = FontWeight.ExtraBold,
-                                )
-                                if (useTimer) {
-                                    Text(
-                                        "⏱ ${PuzzleSaveManager.formatElapsed(elapsed)}",
-                                        fontSize = 12.sp,
-                                        color = MjGameAccent,
-                                        fontWeight = FontWeight.Bold,
-                                    )
-                                }
-                            }
+            GameHudBar(
+                paused = paused,
+                onPauseToggle = { paused = !paused },
+                onQuit = { paused = true; showQuit = true },
+                onShowRules = { showRules = true },
+            ) {
+                Text(layoutId.emoji, fontSize = MaterialTheme.typography.titleLarge.fontSize)
+                Column {
+                    Text("GEZEITENSTEINE", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val remaining = state.tiles.count { !it.removed }
+                        Text(
+                            "$remaining Steine",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
+                        if (useTimer) {
+                            Text(
+                                "⏱ ${SoloGameSaveManager.formatElapsed(elapsed)}",
+                                fontSize = ChipLabel,
+                                color = MahjongGold,
+                                fontWeight = FontWeight.Bold,
+                            )
                         }
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { paused = true; showQuit = true }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Beenden", tint = TextSub)
-                    }
-                },
-                actions = {},
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark),
-            )
+                }
+            }
         },
         containerColor = BgDark,
     ) { padding ->
@@ -262,13 +245,13 @@ fun MahjongGameScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("⏸", fontSize = 48.sp)
+                    Text("⏸", fontSize = DrawNumberTablet)
                     Spacer(Modifier.height(12.dp))
-                    Text("Pausiert", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                    Text("Pausiert", fontSize = MaterialTheme.typography.titleLarge.fontSize, fontWeight = FontWeight.ExtraBold, color = Color.White)
                     Spacer(Modifier.height(20.dp))
                     Button(
                         onClick = { paused = false },
-                        colors = ButtonDefaults.buttonColors(containerColor = MjGameAccent),
+                        colors = ButtonDefaults.buttonColors(containerColor = MahjongGold),
                         shape = RoundedCornerShape(14.dp),
                     ) {
                         Text("▶  Weiterspielen", color = Color.Black, fontWeight = FontWeight.ExtraBold)
@@ -288,12 +271,12 @@ fun MahjongGameScreen(
                         modifier = Modifier.padding(28.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text("😔", fontSize = 48.sp)
+                        Text("😔", fontSize = DrawNumberTablet)
                         Spacer(Modifier.height(8.dp))
-                        Text("Kein Zug mehr möglich", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                        Text("Kein Zug mehr möglich", fontSize = MaterialTheme.typography.titleMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
                         Spacer(Modifier.height(8.dp))
                         val remaining = state.tiles.count { !it.removed }
-                        Text("Noch $remaining Steine übrig.", fontSize = 13.sp, color = TextMuted, textAlign = TextAlign.Center)
+                        Text("Noch $remaining Steine übrig.", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted, textAlign = TextAlign.Center)
                         Spacer(Modifier.height(20.dp))
                         if (state.shufflesUsed < shuffleLimit) {
                             Button(
@@ -307,7 +290,7 @@ fun MahjongGameScreen(
                                     hintIds = emptySet()
                                 },
                                 modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = MjGameAccent),
+                                colors = ButtonDefaults.buttonColors(containerColor = MahjongGold),
                                 shape = RoundedCornerShape(14.dp),
                             ) {
                                 Text("🔀  Steine mischen", color = Color.Black, fontWeight = FontWeight.ExtraBold)
@@ -338,30 +321,30 @@ fun MahjongGameScreen(
                         modifier = Modifier.padding(28.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text("🎉", fontSize = 56.sp)
+                        Text("🎉", fontSize = EmojiXLarge)
                         Spacer(Modifier.height(8.dp))
-                        Text("Alle Steine entfernt!", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                        Text("Alle Steine entfernt!", fontSize = BingoCallSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
                         Spacer(Modifier.height(6.dp))
                         if (useTimer) {
                             Text(
-                                PuzzleSaveManager.formatElapsed(elapsed),
-                                fontSize = 28.sp,
+                                SoloGameSaveManager.formatElapsed(elapsed),
+                                fontSize = MaterialTheme.typography.headlineMedium.fontSize,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = MjGameAccent,
+                                color = MahjongGold,
                             )
                         }
                         if (diff == MahjongDifficulty.BOSS && bestWin != null) {
                             Spacer(Modifier.height(6.dp))
                             Text(
-                                "Bestzeit: ${PuzzleSaveManager.formatElapsed(bestWin)}",
-                                fontSize = 13.sp,
+                                "Bestzeit: ${SoloGameSaveManager.formatElapsed(bestWin)}",
+                                fontSize = MaterialTheme.typography.labelMedium.fontSize,
                                 color = TextMuted,
                             )
                         }
                         Spacer(Modifier.height(6.dp))
                         Text(
                             "${layoutId.emoji} ${layoutId.label} · ${diff.name}",
-                            fontSize = 13.sp,
+                            fontSize = MaterialTheme.typography.labelMedium.fontSize,
                             color = TextMuted,
                         )
                         Spacer(Modifier.height(24.dp))
@@ -373,7 +356,7 @@ fun MahjongGameScreen(
                                 paused = false
                             },
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = MjGameAccent),
+                            colors = ButtonDefaults.buttonColors(containerColor = MahjongGold),
                             shape = RoundedCornerShape(14.dp),
                         ) {
                             Text("Nochmal spielen", color = Color.Black, fontWeight = FontWeight.ExtraBold)
@@ -403,7 +386,7 @@ fun MahjongGameScreen(
                     paused   = false
                 },
                 onSaveAndQuit = {
-                    PuzzleSaveManager.savePuzzle(
+                    SoloGameSaveManager.savePuzzle(
                         context,
                         PuzzleSave(
                             id             = saveIdRef,
@@ -419,7 +402,7 @@ fun MahjongGameScreen(
                     onNavigateBack()
                 },
                 onQuitWithoutSave = {
-                    PuzzleSaveManager.deleteSave(context, saveIdRef)
+                    SoloGameSaveManager.deleteSave(context, saveIdRef)
                     onNavigateBack()
                 },
             )
@@ -465,7 +448,7 @@ private fun ControlBar(
             CtrlBtn(
                 label = if (paused) "▶" else "⏸",
                 active = paused,
-                accent = MjGameAccent,
+                accent = MahjongGold,
                 onClick = onPause,
             )
 
@@ -475,7 +458,7 @@ private fun ControlBar(
                 CtrlBtn(
                     label = countLabel,
                     active = false,
-                    accent = MjGameAccent,
+                    accent = MahjongGold,
                     enabled = canHint,
                     onClick = onHint,
                 )
@@ -487,7 +470,7 @@ private fun ControlBar(
                 CtrlBtn(
                     label = countLabel,
                     active = false,
-                    accent = MjGameAccent,
+                    accent = MahjongGold,
                     enabled = canShuffle,
                     onClick = onShuffle,
                 )
@@ -497,7 +480,7 @@ private fun ControlBar(
             CtrlBtn(
                 label = "↩",
                 active = false,
-                accent = MjGameAccent,
+                accent = MahjongGold,
                 enabled = canUndo,
                 onClick = onUndo,
             )
@@ -506,7 +489,7 @@ private fun ControlBar(
             CtrlBtn(
                 label = "?",
                 active = false,
-                accent = MjGameAccent,
+                accent = MahjongGold,
                 onClick = onRules,
             )
         }
@@ -536,7 +519,7 @@ private fun CtrlBtn(
     ) {
         Text(
             text = label,
-            fontSize = 14.sp,
+            fontSize = CellNumber,
             color = if (active) accent else TextSub.copy(alpha = alpha),
             fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
             textAlign = TextAlign.Center,

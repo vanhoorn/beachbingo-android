@@ -26,7 +26,9 @@ import com.bestfriends.beachbingo.ui.components.GameHudBar
 import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
 import com.bestfriends.beachbingo.feature.raetsel.GameSave
-import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.isActive
@@ -46,10 +48,7 @@ private const val VIRT_CELL = 20f      // virtual cell size in px at base resolu
 private const val VIRT_W    = COLS * VIRT_CELL  // 400f
 private const val VIRT_H    = ROWS * VIRT_CELL  // 400f
 
-private val WormGreen     = Color(0xFF22C55E)
-private val WormGreenDark = Color(0xFF15803D)
-private val BgCanvasColor = Color(0xFF0A1628)
-private val GridColor     = Color(0xFF1E3050).copy(alpha = 0.9f)
+private val GridColor = BorderColor.copy(alpha = 0.9f)
 
 private data class FoodType(val emoji: String, val points: Int, val weight: Int)
 private val FOOD_TYPES = listOf(
@@ -169,7 +168,7 @@ private fun restoreWorm(gs: WormState, json: String) {
 
 private fun DrawScope.drawGame(gs: WormState, scale: Float) {
     // Background
-    drawRect(BgCanvasColor, size = Size(VIRT_W * scale, VIRT_H * scale))
+    drawRect(BgDark, size = Size(VIRT_W * scale, VIRT_H * scale))
 
     // Grid
     val cell = VIRT_CELL * scale
@@ -182,7 +181,7 @@ private fun DrawScope.drawGame(gs: WormState, scale: Float) {
 
     // Outer border – marks the deadly wall
     drawRect(
-        color = Color(0xEFEF4444.toInt()),
+        color = WormDeathFlash,
         topLeft = Offset(1.5f, 1.5f),
         size = Size(VIRT_W * scale - 3f, VIRT_H * scale - 3f),
         style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3f),
@@ -190,7 +189,7 @@ private fun DrawScope.drawGame(gs: WormState, scale: Float) {
 
     // Snake segments
     gs.snake.forEachIndexed { i, seg ->
-        val color = if (i == 0) WormGreenDark else WormGreen
+        val color = if (i == 0) SuccessDark else Success
         drawRoundRect(
             color = color,
             topLeft = Offset(seg.x * cell + scale, seg.y * cell + scale),
@@ -239,6 +238,8 @@ fun WormGameScreen(
     difficulty: String,
     controlMode: String,
     saveId: String? = null,
+    soundEnabled: Boolean = true,
+    musicEnabled: Boolean = true,
     onNavigateToResults: (score: Int, length: Int, highScore: Int, newHighScore: Boolean) -> Unit,
     onNavigateToLobby: () -> Unit,
 ) {
@@ -253,6 +254,7 @@ fun WormGameScreen(
     var renderTick     by remember { mutableLongStateOf(0L) }
     var paused         by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
+    var showRules      by remember { mutableStateOf(false) }
     var resultHandled  by remember { mutableStateOf(false) }
     var showGameOver   by remember { mutableStateOf(false) }
     var savedHighScore by remember { mutableIntStateOf(0) }
@@ -262,20 +264,15 @@ fun WormGameScreen(
     // Restore saved game state
     LaunchedEffect(saveId) {
         if (saveId != null) {
-            val save = PuzzleSaveManager.getGameSave(context, "worm")
+            val save = SoloGameSaveManager.getGameSave(context, "worm")
             if (save != null) restoreWorm(gs, save.gameState)
         }
     }
 
     // Load audio prefs and start music
     LaunchedEffect(Unit) {
-        if (uid != null) {
-            try {
-                val snap = firestore.collection("users").document(uid).get().await()
-                audio.soundEnabled = snap.getBoolean("soundEnabled") ?: true
-                audio.musicEnabled = snap.getBoolean("musicEnabled") ?: true
-            } catch (_: Exception) {}
-        }
+        audio.soundEnabled = soundEnabled
+        audio.musicEnabled = musicEnabled
         audio.startMusic()
         musicStarted = true
     }
@@ -347,12 +344,13 @@ fun WormGameScreen(
             paused        = paused,
             onPauseToggle = { paused = !paused },
             onQuit        = { paused = true; showQuitDialog = true },
+            onShowRules   = { showRules = true },
         ) {
-            Text("${gs.score}", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = WormGreen, modifier = Modifier.padding(end = 2.dp))
-            Text("Pts", fontSize = 10.sp, color = TextMuted)
+            Text("${gs.score}", fontSize = MaterialTheme.typography.titleSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = Success, modifier = Modifier.padding(end = 2.dp))
+            Text("Pts", fontSize = ChipLabelTiny, color = TextMuted)
             Spacer(Modifier.width(12.dp))
-            Text("${gs.length}", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary, modifier = Modifier.padding(end = 2.dp))
-            Text("Länge", fontSize = 10.sp, color = TextMuted)
+            Text("${gs.length}", fontSize = MaterialTheme.typography.titleSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary, modifier = Modifier.padding(end = 2.dp))
+            Text("Länge", fontSize = ChipLabelTiny, color = TextMuted)
         }
 
         Spacer(Modifier.height(8.dp))
@@ -411,9 +409,9 @@ fun WormGameScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Text("⏸", fontSize = 40.sp)
-                            Text("Pause", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-                            Text("Drücke ⏸ zum Weiterspielen", fontSize = 13.sp, color = TextMuted)
+                            Text("⏸", fontSize = EmojiLarge)
+                            Text("Pause", fontSize = MaterialTheme.typography.titleMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                            Text("Drücke ⏸ zum Weiterspielen", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted)
                         }
                     }
                 }
@@ -437,20 +435,20 @@ fun WormGameScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
-                            Text("🪱", fontSize = 40.sp)
-                            Text("Game Over!", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                            Text("🪱", fontSize = EmojiLarge)
+                            Text("Game Over!", fontSize = MaterialTheme.typography.titleMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
                             if (isNewRecord) {
-                                Text("🏆 Neuer Rekord!", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SandGold)
+                                Text("🏆 Neuer Rekord!", fontSize = CellNumber, fontWeight = FontWeight.Bold, color = SandGold)
                             }
-                            Text("${gs.score}", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = WormGreen)
-                            Text("Punkte · Länge: ${gs.length}", fontSize = 12.sp, color = TextMuted)
+                            Text("${gs.score}", fontSize = MaterialTheme.typography.headlineMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = Success)
+                            Text("Punkte · Länge: ${gs.length}", fontSize = ChipLabel, color = TextMuted)
                             Button(
                                 onClick = { onNavigateToResults(gs.score, gs.length, savedHighScore, isNewRecord) },
                                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = WormGreen),
+                                colors = ButtonDefaults.buttonColors(containerColor = Success),
                                 shape = RoundedCornerShape(10.dp),
                             ) {
-                                Text("Weiter →", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text("Weiter →", fontSize = MaterialTheme.typography.labelLarge.fontSize, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -491,14 +489,18 @@ fun WormGameScreen(
         }
     }
 
+    if (showRules) {
+        ALL_GAME_RULES["worm"]?.let { GameRulesBottomSheet(rule = it, onDismiss = { showRules = false }) }
+    }
+
     if (showQuitDialog) {
         GameSaveQuitDialog(
             emoji = "🪱",
             message = "Score: ${gs.score} Pts · Länge: ${gs.length}",
             onContinue = { showQuitDialog = false; paused = false },
             onSaveAndQuit = {
-                PuzzleSaveManager.saveGame(context, GameSave(
-                    id = PuzzleSaveManager.generateId(),
+                SoloGameSaveManager.saveGame(context, GameSave(
+                    id = SoloGameSaveManager.generateId(),
                     gameType = "worm",
                     difficulty = difficulty,
                     gameState = serializeWorm(gs),
@@ -508,7 +510,7 @@ fun WormGameScreen(
                 onNavigateToLobby()
             },
             onQuitWithoutSave = {
-                PuzzleSaveManager.deleteGameSave(context, "worm")
+                SoloGameSaveManager.deleteGameSave(context, "worm")
                 onNavigateToLobby()
             },
         )
@@ -528,7 +530,7 @@ private fun DPadButton(label: String, modifier: Modifier, onClick: () -> Unit) {
             modifier = Modifier.fillMaxSize(),
             shape = RoundedCornerShape(10.dp),
         ) {
-            Text(label, fontSize = 20.sp, color = TextPrimary)
+            Text(label, fontSize = BingoCallSize, color = TextPrimary)
         }
     }
 }

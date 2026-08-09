@@ -70,19 +70,22 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import com.bestfriends.beachbingo.ui.theme.BeerOrange
 import com.bestfriends.beachbingo.ui.theme.BgDark
+import com.bestfriends.beachbingo.ui.theme.BingoCallSize
+import com.bestfriends.beachbingo.ui.theme.BorderColor
 import com.bestfriends.beachbingo.ui.theme.Coral
 import com.bestfriends.beachbingo.ui.theme.Danger
+import com.bestfriends.beachbingo.ui.theme.OceanBlue
 import com.bestfriends.beachbingo.ui.theme.SandGold
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
 import com.bestfriends.beachbingo.ui.theme.TextSub
-import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
 import org.json.JSONObject
 
-private val BeerOrange = Color(0xFFC2410C)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,7 +138,7 @@ fun VierLobbyScreen(
     }
 
     val context = LocalContext.current
-    var savedVierGame by remember { mutableStateOf(PuzzleSaveManager.getGameSave(context, "vier")) }
+    var savedVierGame by remember { mutableStateOf(SoloGameSaveManager.getGameSave(context, "vier")) }
 
     Scaffold(
         containerColor = BgDark,
@@ -159,7 +162,7 @@ fun VierLobbyScreen(
                     IconButton(onClick = { toggleFavorite() }) {
                         Text(
                             if (isFavorite) "★" else "☆",
-                            fontSize = 22.sp,
+                            fontSize = MaterialTheme.typography.titleLarge.fontSize,
                             color = if (isFavorite) SandGold else TextMuted,
                         )
                     }
@@ -195,7 +198,7 @@ fun VierLobbyScreen(
                         subtitle = sg.displayLabel,
                         color = BeerOrange,
                         onResume = { onNavigateToGame("ai", null, savedMyDrinkId, savedAiDrinkId, sg.difficulty, sg.id) },
-                        onDelete = { PuzzleSaveManager.deleteGameSave(context, "vier"); savedVierGame = null },
+                        onDelete = { SoloGameSaveManager.deleteGameSave(context, "vier"); savedVierGame = null },
                     )
                 }
                 Text(
@@ -214,7 +217,7 @@ fun VierLobbyScreen(
                     emoji = "📱",
                     title = "Online – 2 Spieler",
                     description = "Spielt gemeinsam in Echtzeit",
-                    color = Color(0xFF0EA5E9),
+                    color = OceanBlue,
                     onClick = { mode = "online"; step = "drink" },
                 )
             }
@@ -247,7 +250,7 @@ fun VierLobbyScreen(
                                         .clip(RoundedCornerShape(8.dp))
                                         .border(
                                             width = 2.dp,
-                                            color = if (selected) drink.color else Color(0xFF1E3050),
+                                            color = if (selected) drink.color else BorderColor,
                                             shape = RoundedCornerShape(8.dp),
                                         )
                                         .clickable { myDrinkId = drink.id },
@@ -375,7 +378,7 @@ fun VierLobbyScreen(
                                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = BeerOrange,
-                                    unfocusedBorderColor = Color(0xFF1E3050),
+                                    unfocusedBorderColor = BorderColor,
                                     cursorColor = BeerOrange,
                                 ),
                             )
@@ -388,7 +391,7 @@ fun VierLobbyScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(48.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0EA5E9)),
+                                colors = ButtonDefaults.buttonColors(containerColor = OceanBlue),
                                 shape = RoundedCornerShape(12.dp),
                             ) {
                                 if (joining) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
@@ -441,7 +444,7 @@ fun VierLobbyScreen(
                                 Text(
                                     text = uiState.gameCode,
                                     fontFamily = FontFamily.Monospace,
-                                    fontSize = 36.sp,
+                                    fontSize = MaterialTheme.typography.headlineLarge.fontSize,
                                     fontWeight = FontWeight.Black,
                                     color = SandGold,
                                     letterSpacing = 6.sp,
@@ -530,7 +533,7 @@ private fun ModeCard(
                 modifier = Modifier.size(56.dp),
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Text(emoji, fontSize = 28.sp)
+                    Text(emoji, fontSize = MaterialTheme.typography.headlineMedium.fontSize)
                 }
             }
             Column(modifier = Modifier.weight(1f)) {
@@ -545,7 +548,7 @@ private fun ModeCard(
                     color = TextMuted,
                 )
             }
-            Text("›", fontSize = 20.sp, color = TextMuted)
+            Text("›", fontSize = BingoCallSize, color = TextMuted)
         }
     }
 }

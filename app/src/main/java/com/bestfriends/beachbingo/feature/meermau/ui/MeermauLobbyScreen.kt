@@ -60,6 +60,10 @@ import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.R
 import com.bestfriends.beachbingo.feature.bingo.ui.components.QrCodeImage
 import com.bestfriends.beachbingo.ui.theme.BgDark
+import com.bestfriends.beachbingo.ui.theme.BingoCallSize
+import com.bestfriends.beachbingo.ui.theme.BorderColor
+import com.bestfriends.beachbingo.ui.theme.OceanBlue
+import com.bestfriends.beachbingo.ui.theme.PurpleDeep
 import com.bestfriends.beachbingo.ui.theme.SandGold
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
@@ -75,10 +79,9 @@ import androidx.compose.material.icons.outlined.HelpOutline
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.bestfriends.beachbingo.feature.home.ui.SavedGameRow
-import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
 import org.json.JSONObject
 
-private val MeermauViolet = Color(0xFF7C3AED)
 
 private data class MmDifficultyOption(val id: String, val label: String, val emoji: String, val description: String)
 
@@ -118,7 +121,7 @@ fun MeermauLobbyScreen(
     var waitingPlayers by remember { mutableStateOf<List<String>>(emptyList()) }
     var creating by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
-    var savedMeermau by remember { mutableStateOf(PuzzleSaveManager.getGameSave(context, "meermau")) }
+    var savedMeermau by remember { mutableStateOf(SoloGameSaveManager.getGameSave(context, "meermau")) }
 
     LaunchedEffect(uid) {
         if (uid == null) return@LaunchedEffect
@@ -224,7 +227,7 @@ fun MeermauLobbyScreen(
                         Icon(Icons.Default.EmojiEvents, contentDescription = "Ergebnisse", tint = SandGold)
                     }
                     IconButton(onClick = { toggleFavorite() }) {
-                        Text(if (isFavorite) "★" else "☆", fontSize = 22.sp, color = if (isFavorite) SandGold else TextMuted)
+                        Text(if (isFavorite) "★" else "☆", style = MaterialTheme.typography.titleLarge, color = if (isFavorite) SandGold else TextMuted)
                     }
                     IconButton(onClick = { showRules = true }) {
                         Icon(Icons.Outlined.HelpOutline, contentDescription = "Spielanleitung", tint = TextSub)
@@ -252,13 +255,13 @@ fun MeermauLobbyScreen(
                     SavedGameRow(
                         title = "MeerMau",
                         subtitle = sg.displayLabel,
-                        color = MeermauViolet,
+                        color = PurpleDeep,
                         onResume = { onNavigateToGame("ai", null, savedAiCount, sg.difficulty, sg.id) },
-                        onDelete = { PuzzleSaveManager.deleteGameSave(context, "meermau"); savedMeermau = null },
+                        onDelete = { SoloGameSaveManager.deleteGameSave(context, "meermau"); savedMeermau = null },
                     )
                 }
-                MmModeCard("🤖", "Gegen KI", "Spiel allein gegen KI-Gegner", MeermauViolet) { step = "ai_config" }
-                MmModeCard("📱", "Online – 2-4 Spieler", "Spielt gemeinsam in Echtzeit", Color(0xFF0EA5E9)) { step = "online" }
+                MmModeCard("🤖", "Gegen KI", "Spiel allein gegen KI-Gegner", PurpleDeep) { step = "ai_config" }
+                MmModeCard("📱", "Online – 2-4 Spieler", "Spielt gemeinsam in Echtzeit", OceanBlue) { step = "online" }
             }
 
             if (step == "ai_config") {
@@ -276,14 +279,14 @@ fun MeermauLobbyScreen(
                                 val sel = aiCount == count
                                 Surface(
                                     modifier = Modifier.weight(1f)
-                                        .border(2.dp, if (sel) MeermauViolet else Color(0xFF1E3050), RoundedCornerShape(8.dp))
+                                        .border(2.dp, if (sel) PurpleDeep else BorderColor, RoundedCornerShape(8.dp))
                                         .clickable { aiCount = count },
-                                    color = if (sel) MeermauViolet.copy(alpha = 0.2f) else Surface2Dark,
+                                    color = if (sel) PurpleDeep.copy(alpha = 0.2f) else Surface2Dark,
                                     shape = RoundedCornerShape(8.dp),
                                 ) {
                                     Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(vertical = 12.dp)) {
-                                        Text("$count", fontSize = 18.sp, fontWeight = FontWeight.Bold,
-                                            color = if (sel) MeermauViolet else TextPrimary)
+                                        Text("$count", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                                            color = if (sel) PurpleDeep else TextPrimary)
                                     }
                                 }
                             }
@@ -297,9 +300,9 @@ fun MeermauLobbyScreen(
                         val sel = difficulty == diff.id
                         Surface(
                             modifier = Modifier.fillMaxWidth()
-                                .border(2.dp, if (sel) MeermauViolet else Color(0xFF1E3050), RoundedCornerShape(8.dp))
+                                .border(2.dp, if (sel) PurpleDeep else BorderColor, RoundedCornerShape(8.dp))
                                 .clickable { difficulty = diff.id },
-                            color = if (sel) MeermauViolet.copy(alpha = 0.15f) else SurfaceDark,
+                            color = if (sel) PurpleDeep.copy(alpha = 0.15f) else SurfaceDark,
                             shape = RoundedCornerShape(8.dp),
                         ) {
                             Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -309,7 +312,7 @@ fun MeermauLobbyScreen(
                                     Text(diff.label, style = MaterialTheme.typography.titleSmall, color = TextPrimary)
                                     Text(diff.description, style = MaterialTheme.typography.bodySmall, color = TextMuted)
                                 }
-                                if (sel) Text("✓", color = MeermauViolet, fontWeight = FontWeight.Bold)
+                                if (sel) Text("✓", color = PurpleDeep, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -317,7 +320,7 @@ fun MeermauLobbyScreen(
 
                 Button(onClick = { onNavigateToGame("ai", null, aiCount, difficulty, null) },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MeermauViolet),
+                    colors = ButtonDefaults.buttonColors(containerColor = PurpleDeep),
                     shape = RoundedCornerShape(12.dp)) {
                     Text("Spiel starten 🂠", fontWeight = FontWeight.Bold)
                 }
@@ -337,7 +340,7 @@ fun MeermauLobbyScreen(
                             Text("Erstelle ein Spiel und teile den Code mit anderen.", style = MaterialTheme.typography.bodySmall, color = TextMuted)
                             Button(onClick = { createOnlineGame() }, enabled = !creating,
                                 modifier = Modifier.fillMaxWidth().height(48.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MeermauViolet),
+                                colors = ButtonDefaults.buttonColors(containerColor = PurpleDeep),
                                 shape = RoundedCornerShape(12.dp)) {
                                 if (creating) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
                                 else Text("Neues Spiel erstellen")
@@ -355,8 +358,8 @@ fun MeermauLobbyScreen(
                             Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text("SPIELCODE", style = MaterialTheme.typography.labelSmall, color = TextMuted, letterSpacing = 1.5.sp)
-                                Text(gameCode, fontFamily = FontFamily.Monospace, fontSize = 36.sp,
-                                    fontWeight = FontWeight.Black, color = MeermauViolet, letterSpacing = 6.sp)
+                                Text(gameCode, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.headlineLarge,
+                                    fontWeight = FontWeight.Black, color = PurpleDeep, letterSpacing = 6.sp)
                                 OutlinedButton(onClick = {
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                     clipboard.setPrimaryClip(ClipData.newPlainText("Spielcode", gameCode))
@@ -376,7 +379,7 @@ fun MeermauLobbyScreen(
                                 Text("${waitingPlayers.size} / 4 Spieler", style = MaterialTheme.typography.titleSmall, color = TextPrimary)
                                 waitingPlayers.forEachIndexed { idx, _ ->
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text("🂠", fontSize = 18.sp)
+                                        Text("🂠", style = MaterialTheme.typography.titleMedium)
                                         Text(if (idx == 0) "Du (Host)" else "Spieler ${idx + 1}",
                                             style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
                                     }
@@ -385,7 +388,7 @@ fun MeermauLobbyScreen(
                         }
                         if (waitingPlayers.size >= 2) {
                             Button(onClick = { startOnlineGame() }, modifier = Modifier.fillMaxWidth().height(52.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MeermauViolet),
+                                colors = ButtonDefaults.buttonColors(containerColor = PurpleDeep),
                                 shape = RoundedCornerShape(12.dp)) {
                                 Text("Spiel starten (${waitingPlayers.size} Spieler) 🂠", fontWeight = FontWeight.Bold)
                             }
@@ -415,14 +418,14 @@ private fun MmModeCard(emoji: String, title: String, description: String, color:
             horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Surface(shape = RoundedCornerShape(16.dp), color = color.copy(alpha = 0.15f), modifier = Modifier.size(56.dp)) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Text(emoji, fontSize = 28.sp)
+                    Text(emoji, style = MaterialTheme.typography.headlineMedium)
                 }
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleMedium, color = TextPrimary)
                 Text(description, style = MaterialTheme.typography.bodySmall, color = TextMuted)
             }
-            Text("›", fontSize = 20.sp, color = TextMuted)
+            Text("›", fontSize = BingoCallSize, color = TextMuted)
         }
     }
 }

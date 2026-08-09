@@ -23,24 +23,18 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import com.bestfriends.beachbingo.ui.components.GameHudBar
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -70,6 +64,14 @@ import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
+import com.bestfriends.beachbingo.ui.theme.BgPlayerZone
+import com.bestfriends.beachbingo.ui.theme.BingoCallSize
+import com.bestfriends.beachbingo.ui.theme.Crimson
+import com.bestfriends.beachbingo.ui.theme.DrawNumberTablet
+import com.bestfriends.beachbingo.ui.theme.SandGoldLight
+import com.bestfriends.beachbingo.ui.theme.SlateBlueDark
+import com.bestfriends.beachbingo.ui.theme.Success
+import com.bestfriends.beachbingo.ui.theme.Teal
 import com.bestfriends.beachbingo.ui.theme.TextSub
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -79,17 +81,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.feature.raetsel.GameSave
-import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-
-private val SpCrimson = Color(0xFFE11D48)
-private val SpCrimsonDim = SpCrimson.copy(alpha = 0.5f)
-private val SpGold = Color(0xFFFBBF24)
 
 private val AI_NAMES = listOf("🤖 Möwe", "🤖 Krabbe", "🤖 Fisch", "🤖 Hai", "🤖 Delfin")
 
@@ -613,7 +613,6 @@ private suspend fun executeOnlineNextRound(db: FirebaseFirestore, gameId: String
 
 // ── Screen ─────────────────────────────────────────────────────────────────────
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StrandraeuberGameScreen(
     mode: String,
@@ -622,6 +621,8 @@ fun StrandraeuberGameScreen(
     difficulty: String,
     totalRounds: Int,
     saveId: String? = null,
+    soundEnabled: Boolean = true,
+    musicEnabled: Boolean = true,
     onNavigateBack: () -> Unit,
 ) {
     val auth = FirebaseAuth.getInstance()
@@ -642,7 +643,7 @@ fun StrandraeuberGameScreen(
     // ── Restore from save ──────────────────────────────────────────────────────
     LaunchedEffect(saveId) {
         if (saveId == null) return@LaunchedEffect
-        val save = PuzzleSaveManager.getGameSave(context, "strandraeuber")
+        val save = SoloGameSaveManager.getGameSave(context, "strandraeuber")
         if (save == null || save.id != saveId) return@LaunchedEffect
         try {
             val restored = Json.decodeFromString<SpSavedState>(save.gameState)
@@ -656,14 +657,7 @@ fun StrandraeuberGameScreen(
     // Load settings and init game
     LaunchedEffect(uid) {
         if (uid.isBlank()) return@LaunchedEffect
-        var snd = true
-        var mus = true
-        try {
-            val snap = db.collection("users").document(uid).get().await()
-            snd = snap.getBoolean("soundEnabled") ?: true
-            mus = snap.getBoolean("musicEnabled") ?: true
-        } catch (_: Exception) {}
-        audio.startMusic(snd, mus)
+        audio.startMusic(soundEnabled, musicEnabled)
 
         if (mode == "AI" && saveId != null) return@LaunchedEffect
         if (mode == "AI") {
@@ -709,6 +703,8 @@ fun StrandraeuberGameScreen(
         executeOnlineNextRound(db, gameId, s)
     }
 
+    var isPaused by remember { mutableStateOf(false) }
+
     val currentState: SpGameState? = when (mode) {
         "ONLINE" -> onlineRawState
         else -> localState
@@ -716,7 +712,7 @@ fun StrandraeuberGameScreen(
 
     // AI move logic
     val stateForAi = localState
-    LaunchedEffect(stateForAi?.turnIndex, stateForAi?.activePlayerIndices) {
+    LaunchedEffect(stateForAi?.turnIndex, stateForAi?.activePlayerIndices, isPaused) {
         val s = localState ?: return@LaunchedEffect
         if (s.phase != SpPhase.PLAYING) return@LaunchedEffect
         val activeCount = s.activePlayerIndices.size
@@ -724,6 +720,7 @@ fun StrandraeuberGameScreen(
         val drawerIdx = s.activePlayerIndices[s.turnIndex]
         val drawer = s.players.getOrNull(drawerIdx) ?: return@LaunchedEffect
         if (!drawer.isAI) return@LaunchedEffect
+        if (isPaused) return@LaunchedEffect
 
         localState = s.copy(phase = SpPhase.AI_THINKING)
 
@@ -814,8 +811,13 @@ fun StrandraeuberGameScreen(
 
     var startingGame by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
+    var showRules by remember { mutableStateOf(false) }
 
     BackHandler { showQuitDialog = true }
+
+    if (showRules) {
+        ALL_GAME_RULES["strandraeuber"]?.let { GameRulesBottomSheet(rule = it, onDismiss = { showRules = false }) }
+    }
 
     val st = localState
     if (showQuitDialog) {
@@ -833,12 +835,12 @@ fun StrandraeuberGameScreen(
                         displayLabel = "Runde ${st.roundNumber} · ${st.players.size} Spieler",
                         savedAt = System.currentTimeMillis(),
                     )
-                    PuzzleSaveManager.saveGame(context, saveData)
+                    SoloGameSaveManager.saveGame(context, saveData)
                     showQuitDialog = false
                     onNavigateBack()
                 },
                 onQuitWithoutSave = {
-                    PuzzleSaveManager.deleteGameSave(context, "strandraeuber")
+                    SoloGameSaveManager.deleteGameSave(context, "strandraeuber")
                     showQuitDialog = false
                     onNavigateBack()
                 },
@@ -854,11 +856,11 @@ fun StrandraeuberGameScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        Text("🏳️", fontSize = 36.sp)
-                        Text("Spiel verlassen?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                        Text("🏳️", style = MaterialTheme.typography.headlineLarge)
+                        Text("Spiel verlassen?", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = TextPrimary)
                         Text(
                             "Du kannst über den Code wieder beitreten.",
-                            fontSize = 13.sp, color = TextMuted, textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.labelMedium, color = TextMuted, textAlign = TextAlign.Center,
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             OutlinedButton(
@@ -868,7 +870,7 @@ fun StrandraeuberGameScreen(
                             Button(
                                 onClick = { showQuitDialog = false; onNavigateBack() },
                                 modifier = Modifier.weight(1f).height(44.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = SpCrimson),
+                                colors = ButtonDefaults.buttonColors(containerColor = Crimson),
                                 shape = RoundedCornerShape(10.dp),
                             ) { Text("Verlassen", color = Color.White) }
                         }
@@ -881,30 +883,30 @@ fun StrandraeuberGameScreen(
     Scaffold(
         containerColor = BgDark,
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("STRANDRÄUBER", style = MaterialTheme.typography.labelSmall, color = TextMuted)
-                        val s = currentState
-                        if (s != null) {
-                            Text(
-                                "Runde ${s.roundNumber} / ${s.totalRounds}",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { showQuitDialog = true }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Zurück", tint = TextPrimary)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark),
-            )
+            GameHudBar(
+                paused = isPaused,
+                onPauseToggle = { isPaused = !isPaused },
+                onQuit = { showQuitDialog = true },
+                onShowRules = { showRules = true },
+            ) {
+                val s = currentState
+                if (s != null) {
+                    Text("🦹", style = MaterialTheme.typography.titleSmall)
+                    Text("Runde ${s.roundNumber}/${s.totalRounds}", color = TextPrimary, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                }
+            }
         },
     ) { padding ->
+        if (isPaused) {
+            Box(Modifier.fillMaxSize().padding(padding).background(BgDark), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("⏸", fontSize = DrawNumberTablet)
+                    Text("Pausiert", color = TextPrimary, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Drücke ▶ um weiterzuspielen", color = TextMuted, style = MaterialTheme.typography.labelMedium)
+                }
+            }
+            return@Scaffold
+        }
         if (currentState == null) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text("Lade…", color = TextMuted)
@@ -945,7 +947,7 @@ fun StrandraeuberGameScreen(
                             gameId ?: "",
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Black,
-                            color = SpCrimson,
+                            color = Crimson,
                             letterSpacing = 6.sp,
                         )
                         Card(
@@ -967,7 +969,7 @@ fun StrandraeuberGameScreen(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     ) {
-                                        Text("🦹", fontSize = 18.sp)
+                                        Text("🦹", style = MaterialTheme.typography.titleMedium)
                                         Text(
                                             if (idx == 0) "${player.displayName} (Host)" else player.displayName,
                                             style = MaterialTheme.typography.bodyMedium,
@@ -993,7 +995,7 @@ fun StrandraeuberGameScreen(
                             },
                             enabled = canStart && !startingGame,
                             modifier = Modifier.fillMaxWidth().height(52.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = SpCrimson),
+                            colors = ButtonDefaults.buttonColors(containerColor = Crimson),
                             shape = RoundedCornerShape(12.dp),
                         ) {
                             if (startingGame) {
@@ -1013,7 +1015,7 @@ fun StrandraeuberGameScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.padding(32.dp),
                     ) {
-                        CircularProgressIndicator(color = SpCrimson)
+                        CircularProgressIndicator(color = Crimson)
                         Text(
                             if (currentState.phase == SpPhase.DEALING) "Karten werden ausgeteilt…"
                             else "Warte auf Spielstart…",
@@ -1131,7 +1133,7 @@ fun StrandraeuberGameScreen(
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = SpCrimson),
+                    colors = ButtonDefaults.buttonColors(containerColor = Crimson),
                     shape = RoundedCornerShape(12.dp),
                 ) {
                     Text("Karte ziehen (${selectedCardIndex + 1}. Karte) 🦹", fontWeight = FontWeight.Bold)
@@ -1145,11 +1147,11 @@ fun StrandraeuberGameScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = if (isMyTurn && currentState.phase == SpPhase.PLAYING)
-                            SpCrimson.copy(alpha = 0.08f)
+                            Crimson.copy(alpha = 0.08f)
                         else SurfaceDark
                     ),
                     border = if (!isMyTurn && targetPlayer?.userId == uid && currentState.phase == SpPhase.PLAYING)
-                        androidx.compose.foundation.BorderStroke(1.5.dp, SpGold.copy(alpha = 0.5f))
+                        androidx.compose.foundation.BorderStroke(1.5.dp, SandGoldLight.copy(alpha = 0.5f))
                     else null,
                 ) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1167,7 +1169,7 @@ fun StrandraeuberGameScreen(
                                 Text(
                                     "← Du wirst gezogen!",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = SpGold,
+                                    color = SandGoldLight,
                                 )
                             }
                         }
@@ -1212,7 +1214,7 @@ fun StrandraeuberGameScreen(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Text("✓ Alle Paare abgelegt!", color = SpCrimson, fontWeight = FontWeight.Bold)
+                                Text("✓ Alle Paare abgelegt!", color = Crimson, fontWeight = FontWeight.Bold)
                             }
                         } else {
                             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -1269,7 +1271,7 @@ fun StrandraeuberGameScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                 ) {
                                     Text("${p.avatarUrl} ${p.displayName}", style = MaterialTheme.typography.bodySmall, color = TextPrimary)
-                                    Text("🦹 × $score", style = MaterialTheme.typography.bodySmall, color = SpCrimson, fontWeight = FontWeight.Bold)
+                                    Text("🦹 × $score", style = MaterialTheme.typography.bodySmall, color = Crimson, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -1299,15 +1301,15 @@ fun StrandraeuberGameScreen(
                             currentState.discardedPairs.forEach { (a, _) ->
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = Color(0xFF22C55E).copy(alpha = 0.12f),
+                                    color = Success.copy(alpha = 0.12f),
                                     border = androidx.compose.foundation.BorderStroke(
-                                        1.dp, Color(0xFF22C55E).copy(alpha = 0.3f)
+                                        1.dp, Success.copy(alpha = 0.3f)
                                     ),
                                 ) {
                                     Text(
                                         a.emoji,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
-                                        fontSize = 18.sp,
+                                        style = MaterialTheme.typography.titleMedium,
                                     )
                                 }
                             }
@@ -1341,16 +1343,16 @@ fun StrandraeuberGameScreen(
                     Text(
                         if (isGameOver) "🏁 Spiel beendet!" else "Runde ${dialogState.roundNumber} beendet",
                         style = MaterialTheme.typography.titleLarge,
-                        color = if (isGameOver) SpCrimson else TextPrimary,
+                        color = if (isGameOver) Crimson else TextPrimary,
                         fontWeight = FontWeight.ExtraBold,
                     )
 
                     if (loser != null) {
-                        Text("🦹", fontSize = 48.sp)
+                        Text("🦹", fontSize = DrawNumberTablet)
                         Text(
                             "${loser.displayName} hält den Strandräuber!",
                             style = MaterialTheme.typography.titleMedium,
-                            color = if (isMyLoss) SpCrimson else TextPrimary,
+                            color = if (isMyLoss) Crimson else TextPrimary,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center,
                         )
@@ -1370,7 +1372,7 @@ fun StrandraeuberGameScreen(
                             Text("${p.avatarUrl} ${p.displayName}", style = MaterialTheme.typography.bodyMedium, color = TextPrimary)
                             Text(
                                 if (score == 0) "✓" else "🦹 × $score",
-                                color = if (score == 0) TextMuted else SpCrimson,
+                                color = if (score == 0) TextMuted else Crimson,
                                 fontWeight = FontWeight.Bold,
                             )
                         }
@@ -1385,14 +1387,14 @@ fun StrandraeuberGameScreen(
                             Text(
                                 "🦹 ${finalLoser.displayName} hat das Gesamtspiel verloren!",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = SpCrimson,
+                                color = Crimson,
                                 textAlign = TextAlign.Center,
                             )
                         }
                         Button(
                             onClick = onNavigateBack,
                             modifier = Modifier.fillMaxWidth().height(48.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = SpCrimson),
+                            colors = ButtonDefaults.buttonColors(containerColor = Crimson),
                             shape = RoundedCornerShape(10.dp),
                         ) {
                             Text("Zur Lobby", fontWeight = FontWeight.Bold)
@@ -1405,7 +1407,7 @@ fun StrandraeuberGameScreen(
                                 selectedCardIndex = -1
                             },
                             modifier = Modifier.fillMaxWidth().height(48.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = SpCrimson),
+                            colors = ButtonDefaults.buttonColors(containerColor = Crimson),
                             shape = RoundedCornerShape(10.dp),
                         ) {
                             Text("Nächste Runde 🦹", fontWeight = FontWeight.Bold)
@@ -1442,7 +1444,7 @@ private fun SpStatusCard(
 ) {
     val bgColor by animateColorAsState(
         targetValue = when {
-            isMyTurn && state.phase == SpPhase.PLAYING -> SpCrimson.copy(alpha = 0.15f)
+            isMyTurn && state.phase == SpPhase.PLAYING -> Crimson.copy(alpha = 0.15f)
             state.phase == SpPhase.AI_THINKING -> Surface2Dark
             else -> SurfaceDark
         },
@@ -1471,7 +1473,7 @@ private fun SpStatusCard(
             Text(
                 statusText,
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (isMyTurn && state.phase == SpPhase.PLAYING) SpCrimson else TextPrimary,
+                color = if (isMyTurn && state.phase == SpPhase.PLAYING) Crimson else TextPrimary,
                 fontWeight = if (isMyTurn) FontWeight.Bold else FontWeight.Normal,
                 textAlign = TextAlign.Center,
             )
@@ -1503,15 +1505,15 @@ private fun OpponentFan(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = when {
-                isTarget -> SpCrimson.copy(alpha = 0.08f)
-                isDrawer -> Color(0xFF0D9488).copy(alpha = 0.08f)
+                isTarget -> Crimson.copy(alpha = 0.08f)
+                isDrawer -> Teal.copy(alpha = 0.08f)
                 else -> SurfaceDark
             }
         ),
         border = if (isTarget)
-            androidx.compose.foundation.BorderStroke(1.5.dp, SpCrimson.copy(alpha = 0.6f))
+            androidx.compose.foundation.BorderStroke(1.5.dp, Crimson.copy(alpha = 0.6f))
         else if (isDrawer)
-            androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF0D9488).copy(alpha = 0.4f))
+            androidx.compose.foundation.BorderStroke(1.dp, Teal.copy(alpha = 0.4f))
         else null,
     ) {
         Column(
@@ -1525,12 +1527,12 @@ private fun OpponentFan(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(player.avatarUrl, fontSize = 20.sp)
+                    Text(player.avatarUrl, fontSize = BingoCallSize)
                     Column {
                         Text(
                             player.displayName,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = if (isTarget) SpCrimson else if (isDrawer) Color(0xFF0D9488) else TextPrimary,
+                            color = if (isTarget) Crimson else if (isDrawer) Teal else TextPrimary,
                             fontWeight = if (isTarget || isDrawer) FontWeight.Bold else FontWeight.Normal,
                         )
                         Text(
@@ -1542,12 +1544,12 @@ private fun OpponentFan(
                                 else -> "$cardCount Karten"
                             },
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (isTarget) SpCrimson else TextMuted,
+                            color = if (isTarget) Crimson else TextMuted,
                         )
                     }
                 }
                 if (cardCount == 0) {
-                    Text("✓", color = Color(0xFF22C55E), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("✓", color = Success, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -1569,11 +1571,11 @@ private fun OpponentFan(
                                 .clip(RoundedCornerShape(5.dp))
                                 .then(
                                     if (isSelected)
-                                        Modifier.border(2.5.dp, SpGold, RoundedCornerShape(5.dp))
+                                        Modifier.border(2.5.dp, SandGoldLight, RoundedCornerShape(5.dp))
                                     else if (isTarget)
-                                        Modifier.border(1.5.dp, SpCrimson.copy(alpha = 0.6f), RoundedCornerShape(5.dp))
+                                        Modifier.border(1.5.dp, Crimson.copy(alpha = 0.6f), RoundedCornerShape(5.dp))
                                     else
-                                        Modifier.border(1.dp, Color(0xFF334155), RoundedCornerShape(5.dp))
+                                        Modifier.border(1.dp, SlateBlueDark, RoundedCornerShape(5.dp))
                                 )
                                 .clickable(enabled = isTarget) { onCardSelected(i) }
                         ) {
@@ -1589,7 +1591,7 @@ private fun OpponentFan(
 @Composable
 private fun SpFaceUpCard(card: SpCard, highlight: Boolean = false, cardWidth: Dp = 54.dp, cardHeight: Dp = 76.dp) {
     val bgColor by animateColorAsState(
-        targetValue = if (highlight) SpCrimson.copy(alpha = 0.3f) else Color(0xFF0F3460),
+        targetValue = if (highlight) Crimson.copy(alpha = 0.3f) else BgPlayerZone,
         animationSpec = tween(600),
         label = "cardBg",
     )
@@ -1602,7 +1604,7 @@ private fun SpFaceUpCard(card: SpCard, highlight: Boolean = false, cardWidth: Dp
             .background(bgColor)
             .border(
                 width = if (highlight) 2.dp else 1.dp,
-                color = if (highlight) SpCrimson else Color(0xFF334155),
+                color = if (highlight) Crimson else SlateBlueDark,
                 shape = RoundedCornerShape(8.dp),
             ),
         contentAlignment = Alignment.Center,
@@ -1616,7 +1618,7 @@ private fun SpFaceUpCard(card: SpCard, highlight: Boolean = false, cardWidth: Dp
             Text(
                 card.name,
                 fontSize = nameSp,
-                color = if (highlight) SpCrimson else TextSub,
+                color = if (highlight) Crimson else TextSub,
                 textAlign = TextAlign.Center,
                 lineHeight = (nameSp.value * 1.25f).sp,
                 fontWeight = if (highlight) FontWeight.Bold else FontWeight.Normal,

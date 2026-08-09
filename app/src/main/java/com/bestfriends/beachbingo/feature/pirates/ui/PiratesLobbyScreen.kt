@@ -17,12 +17,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.ui.theme.*
-import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -31,9 +29,6 @@ import androidx.compose.material.icons.outlined.HelpOutline
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.bestfriends.beachbingo.feature.home.ui.SavedGameRow
-
-private val Purple = Color(0xFFA855F7)
-private val PurpleDark = Color(0xFF7C3AED)
 
 private data class LobbyDiffItem(val id: String, val emoji: String, val label: String)
 private val DIFF_OPTIONS = listOf(
@@ -61,7 +56,7 @@ fun PiratesLobbyScreen(
     var loading by remember { mutableStateOf(true) }
     var isFavorite by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
-    var savedGame by remember { mutableStateOf(PuzzleSaveManager.getGameSave(context, "pirates")) }
+    var savedGame by remember { mutableStateOf(SoloGameSaveManager.getGameSave(context, "pirates")) }
 
     LaunchedEffect(uid) {
         if (uid == null) { loading = false; return@LaunchedEffect }
@@ -101,7 +96,7 @@ fun PiratesLobbyScreen(
                     IconButton(onClick = { toggleFavorite() }) {
                         Text(
                             if (isFavorite) "★" else "☆",
-                            fontSize = 22.sp,
+                            fontSize = MaterialTheme.typography.titleLarge.fontSize,
                             color = if (isFavorite) SandGold else TextMuted,
                         )
                     }
@@ -127,22 +122,22 @@ fun PiratesLobbyScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Brush.linearGradient(listOf(Color(0xFF1a0a2e), Color(0xFF0a1628))))
+                    .background(Brush.linearGradient(listOf(BgPirateDark, BgDark)))
                     .padding(horizontal = 20.dp, vertical = 28.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("🐙", fontSize = 64.sp)
+                    Text("🐙", fontSize = DrawNumberPhone)
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "BeachPirates",
-                        fontSize = 26.sp,
+                        fontSize = TitleHero,
                         fontWeight = FontWeight.ExtraBold,
-                        color = Purple,
+                        color = PiratesPurple,
                     )
                     Text(
                         "Verteidige den Strand!",
-                        fontSize = 14.sp,
+                        fontSize = CellNumber,
                         color = TextMuted,
                     )
                 }
@@ -160,14 +155,14 @@ fun PiratesLobbyScreen(
                     DIFF_OPTIONS.forEach { diff ->
                         val selected = difficulty == diff.id
                         Surface(
-                            color = if (selected) Purple.copy(alpha = 0.2f) else SurfaceDark,
+                            color = if (selected) PiratesPurple.copy(alpha = 0.2f) else SurfaceDark,
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(10.dp))
                                 .border(
                                     width = if (selected) 2.dp else 1.dp,
-                                    color = if (selected) Purple else BorderColor,
+                                    color = if (selected) PiratesPurple else BorderColor,
                                     shape = RoundedCornerShape(10.dp),
                                 )
                                 .clickable { difficulty = diff.id },
@@ -177,11 +172,11 @@ fun PiratesLobbyScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(4.dp),
                             ) {
-                                Text(diff.emoji, fontSize = 22.sp)
+                                Text(diff.emoji, fontSize = MaterialTheme.typography.titleLarge.fontSize)
                                 Text(
                                     diff.label,
-                                    fontSize = 11.sp,
-                                    color = if (selected) Purple else TextSub,
+                                    fontSize = MaterialTheme.typography.labelSmall.fontSize,
+                                    color = if (selected) PiratesPurple else TextSub,
                                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                                 )
                             }
@@ -197,14 +192,14 @@ fun PiratesLobbyScreen(
                         horizontalArrangement = Arrangement.SpaceAround,
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("⚡", fontSize = 20.sp)
-                            Text("Schussrate", fontSize = 10.sp, color = TextMuted)
-                            Text("$fireRate / 10", fontSize = 14.sp, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                            Text("⚡", fontSize = BingoCallSize)
+                            Text("Schussrate", fontSize = ChipLabelTiny, color = TextMuted)
+                            Text("$fireRate / 10", fontSize = CellNumber, color = TextPrimary, fontWeight = FontWeight.SemiBold)
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(if (controlMode == "BUTTONS") "◀▶" else "👆", fontSize = 20.sp)
-                            Text("Steuerung", fontSize = 10.sp, color = TextMuted)
-                            Text(if (controlMode == "BUTTONS") "Buttons" else "Touch", fontSize = 14.sp,
+                            Text(if (controlMode == "BUTTONS") "◀▶" else "👆", fontSize = BingoCallSize)
+                            Text("Steuerung", fontSize = ChipLabelTiny, color = TextMuted)
+                            Text(if (controlMode == "BUTTONS") "Buttons" else "Touch", fontSize = CellNumber,
                                 color = TextPrimary, fontWeight = FontWeight.SemiBold)
                         }
                     }
@@ -215,9 +210,9 @@ fun PiratesLobbyScreen(
                     SavedGameRow(
                         title = "BeachPirates",
                         subtitle = sg.displayLabel,
-                        color = Purple,
+                        color = PiratesPurple,
                         onResume = { onNavigateToGame(sg.difficulty, fireRate, controlMode, sg.id) },
-                        onDelete = { PuzzleSaveManager.deleteGameSave(context, "pirates"); savedGame = null },
+                        onDelete = { SoloGameSaveManager.deleteGameSave(context, "pirates"); savedGame = null },
                     )
                 }
 
@@ -226,10 +221,10 @@ fun PiratesLobbyScreen(
                     onClick = { onNavigateToGame(difficulty, fireRate, controlMode, null) },
                     enabled = !loading,
                     modifier = Modifier.fillMaxWidth().height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Purple),
+                    colors = ButtonDefaults.buttonColors(containerColor = PiratesPurple),
                     shape = RoundedCornerShape(14.dp),
                 ) {
-                    Text("🎮 Spielen", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("🎮 Spielen", fontSize = MaterialTheme.typography.titleMedium.fontSize, fontWeight = FontWeight.Bold)
                 }
 
                 Spacer(Modifier.height(8.dp))

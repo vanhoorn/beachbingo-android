@@ -23,7 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.ui.theme.*
-import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -32,8 +32,6 @@ import androidx.compose.material.icons.outlined.HelpOutline
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.bestfriends.beachbingo.feature.home.ui.SavedGameRow
-
-private val StrandturmRed = Color(0xFFDC2626)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,7 +53,7 @@ fun StrandturmLobbyScreen(
     var isFavorite   by remember { mutableStateOf(false) }
     var showRules    by remember { mutableStateOf(false) }
     var loading      by remember { mutableStateOf(true) }
-    var savedGame by remember { mutableStateOf(PuzzleSaveManager.getGameSave(context, "strandturm")) }
+    var savedGame by remember { mutableStateOf(SoloGameSaveManager.getGameSave(context, "strandturm")) }
 
     LaunchedEffect(uid) {
         if (uid == null) { loading = false; return@LaunchedEffect }
@@ -96,7 +94,7 @@ fun StrandturmLobbyScreen(
                     IconButton(onClick = { toggleFavorite() }) {
                         Text(
                             if (isFavorite) "★" else "☆",
-                            fontSize = 22.sp,
+                            fontSize = MaterialTheme.typography.titleLarge.fontSize,
                             color = if (isFavorite) SandGold else TextMuted,
                         )
                     }
@@ -114,7 +112,7 @@ fun StrandturmLobbyScreen(
     ) { padding ->
         if (loading) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("🗼", fontSize = 48.sp)
+                Text("🗼", fontSize = DrawNumberTablet)
             }
             return@Scaffold
         }
@@ -138,11 +136,11 @@ fun StrandturmLobbyScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("🗼", fontSize = 56.sp)
-                    Text("Hol Euch den Rettungsring!", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Text("🗼", fontSize = EmojiXLarge)
+                    Text("Hol Euch den Rettungsring!", fontSize = MaterialTheme.typography.titleMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
                     Text(
                         "Böser Seelöwe 🦭 wirft Kokosnüsse 🥥 vom Pier.\nKlettere nach oben — ohne getroffen zu werden!",
-                        fontSize = 13.sp, color = TextMuted, lineHeight = 20.sp,
+                        fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted, lineHeight = 20.sp,
                         textAlign = TextAlign.Center,
                     )
                 }
@@ -159,20 +157,20 @@ fun StrandturmLobbyScreen(
             // How to play
             Surface(color = SurfaceDark, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("So geht's", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    Text("🪜 Leitern hochklettern · 🥥 Kokosnüssen ausweichen", fontSize = 13.sp, color = TextMuted)
-                    Text("🔨 Hammer finden · Kokosnüsse zerschmettern!", fontSize = 13.sp, color = TextMuted)
-                    Text("❤️ 3 Leben · ⏱ Bonuszeit läuft ab", fontSize = 13.sp, color = TextMuted)
+                    Text("So geht's", fontSize = CellNumber, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("🪜 Leitern hochklettern · 🥥 Kokosnüssen ausweichen", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted)
+                    Text("🔨 Hammer finden · Kokosnüsse zerschmettern!", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted)
+                    Text("❤️ 3 Leben · ⏱ Bonuszeit läuft ab", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted)
                     Spacer(Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             "Steuerung: ${when (controlMode) { "BUTTONS" -> "🔲 Klassisch"; "SPLIT" -> "✌️ Zwei-Händig"; else -> "👆 Touch" }}",
-                            fontSize = 12.sp, color = TextSub,
+                            fontSize = ChipLabel, color = TextSub,
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
                             "Ändern",
-                            fontSize = 12.sp, color = StrandturmRed,
+                            fontSize = ChipLabel, color = StrandturmRed,
                             modifier = Modifier.clickable { onNavigateToSettings() }
                         )
                     }
@@ -187,7 +185,7 @@ fun StrandturmLobbyScreen(
                     subtitle = sg.displayLabel,
                     color = StrandturmRed,
                     onResume = { onNavigateToGame(controlMode, savedLevel, sg.id) },
-                    onDelete = { PuzzleSaveManager.deleteGameSave(context, "strandturm"); savedGame = null },
+                    onDelete = { SoloGameSaveManager.deleteGameSave(context, "strandturm"); savedGame = null },
                 )
             }
 
@@ -198,7 +196,7 @@ fun StrandturmLobbyScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = StrandturmRed),
                 shape = RoundedCornerShape(14.dp),
             ) {
-                Text("🎮 Spielen", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text("🎮 Spielen", fontSize = MaterialTheme.typography.bodyLarge.fontSize, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -216,8 +214,8 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text(value, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = color)
-            Text(label, fontSize = 12.sp, color = TextMuted)
+            Text(value, fontSize = MaterialTheme.typography.titleLarge.fontSize, fontWeight = FontWeight.ExtraBold, color = color)
+            Text(label, fontSize = ChipLabel, color = TextMuted)
         }
     }
 }

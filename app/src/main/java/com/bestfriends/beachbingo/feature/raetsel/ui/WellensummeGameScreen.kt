@@ -6,9 +6,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
+import com.bestfriends.beachbingo.ui.components.GameHudBar
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,6 +20,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.bestfriends.beachbingo.feature.raetsel.*
 import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
@@ -28,10 +29,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-private val WsAccent = Color(0xFFC084FC)
-private val KakuroBg = Color(0xFF111827)
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WellensummeGameScreen(
     difficulty: String,
@@ -47,14 +44,14 @@ fun WellensummeGameScreen(
     var showWin by remember { mutableStateOf(false) }
     var showQuit by remember { mutableStateOf(false) }
     var showHelp by remember { mutableStateOf(false) }
-    val saveIdRef = remember { saveId ?: PuzzleSaveManager.generateId() }
+    val saveIdRef = remember { saveId ?: SoloGameSaveManager.generateId() }
 
     LaunchedEffect(seed) {
         val p = withContext(Dispatchers.Default) { generateKakuro(difficulty, seed.toInt()) }
         puzzle = p
-        val savedState = if (saveId != null) PuzzleSaveManager.getSaves(context).find { it.id == saveId }?.puzzleState else null
+        val savedState = if (saveId != null) SoloGameSaveManager.getSaves(context).find { it.id == saveId }?.puzzleState else null
         gs = if (savedState != null) deserializeKakuroState(p, savedState) else createKakuroState(p)
-        elapsed = if (saveId != null) PuzzleSaveManager.getSaves(context).find { it.id == saveId }?.elapsedSeconds ?: 0 else 0
+        elapsed = if (saveId != null) SoloGameSaveManager.getSaves(context).find { it.id == saveId }?.elapsedSeconds ?: 0 else 0
         running = true
     }
 
@@ -63,8 +60,8 @@ fun WellensummeGameScreen(
     LaunchedEffect(gs?.solved) {
         if (gs?.solved == true && !showWin) {
             running = false
-            PuzzleSaveManager.recordBestTime(context, "wellensumme", "standard", difficulty, elapsed)
-            PuzzleSaveManager.deleteSave(context, saveIdRef)
+            SoloGameSaveManager.recordBestTime(context, "wellensumme", "standard", difficulty, elapsed)
+            SoloGameSaveManager.deleteSave(context, saveIdRef)
             showWin = true
         }
     }
@@ -72,7 +69,7 @@ fun WellensummeGameScreen(
     LaunchedEffect(gs) {
         val state = gs ?: return@LaunchedEffect
         if (state.solved || showWin) return@LaunchedEffect
-        PuzzleSaveManager.savePuzzle(context, PuzzleSave(
+        SoloGameSaveManager.savePuzzle(context, PuzzleSave(
             id = saveIdRef, gameType = "wellensumme", variant = "standard",
             difficulty = difficulty, seed = seed, puzzleState = serializeKakuroState(state),
             startedAt = System.currentTimeMillis(), elapsedSeconds = elapsed,
@@ -83,23 +80,20 @@ fun WellensummeGameScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("WELLENSUMME", style = MaterialTheme.typography.labelSmall, color = TextMuted)
-                        Text(
-                            "${difficulty.replaceFirstChar { it.uppercase() }} · ${PuzzleSaveManager.formatElapsed(elapsed)}",
-                            style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.ExtraBold,
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { running = false; showQuit = true }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück", tint = TextSub)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark),
-            )
+            GameHudBar(
+                paused = !running,
+                onPauseToggle = { running = !running },
+                onQuit = { running = false; showQuit = true },
+                onShowRules = { running = false; showHelp = true },
+            ) {
+                Column {
+                    Text("WELLENSUMME", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                    Text(
+                        "${difficulty.replaceFirstChar { it.uppercase() }} · ${SoloGameSaveManager.formatElapsed(elapsed)}",
+                        style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.ExtraBold,
+                    )
+                }
+            }
         },
         containerColor = BgDark,
     ) { padding ->
@@ -117,7 +111,7 @@ fun WellensummeGameScreen(
             ) {
                 if (p == null || state == null) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = WsAccent)
+                        CircularProgressIndicator(color = PurpleLight)
                     }
                 } else {
                     val size = p.size
@@ -141,7 +135,7 @@ fun WellensummeGameScreen(
                         },
                     ) {
                         Surface(
-                            color = Color(0xFF0A1929),
+                            color = BgNavyCell,
                             border = BorderStroke(2.dp, TextMuted.copy(alpha = 0.6f)),
                             shape = RoundedCornerShape(4.dp),
                         ) {
@@ -159,8 +153,8 @@ fun WellensummeGameScreen(
                                                 Box(
                                                     modifier = Modifier
                                                         .size(cellDp)
-                                                        .background(KakuroBg, RoundedCornerShape(2.dp))
-                                                        .border(1.dp, Color(0xFF333333), RoundedCornerShape(2.dp)),
+                                                        .background(BgNightBlue, RoundedCornerShape(2.dp))
+                                                        .border(1.dp, DarkGray, RoundedCornerShape(2.dp)),
                                                     contentAlignment = Alignment.Center,
                                                 ) {
                                                     cell.downClue?.let { clue ->
@@ -187,14 +181,14 @@ fun WellensummeGameScreen(
                                                     modifier = Modifier
                                                         .size(cellDp)
                                                         .background(
-                                                            if (isSelected) WsAccent.copy(alpha = 0.25f)
+                                                            if (isSelected) PurpleLight.copy(alpha = 0.25f)
                                                             else if (hasErr) Danger.copy(alpha = 0.15f)
                                                             else SurfaceDark,
                                                             RoundedCornerShape(2.dp),
                                                         )
                                                         .border(
                                                             1.dp,
-                                                            if (isSelected) WsAccent else if (hasErr) Danger else BorderColor,
+                                                            if (isSelected) PurpleLight else if (hasErr) Danger else BorderColor,
                                                             RoundedCornerShape(2.dp),
                                                         ),
                                                     contentAlignment = Alignment.Center,
@@ -227,7 +221,7 @@ fun WellensummeGameScreen(
                                 modifier = Modifier.size(36.dp).clickable { gs = enterKakuroNumber(state, n) },
                             ) {
                                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Text(n.toString(), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                    Text(n.toString(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = TextPrimary)
                                 }
                             }
                         }
@@ -246,8 +240,8 @@ fun WellensummeGameScreen(
                                 val hint = getKakuroHint(state)
                                 if (hint != null) gs = enterKakuroNumber(selectKakuroCell(state, hint.first, hint.second), p.cells[hint.first][hint.second].solution ?: 0)
                             },
-                            border = BorderStroke(1.dp, WsAccent.copy(alpha = 0.5f)),
-                        ) { Text("💡", color = WsAccent, fontWeight = FontWeight.Bold) }
+                            border = BorderStroke(1.dp, PurpleLight.copy(alpha = 0.5f)),
+                        ) { Text("💡", color = PurpleLight, fontWeight = FontWeight.Bold) }
                         OutlinedButton(
                             onClick = { running = false; showHelp = true },
                             border = BorderStroke(1.dp, TextSub.copy(alpha = 0.5f)),
@@ -271,10 +265,10 @@ fun WellensummeGameScreen(
         Dialog(onDismissRequest = {}) {
             Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
                 Column(modifier = Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("🏆", fontSize = 48.sp)
+                    Text("🏆", fontSize = DrawNumberTablet)
                     Spacer(Modifier.height(8.dp))
-                    Text("Alle Summen stimmen!", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-                    Text("Zeit: ${PuzzleSaveManager.formatElapsed(elapsed)}", fontSize = 14.sp, color = WsAccent, modifier = Modifier.padding(top = 4.dp))
+                    Text("Alle Summen stimmen!", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Text("Zeit: ${SoloGameSaveManager.formatElapsed(elapsed)}", fontSize = CellNumber, color = PurpleLight, modifier = Modifier.padding(top = 4.dp))
                     Spacer(Modifier.height(20.dp))
                     Button(
                         onClick = onNavigateBack, modifier = Modifier.fillMaxWidth(),
@@ -287,36 +281,7 @@ fun WellensummeGameScreen(
 
     // ── Rules dialog ────────────────────────────────────────────────────────────
     if (showHelp) {
-        Dialog(onDismissRequest = { showHelp = false; running = true }) {
-            Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Text(
-                        "🌊 Kakuro",
-                        fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
-                        modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center,
-                    )
-                    Text(
-                        "Wellensumme — Regeln",
-                        fontSize = 13.sp, fontWeight = FontWeight.Bold, color = WsAccent,
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 16.dp),
-                        textAlign = TextAlign.Center,
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("🔢 Fülle alle weißen Zellen mit Zahlen von 1–9.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
-                        Text("➕ Jeder Zahlenblock muss genau die angegebene Summe ergeben — die schwarzen Felder zeigen sie an (oben = vertikal, unten = horizontal).", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
-                        Text("🚫 Innerhalb eines Blocks darf jede Zahl nur einmal vorkommen.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
-                        Spacer(Modifier.fillMaxWidth().height(1.dp).background(BorderColor))
-                        Text("Tippe eine Zelle → dann eine Zahl (1–9). ⌫ löscht die Zelle.", fontSize = 12.sp, color = TextMuted, lineHeight = 16.sp)
-                    }
-                    Spacer(Modifier.height(16.dp))
-                    Button(
-                        onClick = { showHelp = false; running = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = WsAccent),
-                    ) { Text("Verstanden!", fontWeight = FontWeight.Bold, color = BgDark) }
-                }
-            }
-        }
+        ALL_GAME_RULES["wellensumme"]?.let { GameRulesBottomSheet(rule = it, onDismiss = { showHelp = false; running = true }) }
     }
 
     // ── Quit dialog ───────────────────────────────────────────────────────────
@@ -325,7 +290,7 @@ fun WellensummeGameScreen(
             emoji = "🏖️",
             onContinue = { running = true; showQuit = false },
             onSaveAndQuit = onNavigateBack,
-            onQuitWithoutSave = { PuzzleSaveManager.deleteSave(context, saveIdRef); onNavigateBack() },
+            onQuitWithoutSave = { SoloGameSaveManager.deleteSave(context, saveIdRef); onNavigateBack() },
         )
     }
 }

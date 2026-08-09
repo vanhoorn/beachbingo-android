@@ -30,7 +30,9 @@ import com.bestfriends.beachbingo.ui.components.GameHudBar
 import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
 import com.bestfriends.beachbingo.feature.raetsel.GameSave
-import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import org.json.JSONObject
@@ -63,9 +65,6 @@ private const val LADD_W   = 18f
 private const val PLAT_H   = 11f
 private const val HAMMER_FLOAT     = 30f  // px above platform – requires a jump
 private const val EXPLOSION_FRAMES = 18
-
-private val StrandturmRed = Color(0xFFDC2626)
-private val BgCanvas      = Color(0xFF0A1628)
 
 private data class Plat(val x: Float, val y: Float, val w: Float)
 private data class Ladd(val cx: Float, val y1: Float, val y2: Float)
@@ -676,10 +675,10 @@ private class StrandturmState(startLevel: Int = 1) {
 // ── Draw helpers ──────────────────────────────────────────────────────────────
 
 private fun DrawScope.drawPlatform(p: Plat, s: Float, gaps: List<Float> = emptyList()) {
-    val brown     = Color(0xFF7C3F1A)
-    val highlight = Color(0xFFA05A2C)
-    val shadow    = Color(0xFF4A2409)
-    val grain     = Color(0xFF6B3416)
+    val brown     = WoodBrown
+    val highlight = WoodHighlight
+    val shadow    = WoodShadow
+    val grain     = WoodGrain
     val GAP_HALF  = NIETE_GAP
     val sorted    = gaps.sorted()
     // Build segments around gaps
@@ -705,7 +704,7 @@ private fun DrawScope.drawPlatform(p: Plat, s: Float, gaps: List<Float> = emptyL
 }
 
 private fun DrawScope.drawLadder(l: Ladd, s: Float) {
-    val railColor = Color(0xFF8B6534)
+    val railColor = WoodRail
     val lx1 = (l.cx - LADD_W / 2 + 2) * s
     val lx2 = (l.cx + LADD_W / 2 - 2) * s
     drawLine(railColor, Offset(lx1, l.y1 * s), Offset(lx1, l.y2 * s), strokeWidth = 2.5f * s)
@@ -720,14 +719,14 @@ private fun DrawScope.drawLadder(l: Ladd, s: Float) {
 private fun DrawScope.drawOkto(o: Okto, s: Float) {
     val cx = o.x; val cy = o.y - OKTO_R
     // Körper
-    drawCircle(Color(0xFF38BDF8), OKTO_R * s, Offset(cx * s, cy * s))
+    drawCircle(SkyBlue, OKTO_R * s, Offset(cx * s, cy * s))
     // Augen
     drawCircle(Color.White, 2.5f * s, Offset((cx - 2.5f) * s, (cy - 2f) * s))
     drawCircle(Color.White, 2.5f * s, Offset((cx + 2.5f) * s, (cy - 2f) * s))
     drawCircle(Color.Black, 1.2f * s, Offset((cx - 2f) * s,   (cy - 2f) * s))
     drawCircle(Color.Black, 1.2f * s, Offset((cx + 3f) * s,   (cy - 2f) * s))
     // Tentakel
-    val tentCol = Color(0xFF0EA5E9)
+    val tentCol = OceanBlue
     for (i in -2..2) {
         val tx  = cx + i * 2.5f
         val ty1 = cy + OKTO_R * 0.7f
@@ -839,13 +838,13 @@ private fun DrawScope.drawExplosion(e: Explosion, s: Float) {
 
 private fun DrawScope.drawHammerPickup(x: Float, y: Float, s: Float) {
     // Handle
-    drawRect(Color(0xFF92400E), Offset((x - 2) * s, (y - 17) * s), Size(3f * s, 13f * s))
+    drawRect(BurntAmber, Offset((x - 2) * s, (y - 17) * s), Size(3f * s, 13f * s))
     // Head
-    drawRect(Color(0xFF94A3B8), Offset((x - 7) * s, (y - 22) * s), Size(13f * s, 6f * s))
+    drawRect(TextSub, Offset((x - 7) * s, (y - 22) * s), Size(13f * s, 6f * s))
     // Glint
-    drawRect(Color(0x59FFFFFF), Offset((x - 6) * s, (y - 21) * s), Size(5f * s, 2f * s))
+    drawRect(OverlayWhite35, Offset((x - 6) * s, (y - 21) * s), Size(5f * s, 2f * s))
     // Glow
-    drawCircle(Color(0x40FBB124), 10f * s, Offset(x * s, (y - 16) * s))
+    drawCircle(GlowAmber25, 10f * s, Offset(x * s, (y - 16) * s))
 }
 
 private fun DrawScope.drawPlayer(gs: StrandturmState, s: Float) {
@@ -854,9 +853,9 @@ private fun DrawScope.drawPlayer(gs: StrandturmState, s: Float) {
     val px = gs.px; val py = gs.py
     val f  = gs.pfacing
 
-    val capColor  = Color(0xFFFBBF24)
-    val headColor = Color(0xFFFDE68A)
-    val legColor  = Color(0xFFFDE68A)
+    val capColor  = SandGoldLight
+    val headColor = CharacterSkin
+    val legColor  = CharacterSkin
 
     // Swim cap
     drawOval(capColor, Offset((px - 7) * s, (py - PH + 5 - 5.5f) * s), Size(14f * s, 11f * s))
@@ -887,18 +886,18 @@ private fun DrawScope.drawPlayer(gs: StrandturmState, s: Float) {
         val swingUp = gs.totalFrame % 24 < 12
         val hx = px + f * 6f
         val hy = py - PH - (if (swingUp) 8f else 3f)
-        drawRect(Color(0xFF92400E), Offset((hx - 1) * s, hy * s), Size(3f * s, 11f * s))
-        drawRect(Color(0xFF94A3B8), Offset((hx - 6) * s, (hy - (if (swingUp) 6f else 2f)) * s), Size(12f * s, 5f * s))
+        drawRect(BurntAmber, Offset((hx - 1) * s, hy * s), Size(3f * s, 11f * s))
+        drawRect(TextSub, Offset((hx - 6) * s, (hy - (if (swingUp) 6f else 2f)) * s), Size(12f * s, 5f * s))
         if (gs.hammerTimer > 0 && gs.totalFrame % 6 < 3) {
-            drawCircle(Color(0xFFFBBF24), 2f * s, Offset((hx + 7) * s, (hy - 4) * s))
+            drawCircle(SandGoldLight, 2f * s, Offset((hx + 7) * s, (hy - 4) * s))
         }
     }
 }
 
 private fun DrawScope.drawCoco(c: Coco, s: Float) {
-    val mainColor = Color(0xFF5C2D0A)
-    val spotColor = Color(0xFF3D1A06)
-    val hiColor   = Color(0x21FFFFFF)
+    val mainColor = WoodDeep
+    val spotColor = WoodVein
+    val hiColor   = ShimmerWhite13
     drawCircle(mainColor, COCO_R * s, Offset(c.x * s, c.y * s))
     drawCircle(spotColor, COCO_R * 0.38f * s, Offset((c.x - 2) * s, (c.y - 2) * s))
     drawCircle(spotColor, COCO_R * 0.30f * s, Offset((c.x + 3) * s, (c.y + 2) * s))
@@ -1081,11 +1080,11 @@ private fun DrawScope.drawGoal(topPlatY: Float, s: Float, locked: Boolean = fals
 
 private fun DrawScope.drawGame(gs: StrandturmState, s: Float) {
     // Background
-    drawRect(BgCanvas, size = Size(VIRT_W * s, VIRT_H * s))
+    drawRect(BgDark, size = Size(VIRT_W * s, VIRT_H * s))
 
     // Ocean gradient at bottom
     drawRect(
-        Color(0x260EA5E9),
+        RippleBlue15,
         Offset(0f, (VIRT_H - 60) * s),
         Size(VIRT_W * s, 60f * s),
     )
@@ -1146,6 +1145,8 @@ fun StrandturmGameScreen(
     controlMode: String,
     startLevel: Int = 1,
     saveId: String? = null,
+    soundEnabled: Boolean = true,
+    musicEnabled: Boolean = true,
     onNavigateToResults: (score: Int, level: Int, highScore: Int, bestLevel: Int, newHighScore: Boolean, newBestLevel: Boolean) -> Unit,
     onNavigateToLobby: () -> Unit,
 ) {
@@ -1160,6 +1161,7 @@ fun StrandturmGameScreen(
     var renderTick     by remember { mutableLongStateOf(0L) }
     var paused         by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
+    var showRules      by remember { mutableStateOf(false) }
     var showGameOver   by remember { mutableStateOf(false) }
     var savedHighScore by remember { mutableIntStateOf(0) }
     var savedBestLevel by remember { mutableIntStateOf(0) }
@@ -1172,7 +1174,7 @@ fun StrandturmGameScreen(
     // Restore checkpoint save (score + lives + level)
     LaunchedEffect(saveId) {
         if (saveId != null) {
-            val save = PuzzleSaveManager.getGameSave(context, "strandturm")
+            val save = SoloGameSaveManager.getGameSave(context, "strandturm")
             if (save != null) try {
                 val obj = JSONObject(save.gameState)
                 gs.score = obj.getInt("score")
@@ -1184,13 +1186,8 @@ fun StrandturmGameScreen(
 
     // Load audio preferences and start music
     LaunchedEffect(Unit) {
-        if (uid != null) {
-            try {
-                val snap = firestore.collection("users").document(uid).get().await()
-                audio.soundEnabled = snap.getBoolean("soundEnabled") ?: true
-                audio.musicEnabled = snap.getBoolean("musicEnabled") ?: true
-            } catch (_: Exception) {}
-        }
+        audio.soundEnabled = soundEnabled
+        audio.musicEnabled = musicEnabled
         audio.startMusic()
         musicStarted = true
     }
@@ -1267,27 +1264,28 @@ fun StrandturmGameScreen(
                 if (showGameOver) onNavigateToLobby()
                 else { paused = true; showQuitDialog = true }
             },
+            onShowRules   = { showRules = true },
         ) {
-            Text("${gs.score}", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = StrandturmRed)
-            Text("Pts", fontSize = 10.sp, color = TextMuted)
+            Text("${gs.score}", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.ExtraBold, color = StrandturmRed)
+            Text("Pts", fontSize = ChipLabelTiny, color = TextMuted)
             Spacer(Modifier.width(8.dp))
-            Text("Lv.${gs.level}", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+            Text("Lv.${gs.level}", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
             Spacer(Modifier.width(8.dp))
             repeat(3) { i ->
-                Text(if (i < gs.lives) "❤️" else "🖤", fontSize = 13.sp)
+                Text(if (i < gs.lives) "❤️" else "🖤", style = MaterialTheme.typography.labelMedium)
             }
             Spacer(Modifier.width(8.dp))
             Text(
                 "⏱ ${gs.bonusTimer}",
-                fontSize = 12.sp,
+                fontSize = ChipLabel,
                 color = if (gs.bonusTimer < 1000) StrandturmRed else TextMuted,
             )
             if (getLevelType(gs.level) == 4) {
                 Spacer(Modifier.width(8.dp))
                 Text(
                     "🔩 ${gs.nietenCollected}/8",
-                    fontSize = 12.sp,
-                    color = if (gs.nietenCollected >= 8) Color(0xFF22C55E) else SandGold,
+                    fontSize = ChipLabel,
+                    color = if (gs.nietenCollected >= 8) Success else SandGold,
                 )
             }
         }
@@ -1360,9 +1358,9 @@ fun StrandturmGameScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Text("⏸", fontSize = 40.sp)
-                            Text("Pause", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-                            Text("Drücke ⏸ zum Weiterspielen", fontSize = 13.sp, color = TextMuted)
+                            Text("⏸", fontSize = EmojiLarge)
+                            Text("Pause", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                            Text("Drücke ⏸ zum Weiterspielen", style = MaterialTheme.typography.labelMedium, color = TextMuted)
                         }
                     }
                 }
@@ -1380,9 +1378,9 @@ fun StrandturmGameScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
-                            Text("💥", fontSize = 40.sp)
-                            Text("Autsch!", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = StrandturmRed)
-                            Text("Noch ${gs.lives} Leben", fontSize = 14.sp, color = TextMuted)
+                            Text("💥", fontSize = EmojiLarge)
+                            Text("Autsch!", fontSize = BingoCallSize, fontWeight = FontWeight.ExtraBold, color = StrandturmRed)
+                            Text("Noch ${gs.lives} Leben", fontSize = CellNumber, color = TextMuted)
                         }
                     }
                 }
@@ -1400,12 +1398,12 @@ fun StrandturmGameScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
-                            Text("🎉", fontSize = 40.sp)
-                            Text("Geschafft!", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = SandGold)
-                            Text("+${gs.bonusTimer} Bonus", fontSize = 14.sp, color = TextMuted)
-                            Text("Level ${gs.level + 1} startet …", fontSize = 12.sp, color = TextSub)
+                            Text("🎉", fontSize = EmojiLarge)
+                            Text("Geschafft!", fontSize = BingoCallSize, fontWeight = FontWeight.ExtraBold, color = SandGold)
+                            Text("+${gs.bonusTimer} Bonus", fontSize = CellNumber, color = TextMuted)
+                            Text("Level ${gs.level + 1} startet …", fontSize = ChipLabel, color = TextSub)
                             LEVEL_NAMES[getLevelType(gs.level + 1)]?.let { name ->
-                                Text(name, fontSize = 13.sp, color = SandGold)
+                                Text(name, style = MaterialTheme.typography.labelMedium, color = SandGold)
                             }
                         }
                     }
@@ -1428,11 +1426,11 @@ fun StrandturmGameScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
-                            Text("🗼", fontSize = 40.sp)
-                            Text("Game Over", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-                            if (isNewHighScore) Text("🏆 Neuer Rekord!", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SandGold)
-                            Text("${gs.score}", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = StrandturmRed)
-                            Text("Punkte · Level ${gs.level}", fontSize = 12.sp, color = TextMuted)
+                            Text("🗼", fontSize = EmojiLarge)
+                            Text("Game Over", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                            if (isNewHighScore) Text("🏆 Neuer Rekord!", fontSize = CellNumber, fontWeight = FontWeight.Bold, color = SandGold)
+                            Text("${gs.score}", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = StrandturmRed)
+                            Text("Punkte · Level ${gs.level}", fontSize = ChipLabel, color = TextMuted)
                             Button(
                                 onClick = {
                                     onNavigateToResults(
@@ -1445,7 +1443,7 @@ fun StrandturmGameScreen(
                                 colors = ButtonDefaults.buttonColors(containerColor = StrandturmRed),
                                 shape = RoundedCornerShape(10.dp),
                             ) {
-                                Text("Weiter →", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text("Weiter →", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -1513,9 +1511,13 @@ fun StrandturmGameScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text("Oben = Springen/Hoch  ·  Mitte = Laufen  ·  Unten = Leiter runter",
-                    fontSize = 11.sp, color = TextMuted)
+                    style = MaterialTheme.typography.labelSmall, color = TextMuted)
             }
         }
+    }
+
+    if (showRules) {
+        ALL_GAME_RULES["strandturm"]?.let { GameRulesBottomSheet(rule = it, onDismiss = { showRules = false }) }
     }
 
     if (showQuitDialog) {
@@ -1524,8 +1526,8 @@ fun StrandturmGameScreen(
             message = "Score: ${gs.score} Pts · Level ${gs.level} · Leben: ${gs.lives}",
             onContinue = { showQuitDialog = false; paused = false },
             onSaveAndQuit = {
-                PuzzleSaveManager.saveGame(context, GameSave(
-                    id = PuzzleSaveManager.generateId(),
+                SoloGameSaveManager.saveGame(context, GameSave(
+                    id = SoloGameSaveManager.generateId(),
                     gameType = "strandturm",
                     difficulty = "standard",
                     gameState = serializeStrandturm(gs),
@@ -1535,7 +1537,7 @@ fun StrandturmGameScreen(
                 onNavigateToLobby()
             },
             onQuitWithoutSave = {
-                PuzzleSaveManager.deleteGameSave(context, "strandturm")
+                SoloGameSaveManager.deleteGameSave(context, "strandturm")
                 onNavigateToLobby()
             },
         )
@@ -1566,6 +1568,6 @@ private fun HoldButton(
             },
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, fontSize = 24.sp, color = TextPrimary)
+        Text(label, style = MaterialTheme.typography.headlineSmall, color = TextPrimary)
     }
 }

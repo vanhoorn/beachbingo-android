@@ -12,23 +12,31 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.bestfriends.beachbingo.ui.theme.BorderColor
 import com.bestfriends.beachbingo.ui.theme.Danger
+import com.bestfriends.beachbingo.ui.theme.EmojiLarge
 import com.bestfriends.beachbingo.ui.theme.OceanBlue
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
@@ -47,6 +55,7 @@ fun GameHudBar(
     onPauseToggle: () -> Unit,
     onQuit: () -> Unit,
     modifier: Modifier = Modifier,
+    onShowRules: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     Surface(
@@ -56,6 +65,7 @@ fun GameHudBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .statusBarsPadding()
                 .padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -69,22 +79,35 @@ fun GameHudBar(
                 content()
             }
 
+            // Regeln
+            if (onShowRules != null) {
+                HudButton(
+                    icon = Icons.Filled.Info,
+                    contentDescription = "Regeln",
+                    color = Surface2Dark,
+                    borderColor = BorderColor,
+                    tint = TextSub,
+                    onClick = onShowRules,
+                )
+            }
+
             // Pause / Play
             HudButton(
-                label = if (paused) "▶" else "⏸",
+                icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                contentDescription = if (paused) "Weiterspielen" else "Pause",
                 color = if (paused) OceanBlue.copy(0.25f) else Surface2Dark,
                 borderColor = if (paused) OceanBlue else BorderColor,
-                textColor = TextPrimary,
+                tint = TextPrimary,
                 onClick = onPauseToggle,
             )
 
             // Abbruch
             HudButton(
-                label = "✕",
+                icon = Icons.Filled.Close,
+                contentDescription = "Beenden",
                 color = Danger.copy(0.18f),
                 borderColor = Danger.copy(0.5f),
-                textColor = Danger,
-                bold = true,
+                tint = Danger,
                 onClick = onQuit,
             )
         }
@@ -93,39 +116,30 @@ fun GameHudBar(
 
 @Composable
 private fun HudButton(
-    label: String,
+    icon: ImageVector,
+    contentDescription: String,
     color: androidx.compose.ui.graphics.Color,
     borderColor: androidx.compose.ui.graphics.Color,
-    textColor: androidx.compose.ui.graphics.Color,
-    bold: Boolean = false,
+    tint: androidx.compose.ui.graphics.Color,
     onClick: () -> Unit,
 ) {
     Surface(
+        onClick = onClick,
         color = color,
         shape = RoundedCornerShape(8.dp),
         modifier = Modifier
-            .size(36.dp)
+            .size(48.dp)
             .border(1.dp, borderColor, RoundedCornerShape(8.dp)),
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.fillMaxSize().then(
-                Modifier.pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val e = awaitPointerEvent()
-                            if (e.changes.any { it.pressed }) onClick()
-                            e.changes.forEach { it.consume() }
-                        }
-                    }
-                }
-            )
+            modifier = Modifier.fillMaxSize(),
         ) {
-            Text(
-                label,
-                fontSize = 16.sp,
-                color = textColor,
-                fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = tint,
+                modifier = Modifier.size(22.dp),
             )
         }
     }
@@ -147,11 +161,11 @@ fun GameSaveQuitDialog(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(emoji, fontSize = 40.sp)
+                Text(emoji, fontSize = EmojiLarge)
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "Spiel beenden?",
-                    fontSize = 18.sp,
+                    fontSize = MaterialTheme.typography.titleMedium.fontSize,
                     fontWeight = FontWeight.ExtraBold,
                     color = TextPrimary,
                 )
@@ -159,7 +173,7 @@ fun GameSaveQuitDialog(
                 if (message.isNotEmpty()) {
                     Text(
                         message,
-                        fontSize = 13.sp,
+                        fontSize = MaterialTheme.typography.labelMedium.fontSize,
                         color = TextSub,
                         textAlign = TextAlign.Center,
                     )
@@ -207,18 +221,18 @@ fun QuitConfirmDialog(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(emoji, fontSize = 40.sp)
+                Text(emoji, fontSize = EmojiLarge)
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "Spiel beenden?",
-                    fontSize = 18.sp,
+                    fontSize = MaterialTheme.typography.titleMedium.fontSize,
                     fontWeight = FontWeight.ExtraBold,
                     color = TextPrimary,
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     message,
-                    fontSize = 13.sp,
+                    fontSize = MaterialTheme.typography.labelMedium.fontSize,
                     color = TextSub,
                     textAlign = TextAlign.Center,
                 )

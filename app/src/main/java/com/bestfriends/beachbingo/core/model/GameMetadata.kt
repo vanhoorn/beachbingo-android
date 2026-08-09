@@ -164,7 +164,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
     ),
     GameMetadata(
         id = "wortwelle",
-        emoji = "🌊",
+        emoji = "💬",
         title = "WortWelle",
         description = "Errate das deutsche Wort in wenigen Versuchen — Wordle auf Deutsch mit Hard Mode.",
         color = 0xFF06B6D4,

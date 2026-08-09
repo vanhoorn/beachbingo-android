@@ -22,7 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.ui.theme.*
-import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -32,8 +32,6 @@ import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.bestfriends.beachbingo.feature.home.ui.SavedGameRow
 
-private val WormGreen     = Color(0xFF22C55E)
-private val WormGreenDark = Color(0xFF15803D)
 
 private data class DiffItem(val id: String, val emoji: String, val label: String, val desc: String)
 private val DIFF_OPTIONS = listOf(
@@ -60,7 +58,7 @@ fun WormLobbyScreen(
     var loading      by remember { mutableStateOf(true) }
     var isFavorite   by remember { mutableStateOf(false) }
     var showRules    by remember { mutableStateOf(false) }
-    var savedGame by remember { mutableStateOf(PuzzleSaveManager.getGameSave(context, "worm")) }
+    var savedGame by remember { mutableStateOf(SoloGameSaveManager.getGameSave(context, "worm")) }
 
     LaunchedEffect(uid) {
         if (uid == null) { loading = false; return@LaunchedEffect }
@@ -99,7 +97,7 @@ fun WormLobbyScreen(
                     IconButton(onClick = { toggleFavorite() }) {
                         Text(
                             if (isFavorite) "★" else "☆",
-                            fontSize = 22.sp,
+                            fontSize = MaterialTheme.typography.titleLarge.fontSize,
                             color = if (isFavorite) SandGold else TextMuted,
                         )
                     }
@@ -117,7 +115,7 @@ fun WormLobbyScreen(
     ) { padding ->
         if (loading) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("🪱", fontSize = 48.sp)
+                Text("🪱", fontSize = DrawNumberTablet)
             }
             return@Scaffold
         }
@@ -135,32 +133,32 @@ fun WormLobbyScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Brush.linearGradient(listOf(WormGreen.copy(alpha = 0.15f), WormGreen.copy(alpha = 0.05f))))
-                    .border(1.dp, WormGreen.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                    .background(Brush.linearGradient(listOf(Success.copy(alpha = 0.15f), Success.copy(alpha = 0.05f))))
+                    .border(1.dp, Success.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
                     .padding(24.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("🪱", fontSize = 56.sp)
-                    Text("Wattenfresser unterwegs!", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Text("🪱", fontSize = EmojiXLarge)
+                    Text("Wattenfresser unterwegs!", fontSize = MaterialTheme.typography.titleMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
                     Text(
                         "Frisst Krabben 🦀, Muscheln 🐚 und Fische 🐟.\nWerde länger — verliere dich nicht!",
-                        fontSize = 13.sp, color = TextMuted, lineHeight = 20.sp,
+                        fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted, lineHeight = 20.sp,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     )
                 }
             }
 
             // Difficulty selection
-            Text("Schwierigkeit", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextMuted, modifier = Modifier.padding(start = 4.dp))
+            Text("Schwierigkeit", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold, color = TextMuted, modifier = Modifier.padding(start = 4.dp))
             DIFF_OPTIONS.forEach { diff ->
                 val selected = difficulty == diff.id
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(if (selected) WormGreen.copy(alpha = 0.12f) else SurfaceDark)
-                        .border(1.5.dp, if (selected) WormGreen else BorderColor, RoundedCornerShape(14.dp))
+                        .background(if (selected) Success.copy(alpha = 0.12f) else SurfaceDark)
+                        .border(1.5.dp, if (selected) Success else BorderColor, RoundedCornerShape(14.dp))
                         .clickable { difficulty = diff.id }
                         .padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -168,15 +166,15 @@ fun WormLobbyScreen(
                 ) {
                     Box(
                         modifier = Modifier.size(18.dp).clip(RoundedCornerShape(50))
-                            .background(if (selected) WormGreen else Color.Transparent)
-                            .border(2.dp, if (selected) WormGreen else TextMuted, RoundedCornerShape(50)),
+                            .background(if (selected) Success else Color.Transparent)
+                            .border(2.dp, if (selected) Success else TextMuted, RoundedCornerShape(50)),
                         contentAlignment = Alignment.Center,
                     ) {
                         if (selected) Box(Modifier.size(7.dp).clip(RoundedCornerShape(50)).background(Color.White))
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text("${diff.emoji} ${diff.label}", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                        Text(diff.desc, fontSize = 12.sp, color = TextMuted)
+                        Text("${diff.emoji} ${diff.label}", fontSize = MaterialTheme.typography.labelLarge.fontSize, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                        Text(diff.desc, fontSize = ChipLabel, color = TextMuted)
                     }
                 }
             }
@@ -184,7 +182,7 @@ fun WormLobbyScreen(
             // Control mode hint
             Text(
                 "Steuerung: ${if (controlMode == "BUTTONS") "🔲 Buttons" else "👆 Swipe"} · In Einstellungen ändern",
-                fontSize = 12.sp, color = TextMuted,
+                fontSize = ChipLabel, color = TextMuted,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
 
@@ -193,9 +191,9 @@ fun WormLobbyScreen(
                 SavedGameRow(
                     title = "Wattwurm",
                     subtitle = sg.displayLabel,
-                    color = WormGreen,
+                    color = Success,
                     onResume = { onNavigateToGame(sg.difficulty, controlMode, sg.id) },
-                    onDelete = { PuzzleSaveManager.deleteGameSave(context, "worm"); savedGame = null },
+                    onDelete = { SoloGameSaveManager.deleteGameSave(context, "worm"); savedGame = null },
                 )
             }
 
@@ -203,10 +201,10 @@ fun WormLobbyScreen(
             Button(
                 onClick = { onNavigateToGame(difficulty, controlMode, null) },
                 modifier = Modifier.fillMaxWidth().height(54.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = WormGreen),
+                colors = ButtonDefaults.buttonColors(containerColor = Success),
                 shape = RoundedCornerShape(14.dp),
             ) {
-                Text("🎮 Spielen", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text("🎮 Spielen", fontSize = MaterialTheme.typography.bodyLarge.fontSize, fontWeight = FontWeight.Bold)
             }
         }
     }

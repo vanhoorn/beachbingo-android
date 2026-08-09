@@ -62,9 +62,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.feature.bingo.ui.components.QrCodeImage
 import com.bestfriends.beachbingo.ui.theme.BgDark
+import com.bestfriends.beachbingo.ui.theme.BingoCallSize
+import com.bestfriends.beachbingo.ui.theme.BorderColor
+import com.bestfriends.beachbingo.ui.theme.Danger
+import com.bestfriends.beachbingo.ui.theme.OceanBlue
 import com.bestfriends.beachbingo.ui.theme.SandGold
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
+import com.bestfriends.beachbingo.ui.theme.Teal
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
 import com.bestfriends.beachbingo.ui.theme.TextSub
@@ -77,10 +82,9 @@ import androidx.compose.material.icons.outlined.HelpOutline
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.bestfriends.beachbingo.feature.home.ui.SavedGameRow
-import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
 import org.json.JSONObject
 
-private val BrandungTeal = Color(0xFF0D9488)
 
 private data class DifficultyOption(val id: String, val label: String, val emoji: String, val description: String)
 
@@ -115,7 +119,7 @@ fun BrandungLobbyScreen(
     var difficulty by remember { mutableStateOf("SNIPER") }
     var isFavorite by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
-    var savedBrandung by remember { mutableStateOf(PuzzleSaveManager.getGameSave(context, "brandung")) }
+    var savedBrandung by remember { mutableStateOf(SoloGameSaveManager.getGameSave(context, "brandung")) }
 
     // Online lobby state
     var onlineStep by remember { mutableStateOf("choose") } // choose | waiting
@@ -286,7 +290,7 @@ fun BrandungLobbyScreen(
                     IconButton(onClick = { toggleFavorite() }) {
                         Text(
                             if (isFavorite) "★" else "☆",
-                            fontSize = 22.sp,
+                            fontSize = MaterialTheme.typography.titleLarge.fontSize,
                             color = if (isFavorite) SandGold else TextMuted,
                         )
                     }
@@ -321,9 +325,9 @@ fun BrandungLobbyScreen(
                     SavedGameRow(
                         title = "Brandung",
                         subtitle = sg.displayLabel,
-                        color = BrandungTeal,
+                        color = Teal,
                         onResume = { onNavigateToGame("ai", null, savedAiCount, sg.difficulty, sg.id) },
-                        onDelete = { PuzzleSaveManager.deleteGameSave(context, "brandung"); savedBrandung = null },
+                        onDelete = { SoloGameSaveManager.deleteGameSave(context, "brandung"); savedBrandung = null },
                     )
                 }
 
@@ -331,14 +335,14 @@ fun BrandungLobbyScreen(
                     emoji = "🤖",
                     title = "Gegen KI",
                     description = "Spiel allein gegen KI-Gegner",
-                    color = BrandungTeal,
+                    color = Teal,
                     onClick = { mode = "ai"; step = "ai_config" },
                 )
                 BrandungModeCard(
                     emoji = "📱",
                     title = "Online – 2-6 Spieler",
                     description = "Spielt gemeinsam in Echtzeit",
-                    color = Color(0xFF0EA5E9),
+                    color = OceanBlue,
                     onClick = { mode = "online"; step = "online" },
                 )
             }
@@ -370,19 +374,19 @@ fun BrandungLobbyScreen(
                                         .weight(1f)
                                         .border(
                                             2.dp,
-                                            if (selected) BrandungTeal else Color(0xFF1E3050),
+                                            if (selected) Teal else BorderColor,
                                             RoundedCornerShape(8.dp),
                                         )
                                         .clickable { aiCount = count },
-                                    color = if (selected) BrandungTeal.copy(alpha = 0.2f) else Surface2Dark,
+                                    color = if (selected) Teal.copy(alpha = 0.2f) else Surface2Dark,
                                     shape = RoundedCornerShape(8.dp),
                                 ) {
                                     Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(vertical = 12.dp)) {
                                         Text(
                                             "$count",
-                                            fontSize = 18.sp,
+                                            fontSize = MaterialTheme.typography.titleMedium.fontSize,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (selected) BrandungTeal else TextPrimary,
+                                            color = if (selected) Teal else TextPrimary,
                                         )
                                     }
                                 }
@@ -402,11 +406,11 @@ fun BrandungLobbyScreen(
                                 .fillMaxWidth()
                                 .border(
                                     2.dp,
-                                    if (selected) BrandungTeal else Color(0xFF1E3050),
+                                    if (selected) Teal else BorderColor,
                                     RoundedCornerShape(8.dp),
                                 )
                                 .clickable { difficulty = diff.id },
-                            color = if (selected) BrandungTeal.copy(alpha = 0.15f) else SurfaceDark,
+                            color = if (selected) Teal.copy(alpha = 0.15f) else SurfaceDark,
                             shape = RoundedCornerShape(8.dp),
                         ) {
                             Row(
@@ -420,7 +424,7 @@ fun BrandungLobbyScreen(
                                     Text(diff.description, style = MaterialTheme.typography.bodySmall, color = TextMuted)
                                 }
                                 if (selected) {
-                                    Text("✓", color = BrandungTeal, fontWeight = FontWeight.Bold)
+                                    Text("✓", color = Teal, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -430,7 +434,7 @@ fun BrandungLobbyScreen(
                 Button(
                     onClick = { onNavigateToGame("ai", null, aiCount, difficulty, null) },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = BrandungTeal),
+                    colors = ButtonDefaults.buttonColors(containerColor = Teal),
                     shape = RoundedCornerShape(12.dp),
                 ) {
                     Text("Spiel starten 🌊", fontWeight = FontWeight.Bold)
@@ -468,7 +472,7 @@ fun BrandungLobbyScreen(
                                 onClick = { createOnlineGame() },
                                 enabled = !creating,
                                 modifier = Modifier.fillMaxWidth().height(48.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = BrandungTeal),
+                                colors = ButtonDefaults.buttonColors(containerColor = Teal),
                                 shape = RoundedCornerShape(12.dp),
                             ) {
                                 if (creating) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
@@ -501,21 +505,21 @@ fun BrandungLobbyScreen(
                                     keyboardType = KeyboardType.Ascii,
                                 ),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = BrandungTeal,
-                                    focusedLabelColor = BrandungTeal,
-                                    cursorColor = BrandungTeal,
+                                    focusedBorderColor = Teal,
+                                    focusedLabelColor = Teal,
+                                    cursorColor = Teal,
                                     unfocusedTextColor = TextPrimary,
                                     focusedTextColor = TextPrimary,
                                 ),
                             )
                             if (joinError.isNotBlank()) {
-                                Text(joinError, style = MaterialTheme.typography.bodySmall, color = Color(0xFFEF4444))
+                                Text(joinError, style = MaterialTheme.typography.bodySmall, color = Danger)
                             }
                             Button(
                                 onClick = { if (joinCode.length == 6) joinExistingGame(joinCode) },
                                 enabled = joinCode.length == 6,
                                 modifier = Modifier.fillMaxWidth().height(48.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0EA5E9)),
+                                colors = ButtonDefaults.buttonColors(containerColor = OceanBlue),
                                 shape = RoundedCornerShape(12.dp),
                             ) {
                                 Text("Beitreten")
@@ -552,9 +556,9 @@ fun BrandungLobbyScreen(
                                     Text(
                                         text = gameCode,
                                         fontFamily = FontFamily.Monospace,
-                                        fontSize = 36.sp,
+                                        fontSize = MaterialTheme.typography.headlineLarge.fontSize,
                                         fontWeight = FontWeight.Black,
-                                        color = BrandungTeal,
+                                        color = Teal,
                                         letterSpacing = 6.sp,
                                     )
                                     OutlinedButton(
@@ -600,7 +604,7 @@ fun BrandungLobbyScreen(
                                     val isMe = playerId == uid
                                     val isHost = idx == 0
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text("🌊", fontSize = 18.sp)
+                                        Text("🌊", fontSize = MaterialTheme.typography.titleMedium.fontSize)
                                         Text(
                                             when {
                                                 isMe && isHost -> "Du (Host) 👑"
@@ -621,7 +625,7 @@ fun BrandungLobbyScreen(
                             Button(
                                 onClick = { startOnlineGame() },
                                 modifier = Modifier.fillMaxWidth().height(52.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = BrandungTeal),
+                                colors = ButtonDefaults.buttonColors(containerColor = Teal),
                                 shape = RoundedCornerShape(12.dp),
                             ) {
                                 Text("Spiel starten (${waitingPlayers.size} Spieler) 🌊", fontWeight = FontWeight.Bold)
@@ -669,14 +673,14 @@ private fun BrandungModeCard(
         ) {
             Surface(shape = RoundedCornerShape(16.dp), color = color.copy(alpha = 0.15f), modifier = Modifier.size(56.dp)) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Text(emoji, fontSize = 28.sp)
+                    Text(emoji, fontSize = MaterialTheme.typography.headlineMedium.fontSize)
                 }
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleMedium, color = TextPrimary)
                 Text(description, style = MaterialTheme.typography.bodySmall, color = TextMuted)
             }
-            Text("›", fontSize = 20.sp, color = TextMuted)
+            Text("›", fontSize = BingoCallSize, color = TextMuted)
         }
     }
 }

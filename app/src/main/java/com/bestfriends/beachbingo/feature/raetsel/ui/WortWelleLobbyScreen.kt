@@ -31,8 +31,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
-private val WwAccent = Color(0xFF06B6D4)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WortWelleLobbyScreen(
@@ -45,7 +43,7 @@ fun WortWelleLobbyScreen(
     val uid = auth.currentUser?.uid
     var wordBankReady by remember { mutableStateOf(WwWordBank.isReady) }
     var selected by remember { mutableStateOf("mittel") }
-    var saves by remember { mutableStateOf(PuzzleSaveManager.getSaves(context).filter { it.gameType == "wortwelle" && it.variant == "random" }) }
+    var saves by remember { mutableStateOf(SoloGameSaveManager.getSaves(context).filter { it.gameType == "wortwelle" && it.variant == "random" }) }
     var showStats by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
     var isFavorite by remember { mutableStateOf(false) }
@@ -102,18 +100,18 @@ fun WortWelleLobbyScreen(
                     modifier = Modifier.size(40.dp).border(1.dp, BorderColor, RoundedCornerShape(12.dp)).clickable { onNavigateBack() }
                 ) { Box(contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück", tint = TextSub, modifier = Modifier.size(20.dp)) } }
                 Spacer(Modifier.width(14.dp))
-                Text("🌊", fontSize = 32.sp)
+                Text("🌊", fontSize = EmojiMedium)
                 Spacer(Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("RÄTSEL", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
-                    Text("WortWelle", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Text("RÄTSEL", fontSize = ChipLabelTiny, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
+                    Text("WortWelle", fontSize = BingoCallSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
                 }
                 Surface(
-                    shape = RoundedCornerShape(10.dp), color = WwAccent.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(10.dp), color = CyanBright.copy(alpha = 0.12f),
                     modifier = Modifier.size(36.dp)
-                        .border(1.dp, WwAccent.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                        .border(1.dp, CyanBright.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                         .clickable { showStats = true }
-                ) { Box(contentAlignment = Alignment.Center) { Text("🏆", fontSize = 16.sp) } }
+                ) { Box(contentAlignment = Alignment.Center) { Text("🏆", fontSize = MaterialTheme.typography.titleSmall.fontSize) } }
                 Spacer(Modifier.width(8.dp))
                 Surface(
                     shape = RoundedCornerShape(10.dp),
@@ -121,21 +119,21 @@ fun WortWelleLobbyScreen(
                     modifier = Modifier.size(36.dp)
                         .border(1.dp, if (isFavorite) SandGold.copy(alpha = 0.5f) else BorderColor, RoundedCornerShape(10.dp))
                         .clickable { toggleFavorite() }
-                ) { Box(contentAlignment = Alignment.Center) { Text(if (isFavorite) "★" else "☆", fontSize = 16.sp, color = if (isFavorite) SandGold else TextSub) } }
+                ) { Box(contentAlignment = Alignment.Center) { Text(if (isFavorite) "★" else "☆", fontSize = MaterialTheme.typography.titleSmall.fontSize, color = if (isFavorite) SandGold else TextSub) } }
                 Spacer(Modifier.width(8.dp))
                 Surface(
                     shape = RoundedCornerShape(10.dp), color = Surface2Dark,
                     modifier = Modifier.size(36.dp)
                         .border(1.dp, BorderColor, RoundedCornerShape(10.dp))
                         .clickable { showRules = true }
-                ) { Box(contentAlignment = Alignment.Center) { Text("?", fontSize = 16.sp, color = TextSub, fontWeight = FontWeight.Bold) } }
+                ) { Box(contentAlignment = Alignment.Center) { Text("?", fontSize = MaterialTheme.typography.titleSmall.fontSize, color = TextSub, fontWeight = FontWeight.Bold) } }
             }
         }
 
         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
 
             // ── Schwierigkeit ─────────────────────────────────────────────────
-            Text("SCHWIERIGKEIT", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+            Text("SCHWIERIGKEIT", fontSize = ChipLabel, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
             WW_DIFFICULTIES.chunked(2).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     row.forEach { d ->
@@ -143,15 +141,15 @@ fun WortWelleLobbyScreen(
                         val isSel = selected == d
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = if (isSel) WwAccent.copy(alpha = 0.1f) else SurfaceDark,
+                            color = if (isSel) CyanBright.copy(alpha = 0.1f) else SurfaceDark,
                             modifier = Modifier
                                 .weight(1f)
-                                .border(1.5.dp, if (isSel) WwAccent else BorderColor, RoundedCornerShape(12.dp))
+                                .border(1.5.dp, if (isSel) CyanBright else BorderColor, RoundedCornerShape(12.dp))
                                 .clickable { selected = d }
                         ) {
                             Column(modifier = Modifier.padding(14.dp)) {
-                                Text(c.label, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (isSel) WwAccent else TextPrimary)
-                                Text(c.description, fontSize = 11.sp, color = TextMuted, modifier = Modifier.padding(top = 3.dp))
+                                Text(c.label, fontSize = CellNumber, fontWeight = FontWeight.Bold, color = if (isSel) CyanBright else TextPrimary)
+                                Text(c.description, fontSize = MaterialTheme.typography.labelSmall.fontSize, color = TextMuted, modifier = Modifier.padding(top = 3.dp))
                             }
                         }
                     }
@@ -163,23 +161,23 @@ fun WortWelleLobbyScreen(
             // ── Wort des Tages ────────────────────────────────────────────────
             Surface(
                 shape = RoundedCornerShape(14.dp),
-                color = WwAccent.copy(alpha = 0.06f),
-                modifier = Modifier.fillMaxWidth().border(1.5.dp, WwAccent.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+                color = CyanBright.copy(alpha = 0.06f),
+                modifier = Modifier.fillMaxWidth().border(1.5.dp, CyanBright.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("📅", fontSize = 20.sp)
+                        Text("📅", fontSize = BingoCallSize)
                         Spacer(Modifier.width(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Wort des Tages", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = WwAccent)
-                            Text(dateStr, fontSize = 11.sp, color = TextMuted)
+                            Text("Wort des Tages", fontSize = CellNumber, fontWeight = FontWeight.ExtraBold, color = CyanBright)
+                            Text(dateStr, fontSize = MaterialTheme.typography.labelSmall.fontSize, color = TextMuted)
                         }
                         if (dailyPlayed) {
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = Color(0xFF22c55e).copy(alpha = 0.15f),
+                                color = Success.copy(alpha = 0.15f),
                             ) {
-                                Text("✓ Gespielt", fontSize = 12.sp, color = Color(0xFF22c55e), fontWeight = FontWeight.Bold,
+                                Text("✓ Gespielt", fontSize = ChipLabel, color = Success, fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
                             }
                         }
@@ -190,14 +188,14 @@ fun WortWelleLobbyScreen(
                         enabled = !dailyPlayed,
                         modifier = Modifier.fillMaxWidth().height(46.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = WwAccent,
+                            containerColor = CyanBright,
                             disabledContainerColor = Surface2Dark,
                         ),
                         shape = RoundedCornerShape(10.dp),
                     ) {
                         Text(
                             if (dailyPlayed) "Heute bereits gespielt" else "🌊 Tageswort spielen (${cfg.wordLength} Buchstaben)",
-                            fontSize = 14.sp, fontWeight = FontWeight.ExtraBold,
+                            fontSize = CellNumber, fontWeight = FontWeight.ExtraBold,
                             color = if (dailyPlayed) TextMuted else BgDark,
                         )
                     }
@@ -208,16 +206,16 @@ fun WortWelleLobbyScreen(
             Button(
                 onClick = { onNavigateToGame(selected, false, "", "", null) },
                 modifier = Modifier.fillMaxWidth().height(54.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = WwAccent),
+                colors = ButtonDefaults.buttonColors(containerColor = CyanBright),
                 shape = RoundedCornerShape(14.dp),
             ) {
-                Text("🌊 Zufälliges Spiel starten", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = BgDark)
+                Text("🌊 Zufälliges Spiel starten", fontSize = MaterialTheme.typography.titleSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = BgDark)
             }
 
             // ── Gespeicherte Spiele ───────────────────────────────────────────
             val filteredSaves = saves
             if (filteredSaves.isNotEmpty()) {
-                Text("GESPEICHERTE SPIELE", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                Text("GESPEICHERTE SPIELE", fontSize = ChipLabel, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
                 filteredSaves.forEach { save ->
                     val st = try { deserializeWwState(save.puzzleState) } catch (_: Exception) { null }
                     val guessCount = st?.guesses?.size ?: 0
@@ -229,29 +227,29 @@ fun WortWelleLobbyScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     "${WW_CONFIG[save.difficulty]?.label ?: save.difficulty} · $guessCount Versuch${if (guessCount == 1) "" else "e"}",
-                                    fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
+                                    fontSize = CellNumber, fontWeight = FontWeight.Bold, color = TextPrimary,
                                 )
                                 Text(
-                                    PuzzleSaveManager.formatElapsed(save.elapsedSeconds) + " gespielt",
-                                    fontSize = 12.sp, color = TextMuted, modifier = Modifier.padding(top = 2.dp),
+                                    SoloGameSaveManager.formatElapsed(save.elapsedSeconds) + " gespielt",
+                                    fontSize = ChipLabel, color = TextMuted, modifier = Modifier.padding(top = 2.dp),
                                 )
                             }
                             Surface(
-                                shape = RoundedCornerShape(8.dp), color = WwAccent.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(8.dp), color = CyanBright.copy(alpha = 0.1f),
                                 modifier = Modifier
-                                    .border(1.dp, WwAccent.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                    .border(1.dp, CyanBright.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                                     .clickable { onNavigateToGame(save.difficulty, false, "", "", save.id) }
-                            ) { Text("→", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = WwAccent, modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)) }
+                            ) { Text("→", fontSize = MaterialTheme.typography.labelLarge.fontSize, fontWeight = FontWeight.Bold, color = CyanBright, modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)) }
                             Spacer(Modifier.width(8.dp))
                             Surface(
                                 shape = RoundedCornerShape(8.dp), color = Danger.copy(alpha = 0.1f),
                                 modifier = Modifier
                                     .border(1.dp, Danger.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                                     .clickable {
-                                        PuzzleSaveManager.deleteSave(context, save.id)
+                                        SoloGameSaveManager.deleteSave(context, save.id)
                                         saves = saves.filter { it.id != save.id }
                                     }
-                            ) { Text("✕", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Danger, modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)) }
+                            ) { Text("✕", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold, color = Danger, modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)) }
                         }
                     }
                 }
@@ -266,9 +264,9 @@ fun WortWelleLobbyScreen(
         Dialog(onDismissRequest = { showStats = false }) {
             Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
                 Column(modifier = Modifier.padding(24.dp)) {
-                    Text("📊 Statistiken", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
+                    Text("📊 Statistiken", fontSize = MaterialTheme.typography.titleMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
                         textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-                    Text(cfg.label, fontSize = 12.sp, color = WwAccent, textAlign = TextAlign.Center,
+                    Text(cfg.label, fontSize = ChipLabel, color = CyanBright, textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp))
 
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -281,8 +279,8 @@ fun WortWelleLobbyScreen(
                         ).forEach { (label, value) ->
                             Surface(shape = RoundedCornerShape(10.dp), color = BgDark, modifier = Modifier.weight(1f)) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(vertical = 12.dp)) {
-                                    Text(value, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-                                    Text(label, fontSize = 9.sp, color = TextMuted, textAlign = TextAlign.Center)
+                                    Text(value, fontSize = BingoCallSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                                    Text(label, fontSize = StatusTiny, color = TextMuted, textAlign = TextAlign.Center)
                                 }
                             }
                         }
@@ -290,12 +288,12 @@ fun WortWelleLobbyScreen(
 
                     if (stats.distribution.any { it > 0 }) {
                         Spacer(Modifier.height(16.dp))
-                        Text("VERTEILUNG", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                        Text("VERTEILUNG", fontSize = MaterialTheme.typography.labelSmall.fontSize, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
                         Spacer(Modifier.height(8.dp))
                         val maxVal = stats.distribution.maxOrNull()?.takeIf { it > 0 } ?: 1
                         stats.distribution.forEachIndexed { i, count ->
                             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text("${i + 1}", fontSize = 12.sp, color = TextMuted, modifier = Modifier.width(16.dp))
+                                Text("${i + 1}", fontSize = ChipLabel, color = TextMuted, modifier = Modifier.width(16.dp))
                                 Spacer(Modifier.width(8.dp))
                                 val fraction = (count.toFloat().coerceAtLeast(0.05f) / maxVal.toFloat()).coerceIn(0.05f, 1f)
                                 Box(modifier = Modifier.weight(1f).height(18.dp)) {
@@ -303,10 +301,10 @@ fun WortWelleLobbyScreen(
                                         modifier = Modifier
                                             .fillMaxWidth(fraction)
                                             .fillMaxHeight()
-                                            .background(if (count > 0) WwAccent else Surface2Dark, RoundedCornerShape(4.dp)),
+                                            .background(if (count > 0) CyanBright else Surface2Dark, RoundedCornerShape(4.dp)),
                                         contentAlignment = Alignment.CenterEnd,
                                     ) {
-                                        if (count > 0) Text("$count", fontSize = 11.sp, color = BgDark, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 6.dp))
+                                        if (count > 0) Text("$count", fontSize = MaterialTheme.typography.labelSmall.fontSize, color = BgDark, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 6.dp))
                                     }
                                 }
                             }
@@ -321,11 +319,11 @@ fun WortWelleLobbyScreen(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-                                Text("🗓 Tageswort", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                Text("🗓 Tageswort", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold, color = TextPrimary)
                                 Spacer(Modifier.height(4.dp))
                                 Text(
                                     "Gespielt: ${stats.dailyPlayed} · Gewonnen: ${stats.dailyWon} · Streak: ${stats.dailyCurrentStreak}",
-                                    fontSize = 12.sp, color = TextMuted,
+                                    fontSize = ChipLabel, color = TextMuted,
                                 )
                             }
                         }
@@ -334,7 +332,7 @@ fun WortWelleLobbyScreen(
                     Spacer(Modifier.height(16.dp))
                     Button(
                         onClick = { showStats = false }, modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = WwAccent),
+                        colors = ButtonDefaults.buttonColors(containerColor = CyanBright),
                         shape = RoundedCornerShape(10.dp),
                     ) { Text("Schliessen", fontWeight = FontWeight.Bold, color = BgDark) }
                 }
@@ -347,38 +345,38 @@ fun WortWelleLobbyScreen(
         Dialog(onDismissRequest = { showRules = false }) {
             Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
                 Column(modifier = Modifier.padding(24.dp)) {
-                    Text("🌊 WortWelle", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
+                    Text("🌊 WortWelle", fontSize = BingoCallSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
                         textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-                    Text("Wordle auf Deutsch", fontSize = 12.sp, color = WwAccent,
+                    Text("Wordle auf Deutsch", fontSize = ChipLabel, color = CyanBright,
                         textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp))
 
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Errate das versteckte Wort in wenigen Versuchen.", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
-                        Text("Nach jedem Versuch zeigen die Farben, wie nah du warst:", fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
+                        Text("Errate das versteckte Wort in wenigen Versuchen.", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted, lineHeight = 18.sp)
+                        Text("Nach jedem Versuch zeigen die Farben, wie nah du warst:", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted, lineHeight = 18.sp)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Box(modifier = Modifier.size(28.dp).background(Color(0xFF22c55e), RoundedCornerShape(4.dp)),
-                                contentAlignment = Alignment.Center) { Text("S", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color.White) }
-                            Text("Grün: Richtige Position!", fontSize = 13.sp, color = TextMuted)
+                            Box(modifier = Modifier.size(28.dp).background(Success, RoundedCornerShape(4.dp)),
+                                contentAlignment = Alignment.Center) { Text("S", fontSize = CellNumber, fontWeight = FontWeight.ExtraBold, color = Color.White) }
+                            Text("Grün: Richtige Position!", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted)
                         }
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Box(modifier = Modifier.size(28.dp).background(Color(0xFFEAB308), RoundedCornerShape(4.dp)),
-                                contentAlignment = Alignment.Center) { Text("T", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color.White) }
-                            Text("Gelb: Im Wort, falsche Position.", fontSize = 13.sp, color = TextMuted)
+                            Box(modifier = Modifier.size(28.dp).background(WwPresent, RoundedCornerShape(4.dp)),
+                                contentAlignment = Alignment.Center) { Text("T", fontSize = CellNumber, fontWeight = FontWeight.ExtraBold, color = Color.White) }
+                            Text("Gelb: Im Wort, falsche Position.", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted)
                         }
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Box(modifier = Modifier.size(28.dp).background(Color(0xFF374151), RoundedCornerShape(4.dp)),
-                                contentAlignment = Alignment.Center) { Text("R", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color.White) }
-                            Text("Grau: Nicht im Wort.", fontSize = 13.sp, color = TextMuted)
+                            Box(modifier = Modifier.size(28.dp).background(WwAbsent, RoundedCornerShape(4.dp)),
+                                contentAlignment = Alignment.Center) { Text("R", fontSize = CellNumber, fontWeight = FontWeight.ExtraBold, color = Color.White) }
+                            Text("Grau: Nicht im Wort.", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted)
                         }
                         Spacer(Modifier.fillMaxWidth().height(1.dp).background(BorderColor))
-                        Text("Umlaute werden ersetzt: Ä=AE, Ö=OE, Ü=UE, ß=SS (z.B. BOESE statt BÖSE).", fontSize = 12.sp, color = TextMuted, lineHeight = 17.sp)
-                        Text("Wort des Tages: Weltweit dasselbe Wort — einmal täglich pro Schwierigkeit.", fontSize = 12.sp, color = TextMuted, lineHeight = 17.sp)
+                        Text("Umlaute werden ersetzt: Ä=AE, Ö=OE, Ü=UE, ß=SS (z.B. BOESE statt BÖSE).", fontSize = ChipLabel, color = TextMuted, lineHeight = 17.sp)
+                        Text("Wort des Tages: Weltweit dasselbe Wort — einmal täglich pro Schwierigkeit.", fontSize = ChipLabel, color = TextMuted, lineHeight = 17.sp)
                     }
 
                     Spacer(Modifier.height(16.dp))
                     Button(
                         onClick = { showRules = false }, modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = WwAccent),
+                        colors = ButtonDefaults.buttonColors(containerColor = CyanBright),
                         shape = RoundedCornerShape(10.dp),
                     ) { Text("Verstanden!", fontWeight = FontWeight.Bold, color = BgDark) }
                 }

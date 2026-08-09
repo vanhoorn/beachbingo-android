@@ -18,12 +18,13 @@ import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.ui.components.GameHudBar
 import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
 import com.bestfriends.beachbingo.feature.raetsel.GameSave
-import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import org.json.JSONObject
@@ -63,9 +64,6 @@ private val EMOJIS = arrayOf("🪼", "🐚", "🐟", "🦀")
 private val BASE_SPEED  = mapOf("ROOKIE" to 3, "SNIPER" to 6, "BOSS_LEVEL" to 10)
 private val BASE_FIRING = mapOf("ROOKIE" to 3, "SNIPER" to 6, "BOSS_LEVEL" to 10)
 
-private val PurpleGame   = Color(0xFFA855F7)
-private val OrangeBullet = Color(0xFFFB923C)
-private val PurpleBullet = Color(0xFFC084FC)
 
 // ── Data classes ──────────────────────────────────────────────────────────────
 
@@ -168,6 +166,8 @@ fun PiratesGameScreen(
     fireRate: Int,
     controlMode: String,
     saveId: String? = null,
+    soundEnabled: Boolean = true,
+    musicEnabled: Boolean = true,
     onNavigateToResults: (score: Int, wave: Int, highScore: Int, newHighScore: Boolean) -> Unit,
     onNavigateToLobby: () -> Unit,
 ) {
@@ -182,13 +182,14 @@ fun PiratesGameScreen(
     var renderTick     by remember { mutableLongStateOf(0L) }
     var paused         by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
+    var showRules      by remember { mutableStateOf(false) }
     var resultHandled  by remember { mutableStateOf(false) }
     var musicStarted   by remember { mutableStateOf(false) }
 
     // Restore checkpoint save (score + lives + wave)
     LaunchedEffect(saveId) {
         if (saveId != null) {
-            val save = PuzzleSaveManager.getGameSave(context, "pirates")
+            val save = SoloGameSaveManager.getGameSave(context, "pirates")
             if (save != null) try {
                 val obj = JSONObject(save.gameState)
                 gs.score = obj.getInt("score")
@@ -200,13 +201,8 @@ fun PiratesGameScreen(
     }
 
     LaunchedEffect(Unit) {
-        if (uid != null) {
-            try {
-                val snap = firestore.collection("users").document(uid).get().await()
-                audio.soundEnabled = snap.getBoolean("soundEnabled") ?: true
-                audio.musicEnabled = snap.getBoolean("musicEnabled") ?: true
-            } catch (_: Exception) {}
-        }
+        audio.soundEnabled = soundEnabled
+        audio.musicEnabled = musicEnabled
         audio.startMusic()
         musicStarted = true
     }
@@ -258,20 +254,21 @@ fun PiratesGameScreen(
             paused          = paused,
             onPauseToggle   = { paused = !paused },
             onQuit          = { paused = true; showQuitDialog = true },
+            onShowRules     = { showRules = true },
         ) {
-            HudCell(value = "${gs.score}", label = "Score", color = PurpleGame, modifier = Modifier.weight(1.4f))
+            HudCell(value = "${gs.score}", label = "Score", color = PiratesPurple, modifier = Modifier.weight(1.4f))
             HudCell(value = "W${gs.wave}", label = "Welle", color = OceanBlue, modifier = Modifier.weight(0.8f))
             androidx.compose.foundation.layout.Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.weight(1.2f),
             ) {
                 androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-                    repeat(3) { i -> Text(if (i < gs.lives) "🐙" else "💀", fontSize = 13.sp) }
+                    repeat(3) { i -> Text(if (i < gs.lives) "🐙" else "💀", fontSize = MaterialTheme.typography.labelMedium.fontSize) }
                 }
-                Text("Leben", fontSize = 8.sp, color = TextMuted)
+                Text("Leben", fontSize = LabelMicro, color = TextMuted)
             }
             HudBar2("⚡", gs.currentSpeed(), 30, SandGold)
-            HudBar2("🔱", gs.currentFiring(), 30, PurpleGame)
+            HudBar2("🔱", gs.currentFiring(), 30, PiratesPurple)
         }
 
         // ── Game canvas ────────────────────────────────────────────────────
@@ -341,6 +338,10 @@ fun PiratesGameScreen(
         }
     }
 
+    if (showRules) {
+        ALL_GAME_RULES["pirates"]?.let { GameRulesBottomSheet(rule = it, onDismiss = { showRules = false }) }
+    }
+
     // ── Quit dialog ────────────────────────────────────────────────────────
     if (showQuitDialog) {
         GameSaveQuitDialog(
@@ -348,8 +349,8 @@ fun PiratesGameScreen(
             message = "Score: ${gs.score} · Welle: ${gs.wave} · Leben: ${gs.lives}",
             onContinue = { showQuitDialog = false; paused = false },
             onSaveAndQuit = {
-                PuzzleSaveManager.saveGame(context, GameSave(
-                    id = PuzzleSaveManager.generateId(),
+                SoloGameSaveManager.saveGame(context, GameSave(
+                    id = SoloGameSaveManager.generateId(),
                     gameType = "pirates",
                     difficulty = difficulty,
                     gameState = serializePirates(gs),
@@ -359,7 +360,7 @@ fun PiratesGameScreen(
                 onNavigateToLobby()
             },
             onQuitWithoutSave = {
-                PuzzleSaveManager.deleteGameSave(context, "pirates")
+                SoloGameSaveManager.deleteGameSave(context, "pirates")
                 onNavigateToLobby()
             },
         )
@@ -527,7 +528,7 @@ private fun drawGame(scope: DrawScope, gs: GameState, tick: Long, paused: Boolea
     with(scope) {
         // Background gradient
         drawRect(
-            Brush.linearGradient(listOf(Color(0xFF07072a), Color(0xFF0a1628)),
+            Brush.linearGradient(listOf(BgPirateDeepest, BgDark),
                 Offset.Zero, Offset(0f, CH)),
             size = Size(CW, CH),
         )
@@ -547,7 +548,7 @@ private fun drawGame(scope: DrawScope, gs: GameState, tick: Long, paused: Boolea
                 if (!shield.blocks[row][col]) continue
                 val shade = 0.5f + row.toFloat() / SHIELD_ROWS * 0.5f
                 drawRect(
-                    color = Color(0xFFF97316).copy(alpha = shade),
+                    color = Coral.copy(alpha = shade),
                     topLeft = Offset(shield.originX + col * BLOCK, shieldTopY + row * BLOCK),
                     size = Size(BLOCK - 0.5f, BLOCK - 0.5f),
                 )
@@ -557,7 +558,7 @@ private fun drawGame(scope: DrawScope, gs: GameState, tick: Long, paused: Boolea
         // Player bullets (purple glow)
         for (b in gs.playerBullets)
             drawRect(
-                Brush.linearGradient(listOf(PurpleBullet, Color(0xFF7C3AED)),
+                Brush.linearGradient(listOf(PurpleLight, PurpleDeep),
                     Offset(b.x, b.y), Offset(b.x, b.y + BULLET_H)),
                 topLeft = Offset(b.x - BULLET_W / 2, b.y),
                 size = Size(BULLET_W, BULLET_H),
@@ -566,7 +567,7 @@ private fun drawGame(scope: DrawScope, gs: GameState, tick: Long, paused: Boolea
         // Enemy bullets (orange)
         for (b in gs.enemyBullets)
             drawRect(
-                Brush.linearGradient(listOf(OrangeBullet, Color(0xFFEA580C)),
+                Brush.linearGradient(listOf(PiratesOrange, OrangeDark),
                     Offset(b.x, b.y), Offset(b.x, b.y + BULLET_H)),
                 topLeft = Offset(b.x - BULLET_W / 2, b.y),
                 size = Size(BULLET_W, BULLET_H),
@@ -620,13 +621,13 @@ private fun drawOverlay(scope: DrawScope, emoji: String, title: String, subtitle
         val cardW = 300f; val cardH = 110f
         val cardX = (CW - cardW) / 2f; val cardY = CH / 2f - cardH / 2f
         drawRoundRect(
-            color = Color(0xFF1E3050),
+            color = Surface2Dark,
             topLeft = Offset(cardX, cardY),
             size = Size(cardW, cardH),
             cornerRadius = androidx.compose.ui.geometry.CornerRadius(16f),
         )
         drawRoundRect(
-            color = Color(0xFFA855F7).copy(alpha = 0.4f),
+            color = PiratesPurple.copy(alpha = 0.4f),
             topLeft = Offset(cardX, cardY),
             size = Size(cardW, cardH),
             cornerRadius = androidx.compose.ui.geometry.CornerRadius(16f),
@@ -666,15 +667,15 @@ private fun HudCell(value: String, label: String, color: Color, modifier: Modifi
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier,
     ) {
-        Text(value, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = color)
-        Text(label, fontSize = 8.sp, color = TextMuted)
+        Text(value, fontSize = MaterialTheme.typography.titleSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = color)
+        Text(label, fontSize = LabelMicro, color = TextMuted)
     }
 }
 
 @Composable
 private fun HudBar2(label: String, value: Int, max: Int, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, fontSize = 10.sp)
+        Text(label, fontSize = ChipLabelTiny)
         Spacer(Modifier.height(2.dp))
         Box(
             modifier = Modifier
@@ -717,7 +718,7 @@ private fun ControlButton(
             },
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(label, fontSize = 30.sp, color = color, fontWeight = FontWeight.Bold)
+            Text(label, fontSize = EmojiMedium, color = color, fontWeight = FontWeight.Bold)
         }
     }
 }

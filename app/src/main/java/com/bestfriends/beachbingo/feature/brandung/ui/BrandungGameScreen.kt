@@ -20,23 +20,17 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import com.bestfriends.beachbingo.ui.components.GameHudBar
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -69,16 +63,44 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.BgDark
+import com.bestfriends.beachbingo.ui.theme.BingoCallSize
+import com.bestfriends.beachbingo.ui.theme.BorderColor
+import com.bestfriends.beachbingo.ui.theme.CardBack
+import com.bestfriends.beachbingo.ui.theme.CardBorderLight
+import com.bestfriends.beachbingo.ui.theme.CardColorDark
+import com.bestfriends.beachbingo.ui.theme.CardFace
+import com.bestfriends.beachbingo.ui.theme.CardFrame
+import com.bestfriends.beachbingo.ui.theme.CardTable
+import com.bestfriends.beachbingo.ui.theme.CellNumber
+import com.bestfriends.beachbingo.ui.theme.ChipLabelTiny
 import com.bestfriends.beachbingo.ui.theme.Danger
+import com.bestfriends.beachbingo.ui.theme.DrawNumberTablet
+import com.bestfriends.beachbingo.ui.theme.OceanBlueDark
+import com.bestfriends.beachbingo.ui.theme.PalmDark
+import com.bestfriends.beachbingo.ui.theme.PalmDeep
+import com.bestfriends.beachbingo.ui.theme.PalmMid
+import com.bestfriends.beachbingo.ui.theme.SandBeach
+import com.bestfriends.beachbingo.ui.theme.SandBeachLight
 import com.bestfriends.beachbingo.ui.theme.SandGold
+import com.bestfriends.beachbingo.ui.theme.SunBright
+import com.bestfriends.beachbingo.ui.theme.SunCore
+import com.bestfriends.beachbingo.ui.theme.SunGlow
 import com.bestfriends.beachbingo.ui.theme.Success
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
+import com.bestfriends.beachbingo.ui.theme.Teal
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
 import com.bestfriends.beachbingo.ui.theme.TextSub
+import com.bestfriends.beachbingo.ui.theme.TrunkBrown
+import com.bestfriends.beachbingo.ui.theme.WaveDark
+import com.bestfriends.beachbingo.ui.theme.WaveDeep
+import com.bestfriends.beachbingo.ui.theme.WaveLight
+import com.bestfriends.beachbingo.ui.theme.WaveMid
 import com.bestfriends.beachbingo.feature.raetsel.GameSave
-import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.awaitCancellation
@@ -92,7 +114,6 @@ import kotlinx.serialization.json.Json
 
 // ── Data models ──────────────────────────────────────────────────────────────
 
-private val BrandungTeal = Color(0xFF0D9488)
 
 @Serializable
 data class BrandungCard(val rank: String, val suit: String)
@@ -807,7 +828,6 @@ private suspend fun executeOnlineKnock(
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BrandungGameScreen(
     mode: String,
@@ -815,6 +835,8 @@ fun BrandungGameScreen(
     aiCount: Int,
     difficulty: String,
     saveId: String? = null,
+    soundEnabled: Boolean = true,
+    musicEnabled: Boolean = true,
     onNavigateBack: () -> Unit,
 ) {
     val auth = FirebaseAuth.getInstance()
@@ -826,8 +848,6 @@ fun BrandungGameScreen(
     val audio = remember { BrandungAudioManager() }
     DisposableEffect(Unit) { onDispose { audio.release() } }
 
-    var soundEnabled by remember { mutableStateOf(true) }
-    var musicEnabled by remember { mutableStateOf(true) }
     var newCardsOnAllPass by remember { mutableStateOf(false) }
     var passForbidden by remember { mutableStateOf(false) }
 
@@ -837,18 +857,24 @@ fun BrandungGameScreen(
     var selectedHandIdx by remember { mutableStateOf<Int?>(null) }
     var selectedTableIdx by remember { mutableStateOf<Int?>(null) }
     var showQuitDialog by remember { mutableStateOf(false) }
+    var showRules by remember { mutableStateOf(false) }
+    var isPaused by remember { mutableStateOf(false) }
 
     BackHandler { showQuitDialog = true }
 
     // ── Restore from save ──────────────────────────────────────────────────────
     LaunchedEffect(saveId) {
         if (saveId == null) return@LaunchedEffect
-        val save = PuzzleSaveManager.getGameSave(context, "brandung")
+        val save = SoloGameSaveManager.getGameSave(context, "brandung")
         if (save == null || save.id != saveId) return@LaunchedEffect
         try {
             val restored = Json.decodeFromString<LocalBrandungState>(save.gameState)
             localState = restored.copy(aiThinking = false)
         } catch (_: Exception) {}
+    }
+
+    if (showRules) {
+        ALL_GAME_RULES["brandung"]?.let { GameRulesBottomSheet(rule = it, onDismiss = { showRules = false }) }
     }
 
     // ── Quit dialog ────────────────────────────────────────────────────────────
@@ -868,12 +894,12 @@ fun BrandungGameScreen(
                         displayLabel = "Runde ${st.round} · ${st.players.size} Spieler · ${st.players.firstOrNull()?.lives ?: 0}♥",
                         savedAt = System.currentTimeMillis(),
                     )
-                    PuzzleSaveManager.saveGame(context, saveData)
+                    SoloGameSaveManager.saveGame(context, saveData)
                     showQuitDialog = false
                     onNavigateBack()
                 },
                 onQuitWithoutSave = {
-                    PuzzleSaveManager.deleteGameSave(context, "brandung")
+                    SoloGameSaveManager.deleteGameSave(context, "brandung")
                     showQuitDialog = false
                     onNavigateBack()
                 },
@@ -889,11 +915,11 @@ fun BrandungGameScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        Text("🏳️", fontSize = 36.sp)
-                        Text("Spiel verlassen?", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = TextPrimary)
+                        Text("🏳️", style = MaterialTheme.typography.headlineLarge)
+                        Text("Spiel verlassen?", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = TextPrimary)
                         Text(
                             "Du kannst über den Code wieder beitreten.",
-                            fontSize = 13.sp, color = TextMuted, textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.labelMedium, color = TextMuted, textAlign = TextAlign.Center,
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             OutlinedButton(
@@ -903,7 +929,7 @@ fun BrandungGameScreen(
                             Button(
                                 onClick = { showQuitDialog = false; onNavigateBack() },
                                 modifier = Modifier.weight(1f).height(44.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = BrandungTeal),
+                                colors = ButtonDefaults.buttonColors(containerColor = Teal),
                                 shape = RoundedCornerShape(10.dp),
                             ) { Text("Verlassen", color = Color.White) }
                         }
@@ -915,14 +941,10 @@ fun BrandungGameScreen(
 
     LaunchedEffect(uid) {
         if (uid.isBlank()) return@LaunchedEffect
-        var snd = true
-        var mus = true
+        val snd = soundEnabled
+        val mus = musicEnabled
         try {
             val snap = db.collection("users").document(uid).get().await()
-            snd = snap.getBoolean("soundEnabled") ?: true
-            mus = snap.getBoolean("musicEnabled") ?: true
-            soundEnabled = snd
-            musicEnabled = mus
             newCardsOnAllPass = snap.getBoolean("brandungNewCardsOnAllPass") ?: false
             passForbidden = snap.getBoolean("brandungPassingForbidden") ?: false
         } catch (_: Exception) {}
@@ -997,11 +1019,12 @@ fun BrandungGameScreen(
 
     // AI move logic
     val state = localState
-    LaunchedEffect(state?.currentTurnIndex, state?.phase) {
+    LaunchedEffect(state?.currentTurnIndex, state?.phase, isPaused) {
         val s = localState ?: return@LaunchedEffect
         if (s.phase != "TURN") return@LaunchedEffect
         val currentPlayer = s.players.getOrNull(s.currentTurnIndex) ?: return@LaunchedEffect
         if (!currentPlayer.isAI) return@LaunchedEffect
+        if (isPaused) return@LaunchedEffect
 
         localState = s.copy(aiThinking = true)
         delay(1200L)
@@ -1085,25 +1108,30 @@ fun BrandungGameScreen(
     Scaffold(
         containerColor = BgDark,
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("BRANDUNG", style = MaterialTheme.typography.labelSmall, color = TextMuted)
-                        val s = currentState
-                        if (s != null) {
-                            Text("Runde ${s.round}", style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { showQuitDialog = true }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Zurück", tint = TextPrimary)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark),
-            )
+            GameHudBar(
+                paused = isPaused,
+                onPauseToggle = { isPaused = !isPaused },
+                onQuit = { showQuitDialog = true },
+                onShowRules = { showRules = true },
+            ) {
+                val s = currentState
+                if (s != null) {
+                    Text("🌊", style = MaterialTheme.typography.titleSmall)
+                    Text("Runde ${s.round}", color = TextPrimary, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                }
+            }
         },
     ) { padding ->
+        if (isPaused) {
+            Box(Modifier.fillMaxSize().padding(padding).background(BgDark), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("⏸", fontSize = DrawNumberTablet)
+                    Text("Pausiert", color = TextPrimary, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Drücke ▶ um weiterzuspielen", color = TextMuted, style = MaterialTheme.typography.labelMedium)
+                }
+            }
+            return@Scaffold
+        }
         if (currentState == null) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text("Lade…", color = TextMuted)
@@ -1148,27 +1176,27 @@ fun BrandungGameScreen(
                                     val isCurrentTurn = currentState.players.getOrNull(currentState.currentTurnIndex)?.userId == opponent.userId
                                     Surface(
                                         shape = RoundedCornerShape(10.dp),
-                                        color = if (isCurrentTurn) BrandungTeal.copy(alpha = 0.2f) else Surface2Dark,
-                                        modifier = Modifier.border(1.5.dp, if (isCurrentTurn) BrandungTeal else Color(0xFF1E3050), RoundedCornerShape(10.dp)),
+                                        color = if (isCurrentTurn) Teal.copy(alpha = 0.2f) else Surface2Dark,
+                                        modifier = Modifier.border(1.5.dp, if (isCurrentTurn) Teal else BorderColor, RoundedCornerShape(10.dp)),
                                     ) {
                                         Column(
                                             modifier = Modifier.padding(10.dp),
                                             horizontalAlignment = Alignment.CenterHorizontally,
                                             verticalArrangement = Arrangement.spacedBy(4.dp),
                                         ) {
-                                            Text(opponent.avatarUrl, fontSize = 22.sp)
+                                            Text(opponent.avatarUrl, style = MaterialTheme.typography.titleLarge)
                                             Text(
                                                 opponent.displayName + if (isCurrentTurn) " ← Zug" else "",
                                                 style = MaterialTheme.typography.labelMedium,
-                                                color = if (isCurrentTurn) BrandungTeal else TextPrimary,
+                                                color = if (isCurrentTurn) Teal else TextPrimary,
                                                 fontWeight = if (isCurrentTurn) FontWeight.SemiBold else FontWeight.Normal,
                                             )
                                             Text(
                                                 "🌊".repeat(opponent.lives) + if (opponent.eliminated) " ❌" else "",
-                                                fontSize = 13.sp,
+                                                style = MaterialTheme.typography.labelMedium,
                                             )
                                             if (opponent.isAI && currentState.aiThinking && isCurrentTurn) {
-                                                Text("…", color = BrandungTeal, fontSize = 16.sp)
+                                                Text("…", color = Teal, style = MaterialTheme.typography.titleSmall)
                                             }
                                             Box(
                                                 modifier = Modifier
@@ -1184,7 +1212,7 @@ fun BrandungGameScreen(
                                                             .size(width = scaledHiddenW, height = scaledHiddenH)
                                                             .rotate(angle)
                                                             .clip(RoundedCornerShape(4.dp))
-                                                            .border(1.dp, BrandungTeal, RoundedCornerShape(4.dp)),
+                                                            .border(1.dp, Teal, RoundedCornerShape(4.dp)),
                                                     ) {
                                                         CardBackScene(modifier = Modifier.fillMaxSize())
                                                     }
@@ -1205,28 +1233,28 @@ fun BrandungGameScreen(
                                 ) {
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
-                                        color = if (isCurrentTurn) BrandungTeal.copy(alpha = 0.2f) else Surface2Dark,
+                                        color = if (isCurrentTurn) Teal.copy(alpha = 0.2f) else Surface2Dark,
                                         modifier = Modifier.size(40.dp),
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
-                                            Text(opponent.avatarUrl, fontSize = 20.sp)
+                                            Text(opponent.avatarUrl, fontSize = BingoCallSize)
                                         }
                                     }
                                     Column {
                                         Text(
                                             opponent.displayName + if (isCurrentTurn) " ← Zug" else "",
                                             style = MaterialTheme.typography.bodyMedium,
-                                            color = if (isCurrentTurn) BrandungTeal else TextPrimary,
+                                            color = if (isCurrentTurn) Teal else TextPrimary,
                                             fontWeight = if (isCurrentTurn) FontWeight.Bold else FontWeight.Normal,
                                         )
                                         Text(
                                             "🌊".repeat(opponent.lives) + if (opponent.eliminated) " ❌" else "",
-                                            fontSize = 14.sp,
+                                            fontSize = CellNumber,
                                         )
                                     }
                                     Spacer(Modifier.weight(1f))
                                     if (opponent.isAI && currentState.aiThinking && isCurrentTurn) {
-                                        Text("…", color = BrandungTeal, fontSize = 18.sp)
+                                        Text("…", color = Teal, style = MaterialTheme.typography.titleMedium)
                                     }
                                     Box(
                                         modifier = Modifier
@@ -1241,7 +1269,7 @@ fun BrandungGameScreen(
                                                     .size(width = scaledHiddenW, height = scaledHiddenH)
                                                     .rotate(angle)
                                                     .clip(RoundedCornerShape(4.dp))
-                                                    .border(1.dp, BrandungTeal, RoundedCornerShape(4.dp)),
+                                                    .border(1.dp, Teal, RoundedCornerShape(4.dp)),
                                             ) {
                                                 CardBackScene(modifier = Modifier.fillMaxSize())
                                             }
@@ -1258,8 +1286,8 @@ fun BrandungGameScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(60.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1a5c2e)),
-                border = androidx.compose.foundation.BorderStroke(3.dp, Color(0xFF8B7355)),
+                colors = CardDefaults.cardColors(containerColor = CardTable),
+                border = androidx.compose.foundation.BorderStroke(3.dp, CardFrame),
             ) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(
@@ -1309,11 +1337,11 @@ fun BrandungGameScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = if (isMyTurn && currentState.phase == "TURN")
-                            BrandungTeal.copy(alpha = 0.1f)
+                            Teal.copy(alpha = 0.1f)
                         else SurfaceDark
                     ),
                     border = if (isMyTurn && currentState.phase == "TURN")
-                        androidx.compose.foundation.BorderStroke(1.5.dp, BrandungTeal.copy(alpha = 0.5f))
+                        androidx.compose.foundation.BorderStroke(1.5.dp, Teal.copy(alpha = 0.5f))
                     else null,
                 ) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1325,7 +1353,7 @@ fun BrandungGameScreen(
                             Text(
                                 "Deine Hand",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = if (isMyTurn && currentState.phase == "TURN") BrandungTeal else TextMuted,
+                                color = if (isMyTurn && currentState.phase == "TURN") Teal else TextMuted,
                             )
                             val score = calcScore(humanPlayer.hand)
                             Text(
@@ -1365,7 +1393,7 @@ fun BrandungGameScreen(
                         }
                         Text(
                             "🌊".repeat(humanPlayer.lives),
-                            fontSize = 18.sp,
+                            style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.align(Alignment.CenterHorizontally),
                         )
                     }
@@ -1391,7 +1419,7 @@ fun BrandungGameScreen(
                             },
                             enabled = canSwap1,
                             modifier = Modifier.fillMaxWidth().height(48.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = BrandungTeal),
+                            colors = ButtonDefaults.buttonColors(containerColor = Teal),
                             shape = RoundedCornerShape(10.dp),
                         ) {
                             Text("1 Karte tauschen", fontWeight = FontWeight.Bold)
@@ -1411,7 +1439,7 @@ fun BrandungGameScreen(
                                     selectedTableIdx = null
                                 },
                                 modifier = Modifier.weight(1f).height(48.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
+                                colors = ButtonDefaults.buttonColors(containerColor = OceanBlueDark),
                                 shape = RoundedCornerShape(10.dp),
                             ) {
                                 Text("Alle 3 tauschen", fontWeight = FontWeight.Bold)
@@ -1589,7 +1617,7 @@ fun BrandungGameScreen(
                         Button(
                             onClick = onNavigateBack,
                             modifier = Modifier.fillMaxWidth().height(48.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = BrandungTeal),
+                            colors = ButtonDefaults.buttonColors(containerColor = Teal),
                             shape = RoundedCornerShape(10.dp),
                         ) {
                             Text("Zur Lobby", fontWeight = FontWeight.Bold)
@@ -1617,7 +1645,7 @@ fun BrandungGameScreen(
                                 selectedTableIdx = null
                             },
                             modifier = Modifier.fillMaxWidth().height(48.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = BrandungTeal),
+                            colors = ButtonDefaults.buttonColors(containerColor = Teal),
                             shape = RoundedCornerShape(10.dp),
                         ) {
                             Text("Nächste Runde 🌊", fontWeight = FontWeight.Bold)
@@ -1640,7 +1668,7 @@ fun CardBackScene(modifier: Modifier = Modifier) {
         // Daytime sky gradient
         drawRect(
             brush = Brush.verticalGradient(
-                listOf(Color(0xFF1A72C8), Color(0xFF5AB8E8)),
+                listOf(WaveDark, WaveLight),
                 startY = 0f, endY = h * 0.56f,
             ),
             size = Size(w, h * 0.56f),
@@ -1648,7 +1676,7 @@ fun CardBackScene(modifier: Modifier = Modifier) {
         // Ocean
         drawRect(
             brush = Brush.verticalGradient(
-                listOf(Color(0xFF1A8AB8), Color(0xFF0A4A7A)),
+                listOf(WaveMid, WaveDeep),
                 startY = h * 0.56f, endY = h,
             ),
             topLeft = Offset(0f, h * 0.56f),
@@ -1657,15 +1685,15 @@ fun CardBackScene(modifier: Modifier = Modifier) {
 
         // Sun (upper-right)
         val sCx = w * 0.78f; val sCy = h * 0.115f
-        drawCircle(Color(0xFFFFE033).copy(alpha = 0.28f), radius = w * 0.165f, center = Offset(sCx, sCy))
-        drawCircle(Color(0xFFFFD700), radius = w * 0.10f, center = Offset(sCx, sCy))
-        drawCircle(Color(0xFFFFED4A), radius = w * 0.060f, center = Offset(sCx - w * 0.012f, sCy - h * 0.008f))
+        drawCircle(SunGlow.copy(alpha = 0.28f), radius = w * 0.165f, center = Offset(sCx, sCy))
+        drawCircle(SunCore, radius = w * 0.10f, center = Offset(sCx, sCy))
+        drawCircle(SunBright, radius = w * 0.060f, center = Offset(sCx - w * 0.012f, sCy - h * 0.008f))
         val sRi = w * 0.13f; val sRo = w * 0.195f
         for (i in 0 until 8) {
             val angle = i * Math.PI / 4.0
             val ca = cos(angle).toFloat(); val sa = sin(angle).toFloat()
             drawLine(
-                color = Color(0xFFFFD700).copy(alpha = 0.7f),
+                color = SunCore.copy(alpha = 0.7f),
                 start = Offset(sCx + ca * sRi, sCy + sa * sRi),
                 end = Offset(sCx + ca * sRo, sCy + sa * sRo),
                 strokeWidth = 2.5f,
@@ -1687,25 +1715,25 @@ fun CardBackScene(modifier: Modifier = Modifier) {
             }
 
         // Island
-        drawOval(Color(0xFFC8942A), topLeft = Offset(w * 0.285f, h * 0.815f), size = Size(w * 0.43f, h * 0.105f))
-        drawOval(Color(0xFFE4B44A).copy(alpha = 0.45f), topLeft = Offset(w * 0.32f, h * 0.805f), size = Size(w * 0.21f, h * 0.065f))
+        drawOval(SandBeach, topLeft = Offset(w * 0.285f, h * 0.815f), size = Size(w * 0.43f, h * 0.105f))
+        drawOval(SandBeachLight.copy(alpha = 0.45f), topLeft = Offset(w * 0.32f, h * 0.805f), size = Size(w * 0.21f, h * 0.065f))
 
         // Palm trunk
         val trunk = Path()
         trunk.moveTo(w * 0.50f, h * 0.835f)
         trunk.quadraticBezierTo(w * 0.464f, h * 0.67f, w * 0.478f, h * 0.545f)
         trunk.quadraticBezierTo(w * 0.495f, h * 0.465f, w * 0.548f, h * 0.385f)
-        drawPath(trunk, color = Color(0xFF7A5C2E), style = Stroke(width = 4f, cap = StrokeCap.Round))
+        drawPath(trunk, color = TrunkBrown, style = Stroke(width = 4f, cap = StrokeCap.Round))
 
         val ptx = w * 0.548f; val pty = h * 0.385f
 
         // Palm fronds — filled leaf shapes (wide in middle, tapers to tip)
         listOf(
-            Triple(Offset(w * 0.09f, h * 0.585f), 6.5f, Color(0xFF2A7828)),   // left droop
-            Triple(Offset(w * 0.92f, h * 0.585f), 6.5f, Color(0xFF2A7828)),   // right droop
-            Triple(Offset(w * 0.17f, h * 0.185f), 5.5f, Color(0xFF36963A)),   // upper-left
-            Triple(Offset(w * 0.84f, h * 0.185f), 5.5f, Color(0xFF36963A)),   // upper-right
-            Triple(Offset(w * 0.52f, h * 0.095f), 5.0f, Color(0xFF2A7828)),   // top
+            Triple(Offset(w * 0.09f, h * 0.585f), 6.5f, PalmDark),   // left droop
+            Triple(Offset(w * 0.92f, h * 0.585f), 6.5f, PalmDark),   // right droop
+            Triple(Offset(w * 0.17f, h * 0.185f), 5.5f, PalmMid),   // upper-left
+            Triple(Offset(w * 0.84f, h * 0.185f), 5.5f, PalmMid),   // upper-right
+            Triple(Offset(w * 0.52f, h * 0.095f), 5.0f, PalmDark),   // top
         ).forEach { (end, hw, color) ->
             val dx = end.x - ptx; val dy = end.y - pty
             val len = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
@@ -1719,7 +1747,7 @@ fun CardBackScene(modifier: Modifier = Modifier) {
             frond.close()
             drawPath(frond, color = color)
             // Central vein (slightly darker)
-            drawLine(Color(0xFF1A5020).copy(alpha = 0.35f), Offset(ptx, pty), end, strokeWidth = 1.2f)
+            drawLine(PalmDeep.copy(alpha = 0.35f), Offset(ptx, pty), end, strokeWidth = 1.2f)
         }
     }
 }
@@ -1735,8 +1763,8 @@ fun BrandungPlayingCard(
     cardHeight: Dp = 80.dp,
 ) {
     val isRed = suit in RED_SUITS
-    val cardColor = if (isRed) Danger else Color(0xFF1A1A2E)
-    val borderColor = if (selected) BrandungTeal else Color(0xFFDDE0E4)
+    val cardColor = if (isRed) Danger else CardColorDark
+    val borderColor = if (selected) Teal else CardBorderLight
 
     Box(
         modifier = modifier
@@ -1747,7 +1775,7 @@ fun BrandungPlayingCard(
                 color = borderColor,
                 shape = RoundedCornerShape(8.dp),
             )
-            .background(if (faceUp) Color(0xFFFFFBF0) else Color(0xFF0D1F3C)),
+            .background(if (faceUp) CardFace else CardBack),
     ) {
         if (faceUp) {
             Column(
@@ -1755,14 +1783,14 @@ fun BrandungPlayingCard(
             ) {
                 Text(
                     text = rank,
-                    fontSize = 11.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = cardColor,
                     lineHeight = 12.sp,
                 )
                 Text(
                     text = suit,
-                    fontSize = 10.sp,
+                    fontSize = ChipLabelTiny,
                     color = cardColor,
                     lineHeight = 11.sp,
                 )
@@ -1772,7 +1800,7 @@ fun BrandungPlayingCard(
                 ) {
                     Text(
                         text = suit,
-                        fontSize = 22.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         color = cardColor,
                     )
                 }
@@ -1789,7 +1817,7 @@ private fun HiddenCard(cardWidth: Dp = 28.dp, cardHeight: Dp = 40.dp) {
         modifier = Modifier
             .size(width = cardWidth, height = cardHeight)
             .clip(RoundedCornerShape(4.dp))
-            .border(1.dp, BrandungTeal, RoundedCornerShape(4.dp)),
+            .border(1.dp, Teal, RoundedCornerShape(4.dp)),
     ) {
         CardBackScene(modifier = Modifier.fillMaxSize())
     }

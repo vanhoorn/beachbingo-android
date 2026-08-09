@@ -14,7 +14,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -27,7 +26,7 @@ import com.bestfriends.beachbingo.feature.raetsel.AiMode
 import com.bestfriends.beachbingo.feature.raetsel.KRIEG_FLEET
 import com.bestfriends.beachbingo.feature.raetsel.KRIEG_GRID_SIZES
 import com.bestfriends.beachbingo.feature.raetsel.KuestenkriegSession
-import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
 import com.bestfriends.beachbingo.feature.raetsel.deserializeBattleState
 import com.bestfriends.beachbingo.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
@@ -35,8 +34,6 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-
-private val KkAccent = Color(0xFFFB7185)
 
 private fun fleetLabel(fleet: List<Int>): String {
     val counts = fleet.groupBy { it }
@@ -76,8 +73,8 @@ fun KuestenkriegLobbyScreen(
     var mode by remember { mutableStateOf(KkMode.PUZZLE) }
     var selectedDiff by remember { mutableStateOf("mittel") }
     var selectedAi by remember { mutableStateOf("kapitaen") }
-    var puzzleSaves by remember { mutableStateOf(PuzzleSaveManager.getSaves(context).filter { it.gameType == "kuestenkrieg" }) }
-    var kiSaves by remember { mutableStateOf(PuzzleSaveManager.getSaves(context).filter { it.gameType == "kuestenkrieg_ki" }) }
+    var puzzleSaves by remember { mutableStateOf(SoloGameSaveManager.getSaves(context).filter { it.gameType == "kuestenkrieg" }) }
+    var kiSaves by remember { mutableStateOf(SoloGameSaveManager.getSaves(context).filter { it.gameType == "kuestenkrieg_ki" }) }
     val difficulties = listOf("leicht", "mittel", "schwer", "experte")
     val diffLabels = mapOf("leicht" to "Leicht", "mittel" to "Mittel", "schwer" to "Schwer", "experte" to "Experte")
     var showStats by remember { mutableStateOf(false) }
@@ -204,28 +201,28 @@ fun KuestenkriegLobbyScreen(
                     modifier = Modifier.size(40.dp).border(1.dp, BorderColor, RoundedCornerShape(12.dp)).clickable { onNavigateBack() }
                 ) { Box(contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück", tint = TextSub, modifier = Modifier.size(20.dp)) } }
                 Spacer(Modifier.width(14.dp))
-                Text("⚓", fontSize = 32.sp)
+                Text("⚓", fontSize = EmojiMedium)
                 Spacer(Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("RÄTSEL", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
-                    Text("Küstenkrieg", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Text("RÄTSEL", fontSize = ChipLabelTiny, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
+                    Text("Küstenkrieg", fontSize = BingoCallSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
                 }
                 Spacer(Modifier.width(8.dp))
                 Surface(
-                    shape = RoundedCornerShape(10.dp), color = KkAccent.copy(alpha = 0.12f),
-                    modifier = Modifier.size(36.dp).border(1.dp, KkAccent.copy(alpha = 0.35f), RoundedCornerShape(10.dp)).clickable { showStats = true }
-                ) { Box(contentAlignment = Alignment.Center) { Text("🏆", fontSize = 16.sp) } }
+                    shape = RoundedCornerShape(10.dp), color = RoseRed.copy(alpha = 0.12f),
+                    modifier = Modifier.size(36.dp).border(1.dp, RoseRed.copy(alpha = 0.35f), RoundedCornerShape(10.dp)).clickable { showStats = true }
+                ) { Box(contentAlignment = Alignment.Center) { Text("🏆", fontSize = MaterialTheme.typography.titleSmall.fontSize) } }
                 Spacer(Modifier.width(8.dp))
                 Surface(
                     shape = RoundedCornerShape(10.dp),
                     color = if (isFavorite) SandGold.copy(alpha = 0.12f) else Surface2Dark,
                     modifier = Modifier.size(36.dp).border(1.dp, if (isFavorite) SandGold.copy(alpha = 0.5f) else BorderColor, RoundedCornerShape(10.dp)).clickable { toggleFavorite() }
-                ) { Box(contentAlignment = Alignment.Center) { Text(if (isFavorite) "★" else "☆", fontSize = 16.sp, color = if (isFavorite) SandGold else TextSub) } }
+                ) { Box(contentAlignment = Alignment.Center) { Text(if (isFavorite) "★" else "☆", fontSize = MaterialTheme.typography.titleSmall.fontSize, color = if (isFavorite) SandGold else TextSub) } }
                 Spacer(Modifier.width(8.dp))
                 Surface(
                     shape = RoundedCornerShape(10.dp), color = Surface2Dark,
                     modifier = Modifier.size(36.dp).border(1.dp, BorderColor, RoundedCornerShape(10.dp)).clickable { showRules = true }
-                ) { Box(contentAlignment = Alignment.Center) { Text("?", fontSize = 16.sp, color = TextSub, fontWeight = FontWeight.Bold) } }
+                ) { Box(contentAlignment = Alignment.Center) { Text("?", fontSize = MaterialTheme.typography.titleSmall.fontSize, color = TextSub, fontWeight = FontWeight.Bold) } }
             }
         }
 
@@ -233,7 +230,7 @@ fun KuestenkriegLobbyScreen(
 
             // Mode selection
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("SPIELMODUS", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                Text("SPIELMODUS", fontSize = ChipLabel, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
                 listOf(
                     Triple(KkMode.PUZZLE, "🧩", "Solo Rätsel" to "Zahlen am Rand verraten die Schiffe"),
                     Triple(KkMode.KI,     "🤖", "Gegen KI"    to "Klassisches Schiffe versenken"),
@@ -242,19 +239,19 @@ fun KuestenkriegLobbyScreen(
                     val sel = mode == m
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = if (sel) KkAccent.copy(alpha = 0.08f) else SurfaceDark,
+                        color = if (sel) RoseRed.copy(alpha = 0.08f) else SurfaceDark,
                         modifier = Modifier.fillMaxWidth()
-                            .border(1.5.dp, if (sel) KkAccent else BorderColor, RoundedCornerShape(12.dp))
+                            .border(1.5.dp, if (sel) RoseRed else BorderColor, RoundedCornerShape(12.dp))
                             .clickable { mode = m; onlineError = "" }
                     ) {
                         Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(emoji, fontSize = 22.sp)
+                            Text(emoji, fontSize = MaterialTheme.typography.titleLarge.fontSize)
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(texts.first, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (sel) KkAccent else TextPrimary)
-                                Text(texts.second, fontSize = 12.sp, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
+                                Text(texts.first, fontSize = CellNumber, fontWeight = FontWeight.Bold, color = if (sel) RoseRed else TextPrimary)
+                                Text(texts.second, fontSize = ChipLabel, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
                             }
-                            if (sel) Text("✓", fontSize = 18.sp, color = KkAccent)
+                            if (sel) Text("✓", fontSize = MaterialTheme.typography.titleMedium.fontSize, color = RoseRed)
                         }
                     }
                 }
@@ -264,50 +261,50 @@ fun KuestenkriegLobbyScreen(
             if (mode == KkMode.PUZZLE) {
                 Surface(shape = RoundedCornerShape(12.dp), color = SurfaceDark, modifier = Modifier.fillMaxWidth().border(1.dp, BorderColor, RoundedCornerShape(12.dp))) {
                     Text("Schlachtschiff-Rätsel: Zahlen am Rand zeigen Schiffsfelder pro Zeile/Spalte. Schiffe berühren sich nie diagonal. Tippen = Schiff, Lang drücken = Wasser.",
-                        fontSize = 13.sp, color = TextMuted, lineHeight = 20.sp, modifier = Modifier.padding(14.dp))
+                        fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted, lineHeight = 20.sp, modifier = Modifier.padding(14.dp))
                 }
-                Text("SCHWIERIGKEIT", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                Text("SCHWIERIGKEIT", fontSize = ChipLabel, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
                 difficulties.forEach { d ->
                     val sel = selectedDiff == d
-                    Surface(shape = RoundedCornerShape(12.dp), color = if (sel) KkAccent.copy(alpha = 0.1f) else SurfaceDark,
-                        modifier = Modifier.fillMaxWidth().border(1.5.dp, if (sel) KkAccent else BorderColor, RoundedCornerShape(12.dp)).clickable { selectedDiff = d }
+                    Surface(shape = RoundedCornerShape(12.dp), color = if (sel) RoseRed.copy(alpha = 0.1f) else SurfaceDark,
+                        modifier = Modifier.fillMaxWidth().border(1.5.dp, if (sel) RoseRed else BorderColor, RoundedCornerShape(12.dp)).clickable { selectedDiff = d }
                     ) {
                         Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(diffLabels[d] ?: d, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (sel) KkAccent else TextPrimary)
+                                Text(diffLabels[d] ?: d, fontSize = CellNumber, fontWeight = FontWeight.Bold, color = if (sel) RoseRed else TextPrimary)
                                 val size = KRIEG_GRID_SIZES[d] ?: 10
                                 val fleet = KRIEG_FLEET[d] ?: emptyList()
-                                Text("${size}×${size} · ${fleetLabel(fleet)}", fontSize = 11.sp, color = TextMuted, modifier = Modifier.padding(top = 3.dp))
+                                Text("${size}×${size} · ${fleetLabel(fleet)}", fontSize = MaterialTheme.typography.labelSmall.fontSize, color = TextMuted, modifier = Modifier.padding(top = 3.dp))
                             }
-                            if (sel) Text("✓", fontSize = 18.sp, color = KkAccent)
+                            if (sel) Text("✓", fontSize = MaterialTheme.typography.titleMedium.fontSize, color = RoseRed)
                         }
                     }
                 }
                 Button(onClick = { onNavigateToGame(selectedDiff, System.currentTimeMillis(), null) },
                     modifier = Modifier.fillMaxWidth().height(54.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = KkAccent),
+                    colors = ButtonDefaults.buttonColors(containerColor = RoseRed),
                     shape = RoundedCornerShape(14.dp)
-                ) { Text("Neues Rätsel", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = BgDark) }
+                ) { Text("Neues Rätsel", fontSize = MaterialTheme.typography.titleSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = BgDark) }
 
                 // Saved puzzle games
                 if (puzzleSaves.isNotEmpty()) {
-                    Text("GESPEICHERTE RÄTSEL", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                    Text("GESPEICHERTE RÄTSEL", fontSize = ChipLabel, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
                     puzzleSaves.forEach { save ->
                         Surface(shape = RoundedCornerShape(12.dp), color = SurfaceDark, modifier = Modifier.fillMaxWidth().border(1.dp, BorderColor, RoundedCornerShape(12.dp))) {
                             Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text("${diffLabels[save.difficulty] ?: save.difficulty} · ${KRIEG_GRID_SIZES[save.difficulty] ?: 10}×${KRIEG_GRID_SIZES[save.difficulty] ?: 10}",
-                                        fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                    Text(PuzzleSaveManager.formatElapsed(save.elapsedSeconds) + " gespielt", fontSize = 12.sp, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
+                                        fontSize = CellNumber, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                    Text(SoloGameSaveManager.formatElapsed(save.elapsedSeconds) + " gespielt", fontSize = ChipLabel, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
                                 }
-                                Surface(shape = RoundedCornerShape(8.dp), color = KkAccent.copy(alpha = 0.1f),
-                                    modifier = Modifier.border(1.dp, KkAccent.copy(alpha = 0.4f), RoundedCornerShape(8.dp)).clickable { onNavigateToGame(save.difficulty, save.seed, save.id) }
-                                ) { Text("Fortsetzen", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = KkAccent, modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)) }
+                                Surface(shape = RoundedCornerShape(8.dp), color = RoseRed.copy(alpha = 0.1f),
+                                    modifier = Modifier.border(1.dp, RoseRed.copy(alpha = 0.4f), RoundedCornerShape(8.dp)).clickable { onNavigateToGame(save.difficulty, save.seed, save.id) }
+                                ) { Text("Fortsetzen", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold, color = RoseRed, modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)) }
                                 Spacer(Modifier.width(8.dp))
                                 Surface(shape = RoundedCornerShape(8.dp), color = Danger.copy(alpha = 0.1f),
                                     modifier = Modifier.border(1.dp, Danger.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                                        .clickable { PuzzleSaveManager.deleteSave(context, save.id); puzzleSaves = puzzleSaves.filter { it.id != save.id } }
-                                ) { Text("✕", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Danger, modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)) }
+                                        .clickable { SoloGameSaveManager.deleteSave(context, save.id); puzzleSaves = puzzleSaves.filter { it.id != save.id } }
+                                ) { Text("✕", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold, color = Danger, modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)) }
                             }
                         }
                     }
@@ -317,24 +314,24 @@ fun KuestenkriegLobbyScreen(
             // Online options
             if (mode == KkMode.ONLINE) {
                 if (onlineError.isNotBlank()) {
-                    Surface(shape = RoundedCornerShape(10.dp), color = Color(0x22EF4444),
-                        modifier = Modifier.fillMaxWidth().border(1.dp, Color(0x55EF4444), RoundedCornerShape(10.dp))
-                    ) { Text(onlineError, fontSize = 13.sp, color = Color(0xFFEF4444), modifier = Modifier.padding(12.dp)) }
+                    Surface(shape = RoundedCornerShape(10.dp), color = DangerGlow,
+                        modifier = Modifier.fillMaxWidth().border(1.dp, DangerRing, RoundedCornerShape(10.dp))
+                    ) { Text(onlineError, fontSize = MaterialTheme.typography.labelMedium.fontSize, color = Danger, modifier = Modifier.padding(12.dp)) }
                 }
                 Button(
                     onClick = ::createOnlineGame,
                     enabled = !creating && !joining,
                     modifier = Modifier.fillMaxWidth().height(54.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = KkAccent, disabledContainerColor = KkAccent.copy(alpha = 0.3f)),
+                    colors = ButtonDefaults.buttonColors(containerColor = RoseRed, disabledContainerColor = RoseRed.copy(alpha = 0.3f)),
                     shape = RoundedCornerShape(14.dp),
                 ) {
                     if (creating) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = BgDark, strokeWidth = 2.dp)
-                    else Text("Neues Spiel erstellen", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = BgDark)
+                    else Text("Neues Spiel erstellen", fontSize = MaterialTheme.typography.titleSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = BgDark)
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     HorizontalDivider(modifier = Modifier.weight(1f), color = BorderColor)
-                    Text("ODER CODE EINGEBEN", fontSize = 10.sp, color = TextMuted, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Text("ODER CODE EINGEBEN", fontSize = ChipLabelTiny, color = TextMuted, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     HorizontalDivider(modifier = Modifier.weight(1f), color = BorderColor)
                 }
 
@@ -347,12 +344,12 @@ fun KuestenkriegLobbyScreen(
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = KkAccent,
+                        focusedBorderColor = RoseRed,
                         unfocusedBorderColor = BorderColor,
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
-                        cursorColor = KkAccent,
-                        focusedLabelColor = KkAccent,
+                        cursorColor = RoseRed,
+                        focusedLabelColor = RoseRed,
                         unfocusedLabelColor = TextMuted,
                     ),
                 )
@@ -363,48 +360,48 @@ fun KuestenkriegLobbyScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = Surface2Dark, disabledContainerColor = Surface2Dark.copy(alpha = 0.5f)),
                     shape = RoundedCornerShape(14.dp),
                 ) {
-                    if (joining) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = KkAccent, strokeWidth = 2.dp)
-                    else Text("Beitreten", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = KkAccent)
+                    if (joining) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = RoseRed, strokeWidth = 2.dp)
+                    else Text("Beitreten", fontSize = MaterialTheme.typography.labelLarge.fontSize, fontWeight = FontWeight.ExtraBold, color = RoseRed)
                 }
             }
 
             // KI options
             if (mode == KkMode.KI) {
-                Text("KI-SCHWIERIGKEIT", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                Text("KI-SCHWIERIGKEIT", fontSize = ChipLabel, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
                 AI_OPTIONS.forEach { opt ->
                     val sel = selectedAi == opt.id
-                    Surface(shape = RoundedCornerShape(12.dp), color = if (sel) KkAccent.copy(alpha = 0.08f) else SurfaceDark,
-                        modifier = Modifier.fillMaxWidth().border(1.5.dp, if (sel) KkAccent else BorderColor, RoundedCornerShape(12.dp)).clickable { selectedAi = opt.id }
+                    Surface(shape = RoundedCornerShape(12.dp), color = if (sel) RoseRed.copy(alpha = 0.08f) else SurfaceDark,
+                        modifier = Modifier.fillMaxWidth().border(1.5.dp, if (sel) RoseRed else BorderColor, RoundedCornerShape(12.dp)).clickable { selectedAi = opt.id }
                     ) {
                         Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(opt.emoji, fontSize = 22.sp)
+                            Text(opt.emoji, fontSize = MaterialTheme.typography.titleLarge.fontSize)
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(opt.label, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (sel) KkAccent else TextPrimary)
-                                Text(opt.desc, fontSize = 12.sp, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
+                                Text(opt.label, fontSize = CellNumber, fontWeight = FontWeight.Bold, color = if (sel) RoseRed else TextPrimary)
+                                Text(opt.desc, fontSize = ChipLabel, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
                             }
-                            if (sel) Text("✓", fontSize = 18.sp, color = KkAccent)
+                            if (sel) Text("✓", fontSize = MaterialTheme.typography.titleMedium.fontSize, color = RoseRed)
                         }
                     }
                 }
                 Button(onClick = { onNavigateToPlacement(selectedAi) },
                     modifier = Modifier.fillMaxWidth().height(54.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = KkAccent),
+                    colors = ButtonDefaults.buttonColors(containerColor = RoseRed),
                     shape = RoundedCornerShape(14.dp)
-                ) { Text("Schiffe setzen →", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = BgDark) }
+                ) { Text("Schiffe setzen →", fontSize = MaterialTheme.typography.titleSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = BgDark) }
 
                 if (kiSaves.isNotEmpty()) {
-                    Text("LAUFENDE KI-GEFECHTE", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                    Text("LAUFENDE KI-GEFECHTE", fontSize = ChipLabel, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
                     kiSaves.forEach { save ->
                         val aiLabel = when (save.variant) { "matrose" -> "Matrose"; "admiral" -> "Admiral"; else -> "Kapitän" }
                         Surface(shape = RoundedCornerShape(12.dp), color = SurfaceDark, modifier = Modifier.fillMaxWidth().border(1.dp, BorderColor, RoundedCornerShape(12.dp))) {
                             Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("KI: $aiLabel", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                    Text("Gefecht läuft", fontSize = 12.sp, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
+                                    Text("KI: $aiLabel", fontSize = CellNumber, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                    Text("Gefecht läuft", fontSize = ChipLabel, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
                                 }
-                                Surface(shape = RoundedCornerShape(8.dp), color = KkAccent.copy(alpha = 0.1f),
-                                    modifier = Modifier.border(1.dp, KkAccent.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                Surface(shape = RoundedCornerShape(8.dp), color = RoseRed.copy(alpha = 0.1f),
+                                    modifier = Modifier.border(1.dp, RoseRed.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                                         .clickable {
                                             val bs = deserializeBattleState(save.puzzleState ?: "")
                                             if (bs != null) {
@@ -414,12 +411,12 @@ fun KuestenkriegLobbyScreen(
                                                 onNavigateToBattle()
                                             }
                                         }
-                                ) { Text("Fortsetzen", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = KkAccent, modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)) }
+                                ) { Text("Fortsetzen", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold, color = RoseRed, modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)) }
                                 Spacer(Modifier.width(8.dp))
                                 Surface(shape = RoundedCornerShape(8.dp), color = Danger.copy(alpha = 0.1f),
                                     modifier = Modifier.border(1.dp, Danger.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                                        .clickable { PuzzleSaveManager.deleteSave(context, save.id); kiSaves = kiSaves.filter { it.id != save.id } }
-                                ) { Text("✕", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Danger, modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)) }
+                                        .clickable { SoloGameSaveManager.deleteSave(context, save.id); kiSaves = kiSaves.filter { it.id != save.id } }
+                                ) { Text("✕", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold, color = Danger, modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)) }
                             }
                         }
                     }
@@ -434,19 +431,19 @@ fun KuestenkriegLobbyScreen(
         Dialog(onDismissRequest = { showStats = false }) {
             Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
                 Column(modifier = Modifier.padding(24.dp)) {
-                    Text("🏆 Bestzeiten", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
+                    Text("🏆 Bestzeiten", fontSize = MaterialTheme.typography.titleMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
                         textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp))
                     listOf("leicht" to "mittel", "schwer" to "experte").forEach { (d1, d2) ->
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             listOf(d1, d2).forEach { d ->
-                                val best = PuzzleSaveManager.getBestTimeAny(context, "kuestenkrieg", d)
+                                val best = SoloGameSaveManager.getBestTimeAny(context, "kuestenkrieg", d)
                                 Surface(shape = RoundedCornerShape(12.dp), color = BgDark, modifier = Modifier.weight(1f)) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(14.dp)) {
-                                        Text(diffLabels[d] ?: d, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                                        Text(diffLabels[d] ?: d, fontSize = MaterialTheme.typography.labelSmall.fontSize, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
                                         Spacer(Modifier.height(6.dp))
-                                        Text(if (best != null) PuzzleSaveManager.formatElapsed(best) else "—",
-                                            fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = if (best != null) KkAccent else TextMuted)
-                                        Text("Bestzeit", fontSize = 10.sp, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
+                                        Text(if (best != null) SoloGameSaveManager.formatElapsed(best) else "—",
+                                            fontSize = MaterialTheme.typography.titleMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = if (best != null) RoseRed else TextMuted)
+                                        Text("Bestzeit", fontSize = ChipLabelTiny, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
                                     }
                                 }
                             }
@@ -454,7 +451,7 @@ fun KuestenkriegLobbyScreen(
                         Spacer(Modifier.height(10.dp))
                     }
                     Button(onClick = { showStats = false }, modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = KkAccent),
+                        colors = ButtonDefaults.buttonColors(containerColor = RoseRed),
                         shape = RoundedCornerShape(10.dp)
                     ) { Text("Schliessen", fontWeight = FontWeight.Bold, color = BgDark) }
                 }

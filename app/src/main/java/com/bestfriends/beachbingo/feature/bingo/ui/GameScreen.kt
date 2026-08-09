@@ -107,7 +107,29 @@ import com.bestfriends.beachbingo.feature.bingo.viewmodel.BingoViewModel
 import com.bestfriends.beachbingo.feature.bingo.viewmodel.TabletUiState
 import com.bestfriends.beachbingo.ui.components.GameHudBar
 import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
+import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
+import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
+import com.bestfriends.beachbingo.ui.theme.BgDark
+import com.bestfriends.beachbingo.ui.theme.BingoCallSize
+import com.bestfriends.beachbingo.ui.theme.ChipLabel
+import com.bestfriends.beachbingo.ui.theme.ChipLabelTiny
+import com.bestfriends.beachbingo.ui.theme.ConfettiBlue
+import com.bestfriends.beachbingo.ui.theme.ConfettiDarkOrange
+import com.bestfriends.beachbingo.ui.theme.ConfettiGreen
+import com.bestfriends.beachbingo.ui.theme.ConfettiOrange
+import com.bestfriends.beachbingo.ui.theme.ConfettiPink
+import com.bestfriends.beachbingo.ui.theme.ConfettiRed
+import com.bestfriends.beachbingo.ui.theme.ConfettiTeal
+import com.bestfriends.beachbingo.ui.theme.ConfettiYellow
+import com.bestfriends.beachbingo.ui.theme.DangerBright
+import com.bestfriends.beachbingo.ui.theme.DrawNumberPhone
+import com.bestfriends.beachbingo.ui.theme.DrawNumberTablet
+import com.bestfriends.beachbingo.ui.theme.EmojiCelebrate
+import com.bestfriends.beachbingo.ui.theme.EmojiMedium
 import com.bestfriends.beachbingo.ui.theme.OceanBlue
+import com.bestfriends.beachbingo.ui.theme.OverlayDark
+import com.bestfriends.beachbingo.ui.theme.SandGoldDark
+import com.bestfriends.beachbingo.ui.theme.StatusTiny
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
 import kotlinx.coroutines.delay
@@ -122,11 +144,14 @@ import kotlin.random.Random
 @Composable
 fun GameScreen(
     gameId: String,
+    soundEnabled: Boolean = true,
+    musicEnabled: Boolean = true,
     onNavigateBack: () -> Unit,
     viewModel: BingoViewModel = hiltViewModel()
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
+    var showRules by remember { mutableStateOf(false) }
 
     val bingoAuth = com.google.firebase.auth.FirebaseAuth.getInstance()
     val bingoFirestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
@@ -149,13 +174,8 @@ fun GameScreen(
     var musicStarted by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        if (bingoUid != null) {
-            try {
-                val doc = bingoFirestore.collection("users").document(bingoUid).get().await()
-                audio.soundEnabled = doc.getBoolean("soundEnabled") ?: true
-                audio.musicEnabled = doc.getBoolean("musicEnabled") ?: true
-            } catch (_: Exception) {}
-        }
+        audio.soundEnabled = soundEnabled
+        audio.musicEnabled = musicEnabled
         audio.startMusic()
         musicStarted = true
     }
@@ -211,6 +231,10 @@ fun GameScreen(
         )
     }
 
+    if (showRules) {
+        ALL_GAME_RULES["bingo"]?.let { GameRulesBottomSheet(rule = it, onDismiss = { showRules = false }) }
+    }
+
     if (showQuitDialog) {
         QuitConfirmDialog(
             emoji = "🎱",
@@ -252,12 +276,13 @@ fun GameScreen(
                         paused = false,
                         onPauseToggle = {},
                         onQuit = { showQuitDialog = true },
+                        onShowRules = { showRules = true },
                     ) {
                         val playerCount = game.players.size
                         val drawnCount = game.drawnNumbers.size
                         androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("$playerCount Spieler · $drawnCount Zahlen", fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = TextPrimary)
-                            Text("BeachBingo", fontSize = 9.sp, color = TextMuted)
+                            Text("$playerCount Spieler · $drawnCount Zahlen", fontSize = ChipLabel, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = TextPrimary)
+                            Text("BeachBingo", fontSize = StatusTiny, color = TextMuted)
                         }
                     }
                 }
@@ -352,9 +377,9 @@ private fun FireworksOverlay(
 ) {
     val fireworkColors = remember {
         listOf(
-            Color(0xFFFF6B6B), Color(0xFF4ECDC4), Color(0xFFFFE66D),
-            Color(0xFF96CEB4), Color(0xFFFF9FF3), Color(0xFF54A0FF),
-            Color(0xFFFF9F43), Color(0xFFEE5A24)
+            ConfettiRed, ConfettiTeal, ConfettiYellow,
+            ConfettiGreen, ConfettiPink, ConfettiBlue,
+            ConfettiOrange, ConfettiDarkOrange
         )
     }
 
@@ -438,19 +463,19 @@ private fun FireworksOverlay(
                 text = "BINGO! 🎉",
                 fontSize = (32f * scale).sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFFFFE66D)
+                color = ConfettiYellow
             )
             Spacer(Modifier.height(8.dp))
             Text(
                 text = winnerName,
-                fontSize = 22.sp,
+                fontSize = MaterialTheme.typography.titleLarge.fontSize,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 textAlign = TextAlign.Center
             )
             Text(
                 text = "hat gewonnen! 🏖️",
-                fontSize = 16.sp,
+                fontSize = MaterialTheme.typography.titleSmall.fontSize,
                 color = Color.White.copy(alpha = 0.8f)
             )
             Spacer(Modifier.height(32.dp))
@@ -459,7 +484,7 @@ private fun FireworksOverlay(
                 enter = fadeIn() + scaleIn()
             ) {
                 Button(onClick = onDismiss) {
-                    Text("Super! 🎉", fontSize = 16.sp)
+                    Text("Super! 🎉", fontSize = MaterialTheme.typography.titleSmall.fontSize)
                 }
             }
         }
@@ -485,7 +510,7 @@ private fun EliminationOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xCC1A0A0A)),
+            .background(OverlayDark),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -496,25 +521,25 @@ private fun EliminationOverlay(
             Text(text = "😈", fontSize = (80f * scale).sp)
             Text(
                 text = "${playerAvatar.ifEmpty { "🏄" }} $playerName",
-                fontSize = 22.sp,
+                fontSize = MaterialTheme.typography.titleLarge.fontSize,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFFF4444),
+                color = DangerBright,
                 textAlign = TextAlign.Center
             )
             Text(
                 text = "wirft die",
-                fontSize = 16.sp,
+                fontSize = MaterialTheme.typography.titleSmall.fontSize,
                 color = Color.White.copy(alpha = 0.8f)
             )
             Text(
                 text = "$eliminatedNumber",
                 fontSize = (56f * scale).sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFFFFE66D)
+                color = ConfettiYellow
             )
             Text(
                 text = "zurück in die Lostrommel! 🎒",
-                fontSize = 16.sp,
+                fontSize = MaterialTheme.typography.titleSmall.fontSize,
                 color = Color.White.copy(alpha = 0.8f),
                 textAlign = TextAlign.Center
             )
@@ -535,7 +560,7 @@ private fun EliminationDialog(
         onDismissRequest = {},
         title = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("😈", fontSize = 24.sp)
+                Text("😈", fontSize = MaterialTheme.typography.headlineSmall.fontSize)
                 Text("Du bist dran!", fontWeight = FontWeight.Bold)
             }
         },
@@ -566,7 +591,7 @@ private fun EliminationDialog(
                         ) {
                             Text(
                                 text = n.toString(),
-                                fontSize = 12.sp,
+                                fontSize = ChipLabel,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isSelected) Color.White
                                         else MaterialTheme.colorScheme.onSecondaryContainer
@@ -713,7 +738,7 @@ private fun DrumAnimation(modifier: Modifier = Modifier) {
                             0.00f to Color.White,
                             0.20f to secondary.copy(alpha = 0.9f),
                             0.55f to secondary,
-                            1.00f to Color(0xFFD97706)
+                            1.00f to SandGoldDark
                         ),
                         center = Offset(40f, 34f),
                         radius = 120f
@@ -723,9 +748,9 @@ private fun DrumAnimation(modifier: Modifier = Modifier) {
         ) {
             Text(
                 text = displayNumber.toString(),
-                fontSize = 36.sp,
+                fontSize = MaterialTheme.typography.headlineLarge.fontSize,
                 fontWeight = FontWeight.Black,
-                color = Color(0xFF0A1628),
+                color = BgDark,
                 modifier = Modifier.alpha(numberAlpha)
             )
         }
@@ -799,7 +824,7 @@ private fun LobbyStateContent(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text(player2User.avatarUrl.ifEmpty { "🏄" }, fontSize = 36.sp)
+                            Text(player2User.avatarUrl.ifEmpty { "🏄" }, fontSize = MaterialTheme.typography.headlineLarge.fontSize)
                             Column {
                                 Text(player2User.displayName, style = MaterialTheme.typography.titleSmall)
                                 Text("Bereit ✓", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
@@ -1018,7 +1043,7 @@ private fun RunningStateContent(
                             ) { number ->
                                 Text(
                                     text = number?.toString() ?: "–",
-                                    fontSize = 64.sp,
+                                    fontSize = DrawNumberPhone,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
@@ -1039,8 +1064,8 @@ private fun RunningStateContent(
                                 )
                             } else {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("Ziehen", fontSize = 15.sp)
-                                    Text("${game.drawnNumbers.size}/75", fontSize = 12.sp)
+                                    Text("Ziehen", fontSize = MaterialTheme.typography.labelLarge.fontSize)
+                                    Text("${game.drawnNumbers.size}/75", fontSize = ChipLabel)
                                 }
                             }
                         }
@@ -1073,7 +1098,7 @@ private fun RunningStateContent(
                         ) {
                             Text(
                                 text = n.toString(),
-                                fontSize = 13.sp,
+                                fontSize = MaterialTheme.typography.labelMedium.fontSize,
                                 fontWeight = FontWeight.Bold,
                                 color = if (n == game.currentNumber) MaterialTheme.colorScheme.onPrimary
                                         else MaterialTheme.colorScheme.onSecondaryContainer
@@ -1125,10 +1150,10 @@ private fun RunningStateContent(
                                     color = MaterialTheme.colorScheme.onTertiary
                                 )
                                 Spacer(Modifier.width(8.dp))
-                                Text("Prüfe...", fontSize = 18.sp)
+                                Text("Prüfe...", fontSize = MaterialTheme.typography.titleMedium.fontSize)
                             }
                         } else {
-                            Text("BINGO! 🎉", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            Text("BINGO! 🎉", fontSize = BingoCallSize, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -1182,7 +1207,7 @@ private fun TabletRunningContent(
                         ) { number ->
                             Text(
                                 text = number?.toString() ?: "–",
-                                fontSize = 48.sp,
+                                fontSize = DrawNumberTablet,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -1199,8 +1224,8 @@ private fun TabletRunningContent(
                                 color = MaterialTheme.colorScheme.onPrimary)
                         } else {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("Ziehen", fontSize = 13.sp)
-                                Text("${game.drawnNumbers.size}/75", fontSize = 11.sp)
+                                Text("Ziehen", fontSize = MaterialTheme.typography.labelMedium.fontSize)
+                                Text("${game.drawnNumbers.size}/75", fontSize = MaterialTheme.typography.labelSmall.fontSize)
                             }
                         }
                     }
@@ -1223,7 +1248,7 @@ private fun TabletRunningContent(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = n.toString(), fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                            text = n.toString(), fontSize = ChipLabelTiny, fontWeight = FontWeight.Bold,
                             color = if (n == game.currentNumber) MaterialTheme.colorScheme.onPrimary
                                     else MaterialTheme.colorScheme.onSecondaryContainer
                         )
@@ -1314,7 +1339,7 @@ private fun PlayerCardSection(
                             Spacer(Modifier.width(8.dp))
                             Text("Prüfe...")
                         } else {
-                            Text("BINGO! 🎉", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text("BINGO! 🎉", fontSize = MaterialTheme.typography.titleMedium.fontSize, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -1345,7 +1370,7 @@ private fun FinishedStateContent(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(24.dp).then(if (isTablet) Modifier.width(400.dp) else Modifier.fillMaxWidth())
         ) {
-            Text("🎉", fontSize = 72.sp)
+            Text("🎉", fontSize = EmojiCelebrate)
             Text("Spiel beendet!", style = MaterialTheme.typography.headlineMedium)
             if (winner != null) {
                 Text(
@@ -1375,7 +1400,7 @@ private fun PlayerRow(player: BingoPlayer) {
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(player.avatarUrl.ifEmpty { "🏄" }, fontSize = 30.sp)
+        Text(player.avatarUrl.ifEmpty { "🏄" }, fontSize = EmojiMedium)
         Spacer(Modifier.width(14.dp))
         Text(player.displayName, style = MaterialTheme.typography.titleSmall)
         if (player.hasBingo) {

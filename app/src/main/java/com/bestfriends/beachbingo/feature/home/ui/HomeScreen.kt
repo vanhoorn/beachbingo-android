@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -68,7 +69,7 @@ import com.bestfriends.beachbingo.feature.raetsel.GameSave
 import com.bestfriends.beachbingo.feature.raetsel.PUZZLE_DIFFICULTY_LABELS
 import com.bestfriends.beachbingo.feature.raetsel.PUZZLE_GAME_INFO
 import com.bestfriends.beachbingo.feature.raetsel.PuzzleSave
-import com.bestfriends.beachbingo.feature.raetsel.PuzzleSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
 import com.bestfriends.beachbingo.feature.auth.viewmodel.AuthViewModel
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.BorderColor
@@ -78,6 +79,18 @@ import com.bestfriends.beachbingo.ui.theme.SurfaceDark
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
 import com.bestfriends.beachbingo.ui.theme.TextSub
+import com.bestfriends.beachbingo.ui.theme.BingoCallSize
+import com.bestfriends.beachbingo.ui.theme.CellNumber
+import com.bestfriends.beachbingo.ui.theme.ChipLabel
+import com.bestfriends.beachbingo.ui.theme.ChipLabelTiny
+import com.bestfriends.beachbingo.ui.theme.Coral
+import com.bestfriends.beachbingo.ui.theme.Danger
+import com.bestfriends.beachbingo.ui.theme.DrawNumberPhone
+import com.bestfriends.beachbingo.ui.theme.PurpleDeep
+import com.bestfriends.beachbingo.ui.theme.SandGold
+import com.bestfriends.beachbingo.ui.theme.ScoreLarge
+import com.bestfriends.beachbingo.ui.theme.SkyBlue
+import com.bestfriends.beachbingo.ui.theme.TitleHero
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
@@ -157,8 +170,8 @@ fun HomeScreen(
     val uid = auth.currentUser?.uid
 
     LaunchedEffect(Unit) {
-        savedPuzzles = PuzzleSaveManager.getSaves(context)
-        savedGames = PuzzleSaveManager.getGameSaves(context)
+        savedPuzzles = SoloGameSaveManager.getSaves(context)
+        savedGames = SoloGameSaveManager.getGameSaves(context)
         val tourSeen = context.getSharedPreferences("beachbande_prefs", 0).getBoolean("tour_seen", false)
         if (!tourSeen) showTour = true
     }
@@ -228,7 +241,7 @@ fun HomeScreen(
                     modifier = Modifier.size(60.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text(text = currentUser?.avatarUrl ?: "🏖️", fontSize = 32.sp)
+                        Text(text = currentUser?.avatarUrl ?: "🏖️", fontSize = ScoreLarge)
                     }
                 }
 
@@ -237,12 +250,12 @@ fun HomeScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "WILLKOMMEN ZURÜCK",
-                        fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                        fontSize = ChipLabelTiny, fontWeight = FontWeight.Bold,
                         color = TextMuted, letterSpacing = 1.5.sp,
                     )
                     Text(
                         text = currentUser?.displayName ?: "…",
-                        fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
+                        style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
                     )
                 }
 
@@ -254,7 +267,7 @@ fun HomeScreen(
                         .clickable { showTour = true; tourSlide = 0 }
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text("?", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextMuted)
+                        Text("?", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = TextMuted)
                     }
                 }
 
@@ -267,7 +280,7 @@ fun HomeScreen(
                         .border(1.dp, BorderColor, RoundedCornerShape(14.dp))
                         .clickable { onNavigateToJoin() }
                 ) {
-                    Box(contentAlignment = Alignment.Center) { Text("🔗", fontSize = 22.sp) }
+                    Box(contentAlignment = Alignment.Center) { Text("🔗", style = MaterialTheme.typography.titleLarge) }
                 }
 
                 Spacer(Modifier.width(8.dp))
@@ -366,7 +379,7 @@ fun HomeScreen(
             modifier = Modifier
                 .padding(horizontal = 20.dp)
                 .fillMaxWidth()
-                .border(1.5.dp, Color(0xFF38BDF8).copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                .border(1.5.dp, SkyBlue.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
                 .clickable { onNavigateToRaetsel() }
         ) {
             Row(
@@ -374,18 +387,18 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(text = "🧩", fontSize = 28.sp)
+                Text(text = "🧩", style = MaterialTheme.typography.headlineMedium)
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Rätsel",
-                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
+                        style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = TextPrimary,
                     )
                     Text(
                         text = "${RIDDLE_GAMES.size} Rätsel · Strandoku, WellenSumme & mehr",
-                        fontSize = 12.sp, color = TextMuted,
+                        fontSize = ChipLabel, color = TextMuted,
                     )
                 }
-                Text(text = "›", fontSize = 22.sp, color = Color(0xFF38BDF8))
+                Text(text = "›", style = MaterialTheme.typography.titleLarge, color = SkyBlue)
             }
         }
 
@@ -397,7 +410,7 @@ fun HomeScreen(
             modifier = Modifier
                 .padding(horizontal = 20.dp)
                 .fillMaxWidth()
-                .border(1.5.dp, Color(0xFF7C3AED).copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                .border(1.5.dp, PurpleDeep.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
                 .clickable { onNavigateToCardGames() }
         ) {
             Row(
@@ -405,18 +418,18 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(text = "🃏", fontSize = 28.sp)
+                Text(text = "🃏", style = MaterialTheme.typography.headlineMedium)
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Karten",
-                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
+                        style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = TextPrimary,
                     )
                     Text(
                         text = "${CARD_GAMES.size} Spiele · MeerMau, Brandung & mehr",
-                        fontSize = 12.sp, color = TextMuted,
+                        fontSize = ChipLabel, color = TextMuted,
                     )
                 }
-                Text(text = "›", fontSize = 22.sp, color = Color(0xFF7C3AED))
+                Text(text = "›", style = MaterialTheme.typography.titleLarge, color = PurpleDeep)
             }
         }
 
@@ -428,7 +441,7 @@ fun HomeScreen(
             modifier = Modifier
                 .padding(horizontal = 20.dp)
                 .fillMaxWidth()
-                .border(1.5.dp, Color(0xFFF97316).copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                .border(1.5.dp, Coral.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
                 .clickable { onNavigateToActionGames() }
         ) {
             Row(
@@ -436,18 +449,18 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(text = "⚡", fontSize = 28.sp)
+                Text(text = "⚡", style = MaterialTheme.typography.headlineMedium)
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Action",
-                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
+                        style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = TextPrimary,
                     )
                     Text(
                         text = "${ACTION_GAMES.size} Spiele · BeachPirates, BeachVolley & mehr",
-                        fontSize = 12.sp, color = TextMuted,
+                        fontSize = ChipLabel, color = TextMuted,
                     )
                 }
-                Text(text = "›", fontSize = 22.sp, color = Color(0xFFF97316))
+                Text(text = "›", style = MaterialTheme.typography.titleLarge, color = Coral)
             }
         }
 
@@ -459,7 +472,7 @@ fun HomeScreen(
             modifier = Modifier
                 .padding(horizontal = 20.dp)
                 .fillMaxWidth()
-                .border(1.5.dp, Color(0xFFF59E0B).copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                .border(1.5.dp, SandGold.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
                 .clickable { onNavigateToCouchGames() }
         ) {
             Row(
@@ -467,18 +480,18 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(text = "🛋️", fontSize = 28.sp)
+                Text(text = "🛋️", style = MaterialTheme.typography.headlineMedium)
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Couch",
-                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
+                        style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = TextPrimary,
                     )
                     Text(
                         text = "${COUCH_GAMES.size} Spiele · BeachBingo, Vier4Bier & mehr",
-                        fontSize = 12.sp, color = TextMuted,
+                        fontSize = ChipLabel, color = TextMuted,
                     )
                 }
-                Text(text = "›", fontSize = 22.sp, color = Color(0xFFF59E0B))
+                Text(text = "›", style = MaterialTheme.typography.titleLarge, color = SandGold)
             }
         }
 
@@ -498,18 +511,18 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(text = "🎮", fontSize = 28.sp)
+                Text(text = "🎮", style = MaterialTheme.typography.headlineMedium)
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Alle Spiele",
-                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
+                        style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = TextPrimary,
                     )
                     Text(
                         text = "${ALL_GAMES.size} Spiele · alphabetisch sortiert",
-                        fontSize = 12.sp, color = TextMuted,
+                        fontSize = ChipLabel, color = TextMuted,
                     )
                 }
-                Text(text = "›", fontSize = 22.sp, color = OceanBlue)
+                Text(text = "›", style = MaterialTheme.typography.titleLarge, color = OceanBlue)
             }
         }
 
@@ -562,7 +575,7 @@ fun HomeScreen(
                         save = save,
                         onClick = navigateTo,
                         onDelete = {
-                            PuzzleSaveManager.deleteGameSave(context, save.gameType)
+                            SoloGameSaveManager.deleteGameSave(context, save.gameType)
                             savedGames = savedGames.filter { it.gameType != save.gameType }
                         },
                     )
@@ -574,7 +587,7 @@ fun HomeScreen(
                             save = save, info = info,
                             onClick = { onNavigateToRaetselGame(save) },
                             onDelete = {
-                                PuzzleSaveManager.deleteSave(context, save.id)
+                                SoloGameSaveManager.deleteSave(context, save.id)
                                 savedPuzzles = savedPuzzles.filter { it.id != save.id }
                             },
                         )
@@ -609,10 +622,10 @@ private fun SectionHeader(title: String, emoji: String, modifier: Modifier = Mod
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(text = emoji, fontSize = 16.sp)
+        Text(text = emoji, style = MaterialTheme.typography.titleSmall)
         Text(
             text = title,
-            fontSize = 12.sp, fontWeight = FontWeight.Bold,
+            fontSize = ChipLabel, fontWeight = FontWeight.Bold,
             color = TextMuted, letterSpacing = 1.sp,
         )
     }
@@ -641,12 +654,12 @@ private fun MiniGameCard(game: GameMetadata, onClick: () -> Unit) {
                     modifier = Modifier.size(28.dp)
                 )
             } else {
-                Text(text = game.emoji, fontSize = 28.sp)
+                Text(text = game.emoji, style = MaterialTheme.typography.headlineMedium)
             }
             Spacer(Modifier.height(6.dp))
             Text(
                 text = game.title,
-                fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
                 color = TextPrimary, lineHeight = 14.sp,
             )
         }
@@ -662,8 +675,6 @@ private fun ActiveGameBanner(
     modifier: Modifier = Modifier,
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
-    val accentColor = Color(0xFF0EA5E9)
-    val deleteColor = Color(0xFFEF4444)
 
     if (showDeleteDialog) {
         AlertDialog(
@@ -672,7 +683,7 @@ private fun ActiveGameBanner(
             text = { Text("\"${game.gameName}\" wird für alle Spieler beendet.") },
             confirmButton = {
                 TextButton(onClick = { showDeleteDialog = false; onDelete() }) {
-                    Text("Löschen", color = deleteColor)
+                    Text("Löschen", color = Danger)
                 }
             },
             dismissButton = {
@@ -686,25 +697,25 @@ private fun ActiveGameBanner(
         color = Surface2Dark,
         modifier = modifier
             .fillMaxWidth()
-            .border(1.5.dp, accentColor.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+            .border(1.5.dp, OceanBlue.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(game.emoji, fontSize = 22.sp)
+                Text(game.emoji, style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         "AKTIVES SPIEL",
-                        fontSize = 10.sp, fontWeight = FontWeight.Bold,
-                        color = accentColor, letterSpacing = 1.sp,
+                        fontSize = ChipLabelTiny, fontWeight = FontWeight.Bold,
+                        color = OceanBlue, letterSpacing = 1.sp,
                     )
                     Text(
                         game.gameName,
-                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
+                        style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = TextPrimary,
                     )
                     Text(
                         "Code: ${game.gameId}",
-                        fontSize = 12.sp, color = TextMuted,
+                        fontSize = ChipLabel, color = TextMuted,
                     )
                 }
             }
@@ -713,21 +724,21 @@ private fun ActiveGameBanner(
                 OutlinedButton(
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f).height(40.dp),
-                ) { Text("Ignorieren", color = TextMuted, fontSize = 13.sp) }
+                ) { Text("Ignorieren", color = TextMuted, style = MaterialTheme.typography.labelMedium) }
                 OutlinedButton(
                     onClick = { showDeleteDialog = true },
                     modifier = Modifier.weight(1f).height(40.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = deleteColor),
-                    border = BorderStroke(1.dp, deleteColor),
-                ) { Text("🗑 Löschen", color = deleteColor, fontSize = 13.sp) }
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Danger),
+                    border = BorderStroke(1.dp, Danger),
+                ) { Text("🗑 Löschen", color = Danger, style = MaterialTheme.typography.labelMedium) }
             }
             Spacer(Modifier.height(8.dp))
             Button(
                 onClick = onResume,
                 modifier = Modifier.fillMaxWidth().height(40.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = accentColor),
+                colors = ButtonDefaults.buttonColors(containerColor = OceanBlue),
                 shape = RoundedCornerShape(10.dp),
-            ) { Text("Weiterspielen →", color = Color.White, fontSize = 13.sp) }
+            ) { Text("Weiterspielen →", color = Color.White, style = MaterialTheme.typography.labelMedium) }
         }
     }
 }
@@ -750,17 +761,17 @@ private fun CategoryTile(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = entry.emoji, fontSize = 26.sp)
+            Text(text = entry.emoji, fontSize = TitleHero)
             Spacer(Modifier.height(6.dp))
             Text(
                 text = entry.label,
-                fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                fontSize = ChipLabel, fontWeight = FontWeight.Bold,
                 color = TextPrimary, lineHeight = 15.sp,
             )
             Spacer(Modifier.height(3.dp))
             Text(
                 text = "$gameCount ${if (gameCount == 1) "Spiel" else "Spiele"}",
-                fontSize = 10.sp, color = TextMuted,
+                fontSize = ChipLabelTiny, color = TextMuted,
             )
         }
     }
@@ -775,7 +786,7 @@ private fun SavedPuzzleCard(
 ) {
     val accentColor = Color(info.third)
     val diffLabel = PUZZLE_DIFFICULTY_LABELS[save.difficulty] ?: save.difficulty
-    val elapsed = PuzzleSaveManager.formatElapsed(save.elapsedSeconds)
+    val elapsed = SoloGameSaveManager.formatElapsed(save.elapsedSeconds)
 
     Box(modifier = Modifier.width(140.dp)) {
         Surface(
@@ -787,23 +798,23 @@ private fun SavedPuzzleCard(
                 .clickable { onClick() }
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
-                Text(text = info.second, fontSize = 26.sp)
+                Text(text = info.second, fontSize = TitleHero)
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = info.first,
-                    fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                    fontSize = ChipLabel, fontWeight = FontWeight.Bold,
                     color = TextPrimary, lineHeight = 15.sp,
                     modifier = Modifier.padding(end = 22.dp),
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
                     text = "$diffLabel · ${save.variant}",
-                    fontSize = 10.sp, fontWeight = FontWeight.Bold, color = accentColor,
+                    fontSize = ChipLabelTiny, fontWeight = FontWeight.Bold, color = accentColor,
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = "⏱ $elapsed",
-                    fontSize = 10.sp, color = TextMuted,
+                    fontSize = ChipLabelTiny, color = TextMuted,
                 )
             }
         }
@@ -813,11 +824,11 @@ private fun SavedPuzzleCard(
                 .padding(6.dp)
                 .size(22.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFEF4444).copy(alpha = 0.15f))
+                .background(Danger.copy(alpha = 0.15f))
                 .clickable { onDelete() },
             contentAlignment = Alignment.Center,
         ) {
-            Text("✕", fontSize = 10.sp, color = Color(0xFFEF4444))
+            Text("✕", fontSize = ChipLabelTiny, color = Danger)
         }
     }
 }
@@ -849,19 +860,19 @@ private fun SavedGameHomeCard(
                         modifier = Modifier.size(26.dp),
                     )
                 } else {
-                    Text(text = gameInfo.emoji, fontSize = 26.sp)
+                    Text(text = gameInfo.emoji, fontSize = TitleHero)
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = gameInfo.title,
-                    fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                    fontSize = ChipLabel, fontWeight = FontWeight.Bold,
                     color = TextPrimary, lineHeight = 15.sp,
                     modifier = Modifier.padding(end = 22.dp),
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = save.displayLabel,
-                    fontSize = 10.sp, color = TextMuted,
+                    fontSize = ChipLabelTiny, color = TextMuted,
                 )
             }
         }
@@ -871,11 +882,11 @@ private fun SavedGameHomeCard(
                 .padding(6.dp)
                 .size(22.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFEF4444).copy(alpha = 0.15f))
+                .background(Danger.copy(alpha = 0.15f))
                 .clickable { onDelete() },
             contentAlignment = Alignment.Center,
         ) {
-            Text("✕", fontSize = 10.sp, color = Color(0xFFEF4444))
+            Text("✕", fontSize = ChipLabelTiny, color = Danger)
         }
     }
 }
@@ -907,7 +918,7 @@ private fun HelpTourDialog(
                     .clickable { onClose() },
                 contentAlignment = Alignment.Center,
             ) {
-                Text("✕", fontSize = 16.sp, color = Color.White.copy(alpha = 0.6f))
+                Text("✕", style = MaterialTheme.typography.titleSmall, color = Color.White.copy(alpha = 0.6f))
             }
 
             Column(
@@ -931,17 +942,17 @@ private fun HelpTourDialog(
                         modifier = Modifier.padding(horizontal = 28.dp, vertical = 36.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Text(current.emoji, fontSize = 64.sp, lineHeight = 72.sp)
+                        Text(current.emoji, fontSize = DrawNumberPhone, lineHeight = 72.sp)
                         Spacer(Modifier.height(20.dp))
                         Text(
                             current.title,
-                            fontSize = 20.sp, fontWeight = FontWeight.ExtraBold,
+                            fontSize = BingoCallSize, fontWeight = FontWeight.ExtraBold,
                             color = TextPrimary, textAlign = TextAlign.Center, lineHeight = 26.sp,
                         )
                         Spacer(Modifier.height(14.dp))
                         Text(
                             current.description,
-                            fontSize = 14.sp, color = TextMuted,
+                            fontSize = CellNumber, color = TextMuted,
                             textAlign = TextAlign.Center, lineHeight = 22.sp,
                         )
                     }
@@ -977,7 +988,7 @@ private fun HelpTourDialog(
                             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f)),
                             shape = RoundedCornerShape(12.dp),
                         ) {
-                            Text("← Zurück", color = Color.White.copy(alpha = 0.7f), fontSize = 15.sp)
+                            Text("← Zurück", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelLarge)
                         }
                     } else {
                         Spacer(Modifier.weight(1f))
@@ -990,7 +1001,7 @@ private fun HelpTourDialog(
                     ) {
                         Text(
                             if (slide == TOUR_SLIDES.size - 1) "Los geht's! 🏖️" else "Weiter →",
-                            color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold,
+                            color = Color.White, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold,
                         )
                     }
                 }
