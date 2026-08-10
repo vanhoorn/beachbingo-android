@@ -21,8 +21,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.core.model.BingoCard
+import com.bestfriends.beachbingo.ui.theme.BingoCallSize
+import com.bestfriends.beachbingo.ui.theme.CellNumber
+import com.bestfriends.beachbingo.ui.theme.FreeCellBrown
+import com.bestfriends.beachbingo.ui.theme.FreeCellYellow
 
 private val COLUMN_LABELS = listOf("B", "I", "N", "G", "O")
 
@@ -61,7 +64,7 @@ fun BingoCardView(
                         text = label,
                         color = MaterialTheme.colorScheme.onPrimary,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
+                        fontSize = MaterialTheme.typography.titleSmall.fontSize,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -105,12 +108,12 @@ private fun BingoCell(
     modifier: Modifier = Modifier
 ) {
     val backgroundColor = when {
-        isFree -> Color(0xFFFFD600)
+        isFree -> FreeCellYellow
         isMarked -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.surface
     }
     val textColor = when {
-        isFree -> Color(0xFF5D4037)
+        isFree -> FreeCellBrown
         isMarked -> MaterialTheme.colorScheme.onPrimary
         else -> MaterialTheme.colorScheme.onSurface
     }
@@ -134,7 +137,7 @@ private fun BingoCell(
         Text(
             text = if (isFree) "★" else number.toString(),
             color = textColor,
-            fontSize = if (isFree) 20.sp else 14.sp,
+            fontSize = if (isFree) BingoCallSize else CellNumber,
             fontWeight = if (isMarked) FontWeight.Bold else FontWeight.Normal,
             textAlign = TextAlign.Center
         )

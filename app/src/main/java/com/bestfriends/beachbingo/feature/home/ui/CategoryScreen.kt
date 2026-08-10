@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,8 +48,12 @@ import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.core.model.ALL_GAMES
 import com.bestfriends.beachbingo.core.model.PlayerCount
 import com.bestfriends.beachbingo.ui.theme.BgDark
+import com.bestfriends.beachbingo.ui.theme.BingoCallSize
 import com.bestfriends.beachbingo.ui.theme.BorderColor
+import com.bestfriends.beachbingo.ui.theme.CellNumber
+import com.bestfriends.beachbingo.ui.theme.ChipLabelTiny
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
+import com.bestfriends.beachbingo.ui.theme.ScoreLarge
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
@@ -150,21 +155,21 @@ fun CategoryScreen(
 
                 Spacer(Modifier.width(14.dp))
 
-                Text(text = info.first, fontSize = 32.sp)
+                Text(text = info.first, fontSize = ScoreLarge)
 
                 Spacer(Modifier.width(14.dp))
 
                 Column {
                     Text(
                         text = "SPIELERANZAHL",
-                        fontSize = 10.sp,
+                        fontSize = ChipLabelTiny,
                         fontWeight = FontWeight.Bold,
                         color = TextMuted,
                         letterSpacing = 1.5.sp,
                     )
                     Text(
                         text = info.second,
-                        fontSize = 20.sp,
+                        fontSize = BingoCallSize,
                         fontWeight = FontWeight.ExtraBold,
                         color = TextPrimary,
                     )
@@ -181,7 +186,7 @@ fun CategoryScreen(
                 Text(
                     text = "Keine Spiele in dieser Kategorie.",
                     color = TextMuted,
-                    fontSize = 14.sp,
+                    fontSize = CellNumber,
                     modifier = Modifier.padding(top = 40.dp).fillMaxWidth(),
                 )
             } else {
@@ -238,7 +243,7 @@ fun CategoryScreen(
                                             modifier = Modifier.size(44.dp)
                                         )
                                     } else {
-                                        Text(text = game.emoji, fontSize = 32.sp)
+                                        Text(text = game.emoji, fontSize = ScoreLarge)
                                     }
                                 }
                             }
@@ -248,14 +253,14 @@ fun CategoryScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = game.title,
-                                    fontSize = 18.sp,
+                                    fontSize = MaterialTheme.typography.titleMedium.fontSize,
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimary,
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 Text(
                                     text = game.description,
-                                    fontSize = 13.sp,
+                                    fontSize = MaterialTheme.typography.labelMedium.fontSize,
                                     color = TextMuted,
                                     lineHeight = 18.sp,
                                 )

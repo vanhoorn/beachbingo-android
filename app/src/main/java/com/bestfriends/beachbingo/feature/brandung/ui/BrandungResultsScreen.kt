@@ -34,14 +34,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.ui.theme.BgDark
+import com.bestfriends.beachbingo.ui.theme.BingoCallSize
+import com.bestfriends.beachbingo.ui.theme.DrawNumberPhone
 import com.bestfriends.beachbingo.ui.theme.SandGold
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
+import com.bestfriends.beachbingo.ui.theme.Teal
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
 import com.google.firebase.auth.ktx.auth
@@ -51,7 +52,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val BrandungTeal = Color(0xFF0D9488)
 
 private data class BrandungResultEntry(
     val id: String,
@@ -113,7 +113,7 @@ fun BrandungResultsScreen(onNavigateBack: () -> Unit) {
                 title = { Text("Brandung Ergebnisse 🌊", color = TextPrimary, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Zurück", tint = BrandungTeal)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Zurück", tint = Teal)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark),
@@ -126,7 +126,7 @@ fun BrandungResultsScreen(onNavigateBack: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                Text("🌊", fontSize = 64.sp)
+                Text("🌊", fontSize = DrawNumberPhone)
                 Spacer(Modifier.height(16.dp))
                 Text("Noch keine Ergebnisse", style = MaterialTheme.typography.titleMedium, color = TextMuted)
                 Spacer(Modifier.height(6.dp))
@@ -167,7 +167,7 @@ private fun BrandungResultCard(
                 Text(
                     text = if (result.mode == "ai") "🤖 Gegen KI" else "📱 Online",
                     style = MaterialTheme.typography.titleSmall,
-                    color = BrandungTeal,
+                    color = Teal,
                     fontWeight = FontWeight.ExtraBold,
                 )
                 Text(
@@ -193,7 +193,7 @@ private fun BrandungResultCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("🏆", fontSize = 20.sp)
+                Text("🏆", fontSize = BingoCallSize)
                 Text(
                     text = "${result.winnerAvatar} ${result.winnerName}",
                     style = MaterialTheme.typography.bodyMedium,

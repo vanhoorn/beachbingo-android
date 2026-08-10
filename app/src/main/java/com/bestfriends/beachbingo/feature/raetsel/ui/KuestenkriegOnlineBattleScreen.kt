@@ -30,7 +30,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-private val KkBattleAccent = Color(0xFFFB7185)
 
 private enum class OnlineCellView { UNKNOWN, MISS, HIT, SUNK, MYSHIP }
 
@@ -205,15 +204,15 @@ fun KuestenkriegOnlineBattleScreen(
                     modifier = Modifier.size(36.dp).border(1.dp, BorderColor, RoundedCornerShape(10.dp)).clickable { onNavigateBack() },
                 ) { Box(contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück", tint = TextSub, modifier = Modifier.size(18.dp)) } }
                 Spacer(Modifier.width(10.dp))
-                Text("⚓", fontSize = 22.sp)
+                Text("⚓", style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("KÜSTENKRIEG · ONLINE", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
-                    Text(headerText, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("KÜSTENKRIEG · ONLINE", fontSize = StatusTiny, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
+                    Text(headerText, fontSize = CellNumber, fontWeight = FontWeight.Bold, color = TextPrimary)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("Du: $myRemainingCells ❤️", fontSize = 11.sp, color = TextMuted)
-                    Text("$oppName: $oppRemainingCells 💀", fontSize = 11.sp, color = TextMuted)
+                    Text("Du: $myRemainingCells ❤️", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                    Text("$oppName: $oppRemainingCells 💀", style = MaterialTheme.typography.labelSmall, color = TextMuted)
                 }
             }
         }
@@ -225,28 +224,28 @@ fun KuestenkriegOnlineBattleScreen(
             // Message banner
             lastMsg?.let { msg ->
                 Surface(
-                    shape = RoundedCornerShape(10.dp), color = KkBattleAccent.copy(alpha = 0.12f),
-                    modifier = Modifier.fillMaxWidth().border(1.dp, KkBattleAccent.copy(alpha = 0.4f), RoundedCornerShape(10.dp)),
-                ) { Text(msg, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = KkBattleAccent, textAlign = TextAlign.Center, modifier = Modifier.padding(10.dp)) }
+                    shape = RoundedCornerShape(10.dp), color = RoseRed.copy(alpha = 0.12f),
+                    modifier = Modifier.fillMaxWidth().border(1.dp, RoseRed.copy(alpha = 0.4f), RoundedCornerShape(10.dp)),
+                ) { Text(msg, fontSize = CellNumber, fontWeight = FontWeight.Bold, color = RoseRed, textAlign = TextAlign.Center, modifier = Modifier.padding(10.dp)) }
             }
             if (!isMyTurn && !isOver && lastMsg == null) {
                 Surface(
                     shape = RoundedCornerShape(10.dp), color = SurfaceDark,
                     modifier = Modifier.fillMaxWidth().border(1.dp, BorderColor, RoundedCornerShape(10.dp)),
-                ) { Text("$oppName ist am Zug…", fontSize = 13.sp, color = TextMuted, textAlign = TextAlign.Center, modifier = Modifier.padding(10.dp)) }
+                ) { Text("$oppName ist am Zug…", style = MaterialTheme.typography.labelMedium, color = TextMuted, textAlign = TextAlign.Center, modifier = Modifier.padding(10.dp)) }
             }
 
             // Enemy grid — player shoots here
             Text(
                 text = "${oppName}s Gewässer${if (isMyTurn && !isOver) " ← Tippen!" else ""}",
-                fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                color = if (isMyTurn && !isOver) KkBattleAccent else TextMuted,
+                style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
+                color = if (isMyTurn && !isOver) RoseRed else TextMuted,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(), letterSpacing = 1.sp,
             )
             OnlineKriegGrid(grid = enemyGrid, onCell = ::handleShoot, clickable = isMyTurn && !isOver && !shooting, cellDp = cellDp)
 
             // My grid
-            Text("Dein Gewässer", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted,
+            Text("Dein Gewässer", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = TextMuted,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(), letterSpacing = 1.sp)
             OnlineKriegGrid(grid = myGrid, onCell = { _, _ -> }, clickable = false, cellDp = cellDp)
 
@@ -261,22 +260,22 @@ fun KuestenkriegOnlineBattleScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Text(if (iWon) "🏆" else "💀", fontSize = 40.sp)
+                        Text(if (iWon) "🏆" else "💀", fontSize = EmojiLarge)
                         Text(
                             if (iWon) "Du hast gewonnen!" else "$oppName hat gewonnen!",
-                            fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
+                            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
                         )
                         Text(
                             if (iWon) "Alle feindlichen Schiffe versenkt!" else "Deine Flotte wurde vernichtet!",
-                            fontSize = 12.sp, color = TextMuted,
+                            fontSize = ChipLabel, color = TextMuted,
                         )
                         Spacer(Modifier.height(4.dp))
                         Button(
                             onClick = onNavigateBack,
                             modifier = Modifier.fillMaxWidth().height(50.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = KkBattleAccent),
+                            colors = ButtonDefaults.buttonColors(containerColor = RoseRed),
                             shape = RoundedCornerShape(12.dp),
-                        ) { Text("Zurück zur Lobby", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = BgDark) }
+                        ) { Text("Zurück zur Lobby", fontSize = CellNumber, fontWeight = FontWeight.ExtraBold, color = BgDark) }
                     }
                 }
             }
@@ -296,22 +295,22 @@ private fun OnlineKriegGrid(
         Row(modifier = Modifier.padding(start = 22.dp)) {
             repeat(BATTLE_GRID) { c ->
                 Box(modifier = Modifier.size(cellDp), contentAlignment = Alignment.Center) {
-                    Text(('A' + c).toString(), fontSize = 9.sp, color = TextMuted, fontWeight = FontWeight.Bold)
+                    Text(('A' + c).toString(), fontSize = StatusTiny, color = TextMuted, fontWeight = FontWeight.Bold)
                 }
             }
         }
         repeat(BATTLE_GRID) { r ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(modifier = Modifier.width(20.dp), contentAlignment = Alignment.CenterEnd) {
-                    Text("${r + 1}", fontSize = 9.sp, color = TextMuted, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 2.dp))
+                    Text("${r + 1}", fontSize = StatusTiny, color = TextMuted, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 2.dp))
                 }
                 repeat(BATTLE_GRID) { c ->
                     val v = grid[r][c]
                     val bg = when (v) {
-                        OnlineCellView.MISS   -> Color(0xFF1E3050)
-                        OnlineCellView.HIT    -> Color(0x88EF4444)
-                        OnlineCellView.SUNK   -> Color(0xCCEF4444)
-                        OnlineCellView.MYSHIP -> Color(0x88FB7185)
+                        OnlineCellView.MISS   -> BorderColor
+                        OnlineCellView.HIT    -> HitCell
+                        OnlineCellView.SUNK   -> SunkCell
+                        OnlineCellView.MYSHIP -> MyShipCell
                         OnlineCellView.UNKNOWN -> SurfaceDark
                     }
                     val label = when (v) { OnlineCellView.MISS -> "•"; OnlineCellView.HIT -> "●"; OnlineCellView.SUNK -> "✕"; else -> "" }
@@ -324,7 +323,7 @@ private fun OnlineKriegGrid(
                         contentAlignment = Alignment.Center,
                     ) {
                         if (label.isNotEmpty()) {
-                            Text(label, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold,
+                            Text(label, fontSize = ChipLabelTiny, fontWeight = FontWeight.ExtraBold,
                                 color = if (v == OnlineCellView.MISS) TextMuted else Color.White)
                         }
                     }

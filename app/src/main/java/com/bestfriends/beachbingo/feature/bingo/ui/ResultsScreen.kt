@@ -33,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestfriends.beachbingo.core.model.GameResult
@@ -45,6 +44,8 @@ import com.bestfriends.beachbingo.ui.theme.SurfaceDark
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
+import com.bestfriends.beachbingo.ui.theme.DrawNumberPhone
+import com.bestfriends.beachbingo.ui.theme.EmojiMedium
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import java.text.SimpleDateFormat
@@ -157,7 +158,7 @@ fun ResultsScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text("🏖️", fontSize = 64.sp)
+                Text("🏖️", fontSize = DrawNumberPhone)
                 Spacer(Modifier.height(16.dp))
                 Text("Noch keine abgeschlossenen Spiele", style = MaterialTheme.typography.titleMedium, color = TextMuted)
                 Spacer(Modifier.height(6.dp))
@@ -220,10 +221,10 @@ private fun BingoTeamCard(team: BingoTeam, currentUid: String, dateFormat: Simpl
                 ) {
                     Text(
                         text = rankEmoji(rank, isLast, total),
-                        fontSize = 18.sp,
+                        fontSize = MaterialTheme.typography.titleMedium.fontSize,
                         modifier = Modifier.width(30.dp)
                     )
-                    Text(text = p.avatarUrl.ifEmpty { "🏄" }, fontSize = 24.sp)
+                    Text(text = p.avatarUrl.ifEmpty { "🏄" }, fontSize = MaterialTheme.typography.headlineSmall.fontSize)
                     Spacer(Modifier.width(10.dp))
                     Text(
                         text = p.displayName + if (isMe) " 👤" else "",
@@ -253,7 +254,7 @@ private fun BingoTeamCard(team: BingoTeam, currentUid: String, dateFormat: Simpl
                 HorizontalDivider(color = Surface2Dark)
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(lastResult.winnerAvatar.ifEmpty { "🏆" }, fontSize = 18.sp)
+                    Text(lastResult.winnerAvatar.ifEmpty { "🏆" }, fontSize = MaterialTheme.typography.titleMedium.fontSize)
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = "Letztes Spiel: ${lastResult.winnerName} hat gewonnen · ${lastResult.drawnNumbersCount} Zahlen",

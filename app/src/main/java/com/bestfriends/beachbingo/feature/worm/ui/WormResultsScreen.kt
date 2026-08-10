@@ -15,7 +15,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.ui.theme.*
 
-private val WormGreen = Color(0xFF22C55E)
 
 private val DIFF_LABEL = mapOf(
     "ROOKIE"     to "🌊 Rookie",
@@ -43,17 +42,17 @@ fun WormResultsScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Text("🪱", fontSize = 64.sp)
+        Text("🪱", fontSize = DrawNumberPhone)
 
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("SPIEL BEENDET", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
-            Text("Wattwurm", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-            Text(DIFF_LABEL[difficulty] ?: difficulty, fontSize = 14.sp, color = TextMuted)
+            Text("SPIEL BEENDET", fontSize = ChipLabel, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
+            Text("Wattwurm", fontSize = MaterialTheme.typography.headlineMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+            Text(DIFF_LABEL[difficulty] ?: difficulty, fontSize = CellNumber, color = TextMuted)
         }
 
         if (newHighScore) {
             Surface(
-                color = Color(0xFFF59E0B).copy(alpha = 0.15f),
+                color = SandGold.copy(alpha = 0.15f),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -62,8 +61,8 @@ fun WormResultsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Text("🏆", fontSize = 28.sp)
-                    Text("Neuer Rekord!", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = SandGold)
+                    Text("🏆", fontSize = MaterialTheme.typography.headlineMedium.fontSize)
+                    Text("Neuer Rekord!", fontSize = MaterialTheme.typography.titleSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = SandGold)
                 }
             }
         }
@@ -76,8 +75,8 @@ fun WormResultsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Text("$score", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = WormGreen)
-                    Text("Punkte", fontSize = 12.sp, color = TextMuted)
+                    Text("$score", fontSize = MaterialTheme.typography.headlineMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = Success)
+                    Text("Punkte", fontSize = ChipLabel, color = TextMuted)
                 }
             }
             Surface(color = SurfaceDark, shape = RoundedCornerShape(16.dp), modifier = Modifier.weight(1f)) {
@@ -86,8 +85,8 @@ fun WormResultsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Text("$length", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = OceanBlue)
-                    Text("Länge", fontSize = 12.sp, color = TextMuted)
+                    Text("$length", fontSize = MaterialTheme.typography.headlineMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = OceanBlue)
+                    Text("Länge", fontSize = ChipLabel, color = TextMuted)
                 }
             }
         }
@@ -99,9 +98,9 @@ fun WormResultsScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Text("🏆 REKORD ${DIFF_LABEL[difficulty]?.uppercase() ?: ""}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
-                Text(if (highScore > 0) "$highScore" else "—", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold, color = SandGold)
-                if (highScore > 0) Text("Punkte", fontSize = 12.sp, color = TextMuted)
+                Text("🏆 REKORD ${DIFF_LABEL[difficulty]?.uppercase() ?: ""}", fontSize = MaterialTheme.typography.labelSmall.fontSize, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                Text(if (highScore > 0) "$highScore" else "—", fontSize = ScoreLarge, fontWeight = FontWeight.ExtraBold, color = SandGold)
+                if (highScore > 0) Text("Punkte", fontSize = ChipLabel, color = TextMuted)
             }
         }
 
@@ -110,17 +109,17 @@ fun WormResultsScreen(
             Button(
                 onClick = onPlayAgain,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = WormGreen),
+                colors = ButtonDefaults.buttonColors(containerColor = Success),
                 shape = RoundedCornerShape(14.dp),
             ) {
-                Text("🔄 Nochmal spielen", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text("🔄 Nochmal spielen", fontSize = MaterialTheme.typography.labelLarge.fontSize, fontWeight = FontWeight.Bold)
             }
             OutlinedButton(
                 onClick = onNavigateToHome,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(14.dp),
             ) {
-                Text("🏠 Zurück zum Menü", fontSize = 15.sp, color = TextPrimary)
+                Text("🏠 Zurück zum Menü", fontSize = MaterialTheme.typography.labelLarge.fontSize, color = TextPrimary)
             }
         }
     }

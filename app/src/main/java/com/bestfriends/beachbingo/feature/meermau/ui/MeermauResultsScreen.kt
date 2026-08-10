@@ -33,11 +33,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.ui.theme.BgDark
+import com.bestfriends.beachbingo.ui.theme.BingoCallSize
+import com.bestfriends.beachbingo.ui.theme.DrawNumberPhone
+import com.bestfriends.beachbingo.ui.theme.PurpleDeep
 import com.bestfriends.beachbingo.ui.theme.SandGold
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
@@ -50,7 +51,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val MeermauViolet = Color(0xFF7C3AED)
 
 private data class MeermauResultEntry(
     val id: String,
@@ -112,7 +112,7 @@ fun MeermauResultsScreen(onNavigateBack: () -> Unit) {
                 title = { Text("MeerMau Ergebnisse 🂠", color = TextPrimary, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Zurück", tint = MeermauViolet)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Zurück", tint = PurpleDeep)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark),
@@ -125,7 +125,7 @@ fun MeermauResultsScreen(onNavigateBack: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                Text("🂠", fontSize = 64.sp)
+                Text("🂠", fontSize = DrawNumberPhone)
                 Spacer(Modifier.height(16.dp))
                 Text("Noch keine Ergebnisse", style = MaterialTheme.typography.titleMedium, color = TextMuted)
                 Spacer(Modifier.height(6.dp))
@@ -161,7 +161,7 @@ private fun MeermauResultCard(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = if (result.mode == "ai") "🤖 Gegen KI" else "📱 Online",
-                    style = MaterialTheme.typography.titleSmall, color = MeermauViolet, fontWeight = FontWeight.ExtraBold,
+                    style = MaterialTheme.typography.titleSmall, color = PurpleDeep, fontWeight = FontWeight.ExtraBold,
                 )
                 Text(dateFormat.format(Date(result.createdAt)), style = MaterialTheme.typography.labelSmall, color = TextMuted)
             }
@@ -175,7 +175,7 @@ private fun MeermauResultCard(
             HorizontalDivider(color = Surface2Dark)
             Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("🏆", fontSize = 20.sp)
+                Text("🏆", fontSize = BingoCallSize)
                 Text("${result.winnerAvatar} ${result.winnerName}", style = MaterialTheme.typography.bodyMedium, color = SandGold, fontWeight = FontWeight.Bold)
                 if (isMyWin) Text("Du!", style = MaterialTheme.typography.labelSmall, color = SandGold, fontWeight = FontWeight.Bold)
             }

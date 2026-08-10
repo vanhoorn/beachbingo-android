@@ -30,7 +30,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.bestfriends.beachbingo.ui.components.CardBackScene
+import com.bestfriends.beachbingo.ui.components.CardFanRow
 import com.bestfriends.beachbingo.ui.components.GameHudBar
+import com.bestfriends.beachbingo.ui.components.PlayingCard
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -65,10 +68,6 @@ import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.BingoCallSize
 import com.bestfriends.beachbingo.ui.theme.BorderColor
-import com.bestfriends.beachbingo.ui.theme.CardBack
-import com.bestfriends.beachbingo.ui.theme.CardBorderLight
-import com.bestfriends.beachbingo.ui.theme.CardColorDark
-import com.bestfriends.beachbingo.ui.theme.CardFace
 import com.bestfriends.beachbingo.ui.theme.CardFrame
 import com.bestfriends.beachbingo.ui.theme.CardTable
 import com.bestfriends.beachbingo.ui.theme.CellNumber
@@ -76,15 +75,7 @@ import com.bestfriends.beachbingo.ui.theme.ChipLabelTiny
 import com.bestfriends.beachbingo.ui.theme.Danger
 import com.bestfriends.beachbingo.ui.theme.DrawNumberTablet
 import com.bestfriends.beachbingo.ui.theme.OceanBlueDark
-import com.bestfriends.beachbingo.ui.theme.PalmDark
-import com.bestfriends.beachbingo.ui.theme.PalmDeep
-import com.bestfriends.beachbingo.ui.theme.PalmMid
-import com.bestfriends.beachbingo.ui.theme.SandBeach
-import com.bestfriends.beachbingo.ui.theme.SandBeachLight
 import com.bestfriends.beachbingo.ui.theme.SandGold
-import com.bestfriends.beachbingo.ui.theme.SunBright
-import com.bestfriends.beachbingo.ui.theme.SunCore
-import com.bestfriends.beachbingo.ui.theme.SunGlow
 import com.bestfriends.beachbingo.ui.theme.Success
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
@@ -92,11 +83,6 @@ import com.bestfriends.beachbingo.ui.theme.Teal
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
 import com.bestfriends.beachbingo.ui.theme.TextSub
-import com.bestfriends.beachbingo.ui.theme.TrunkBrown
-import com.bestfriends.beachbingo.ui.theme.WaveDark
-import com.bestfriends.beachbingo.ui.theme.WaveDeep
-import com.bestfriends.beachbingo.ui.theme.WaveLight
-import com.bestfriends.beachbingo.ui.theme.WaveMid
 import com.bestfriends.beachbingo.feature.raetsel.GameSave
 import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
@@ -173,8 +159,6 @@ data class OnlineBrandungState(
 
 private val SUITS = listOf("♣", "♠", "♥", "♦")
 private val RANKS = listOf("7", "8", "9", "10", "J", "Q", "K", "A")
-private val RED_SUITS = setOf("♥", "♦")
-
 private fun cardValue(rank: String): Int = when (rank) {
     "A" -> 11
     "10", "J", "Q", "K" -> 10
@@ -1305,7 +1289,7 @@ fun BrandungGameScreen(
                     ) {
                         currentState.tableCards.forEachIndexed { idx, card ->
                             val isSelected = selectedTableIdx == idx
-                            BrandungPlayingCard(
+                            PlayingCard(
                                 rank = card.rank,
                                 suit = card.suit,
                                 faceUp = true,
@@ -1366,29 +1350,23 @@ fun BrandungGameScreen(
                                 },
                             )
                         }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                        ) {
-                            humanPlayer.hand.forEachIndexed { idx, card ->
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            CardFanRow(cards = humanPlayer.hand) { card, idx ->
                                 val isSelected = selectedHandIdx == idx
-                                BrandungPlayingCard(
+                                PlayingCard(
                                     rank = card.rank,
                                     suit = card.suit,
                                     faceUp = true,
                                     selected = isSelected,
                                     cardWidth = scaledCardW,
                                     cardHeight = scaledCardH,
-                                    modifier = Modifier
-                                        .padding(horizontal = 4.dp)
-                                        .clickable {
-                                            if (isMyTurn && currentState.phase == "TURN") {
-                                                if (!isSelected) audio.playSound("card_select")
-                                                selectedHandIdx = if (isSelected) null else idx
-                                            }
-                                        },
+                                    modifier = Modifier.clickable {
+                                        if (isMyTurn && currentState.phase == "TURN") {
+                                            if (!isSelected) audio.playSound("card_select")
+                                            selectedHandIdx = if (isSelected) null else idx
+                                        }
+                                    },
                                 )
-                                if (idx < humanPlayer.hand.size - 1) Spacer(Modifier.width(4.dp))
                             }
                         }
                         Text(
@@ -1657,159 +1635,7 @@ fun BrandungGameScreen(
     }
 }
 
-// ── Card Composable ────────────────────────────────────────────────────────────
-
-@Composable
-fun CardBackScene(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-
-        // Daytime sky gradient
-        drawRect(
-            brush = Brush.verticalGradient(
-                listOf(WaveDark, WaveLight),
-                startY = 0f, endY = h * 0.56f,
-            ),
-            size = Size(w, h * 0.56f),
-        )
-        // Ocean
-        drawRect(
-            brush = Brush.verticalGradient(
-                listOf(WaveMid, WaveDeep),
-                startY = h * 0.56f, endY = h,
-            ),
-            topLeft = Offset(0f, h * 0.56f),
-            size = Size(w, h * 0.44f),
-        )
-
-        // Sun (upper-right)
-        val sCx = w * 0.78f; val sCy = h * 0.115f
-        drawCircle(SunGlow.copy(alpha = 0.28f), radius = w * 0.165f, center = Offset(sCx, sCy))
-        drawCircle(SunCore, radius = w * 0.10f, center = Offset(sCx, sCy))
-        drawCircle(SunBright, radius = w * 0.060f, center = Offset(sCx - w * 0.012f, sCy - h * 0.008f))
-        val sRi = w * 0.13f; val sRo = w * 0.195f
-        for (i in 0 until 8) {
-            val angle = i * Math.PI / 4.0
-            val ca = cos(angle).toFloat(); val sa = sin(angle).toFloat()
-            drawLine(
-                color = SunCore.copy(alpha = 0.7f),
-                start = Offset(sCx + ca * sRi, sCy + sa * sRi),
-                end = Offset(sCx + ca * sRo, sCy + sa * sRo),
-                strokeWidth = 2.5f,
-            )
-        }
-
-        // Wave lines
-        listOf(Triple(0.68f, 1.2f, 0.35f), Triple(0.79f, 1.0f, 0.25f), Triple(0.90f, 0.9f, 0.18f))
-            .forEach { (yf, lw, alpha) ->
-                val y = h * yf
-                val p = Path(); p.moveTo(0f, y); var x = 0f
-                while (x < w) {
-                    val dx = w * 0.26f
-                    p.quadraticBezierTo(x + dx * 0.25f, y - h * 0.022f, x + dx * 0.5f, y)
-                    p.quadraticBezierTo(x + dx * 0.75f, y + h * 0.022f, x + dx, y)
-                    x += dx
-                }
-                drawPath(p, color = Color.White.copy(alpha = alpha), style = Stroke(width = lw))
-            }
-
-        // Island
-        drawOval(SandBeach, topLeft = Offset(w * 0.285f, h * 0.815f), size = Size(w * 0.43f, h * 0.105f))
-        drawOval(SandBeachLight.copy(alpha = 0.45f), topLeft = Offset(w * 0.32f, h * 0.805f), size = Size(w * 0.21f, h * 0.065f))
-
-        // Palm trunk
-        val trunk = Path()
-        trunk.moveTo(w * 0.50f, h * 0.835f)
-        trunk.quadraticBezierTo(w * 0.464f, h * 0.67f, w * 0.478f, h * 0.545f)
-        trunk.quadraticBezierTo(w * 0.495f, h * 0.465f, w * 0.548f, h * 0.385f)
-        drawPath(trunk, color = TrunkBrown, style = Stroke(width = 4f, cap = StrokeCap.Round))
-
-        val ptx = w * 0.548f; val pty = h * 0.385f
-
-        // Palm fronds — filled leaf shapes (wide in middle, tapers to tip)
-        listOf(
-            Triple(Offset(w * 0.09f, h * 0.585f), 6.5f, PalmDark),   // left droop
-            Triple(Offset(w * 0.92f, h * 0.585f), 6.5f, PalmDark),   // right droop
-            Triple(Offset(w * 0.17f, h * 0.185f), 5.5f, PalmMid),   // upper-left
-            Triple(Offset(w * 0.84f, h * 0.185f), 5.5f, PalmMid),   // upper-right
-            Triple(Offset(w * 0.52f, h * 0.095f), 5.0f, PalmDark),   // top
-        ).forEach { (end, hw, color) ->
-            val dx = end.x - ptx; val dy = end.y - pty
-            val len = sqrt((dx * dx + dy * dy).toDouble()).toFloat()
-            val px = -dy / len; val py = dx / len
-            val wx = ptx + dx * 0.42f; val wy = pty + dy * 0.42f
-
-            val frond = Path()
-            frond.moveTo(ptx + px * 1.5f, pty + py * 1.5f)
-            frond.quadraticBezierTo(wx + px * hw, wy + py * hw, end.x, end.y)
-            frond.quadraticBezierTo(wx - px * hw, wy - py * hw, ptx - px * 1.5f, pty - py * 1.5f)
-            frond.close()
-            drawPath(frond, color = color)
-            // Central vein (slightly darker)
-            drawLine(PalmDeep.copy(alpha = 0.35f), Offset(ptx, pty), end, strokeWidth = 1.2f)
-        }
-    }
-}
-
-@Composable
-fun BrandungPlayingCard(
-    rank: String,
-    suit: String,
-    faceUp: Boolean,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    cardWidth: Dp = 56.dp,
-    cardHeight: Dp = 80.dp,
-) {
-    val isRed = suit in RED_SUITS
-    val cardColor = if (isRed) Danger else CardColorDark
-    val borderColor = if (selected) Teal else CardBorderLight
-
-    Box(
-        modifier = modifier
-            .size(width = cardWidth, height = cardHeight)
-            .clip(RoundedCornerShape(8.dp))
-            .border(
-                width = if (selected) 2.5.dp else 1.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(8.dp),
-            )
-            .background(if (faceUp) CardFace else CardBack),
-    ) {
-        if (faceUp) {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(4.dp),
-            ) {
-                Text(
-                    text = rank,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = cardColor,
-                    lineHeight = 12.sp,
-                )
-                Text(
-                    text = suit,
-                    fontSize = ChipLabelTiny,
-                    color = cardColor,
-                    lineHeight = 11.sp,
-                )
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = suit,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = cardColor,
-                    )
-                }
-            }
-        } else {
-            CardBackScene(modifier = Modifier.fillMaxSize())
-        }
-    }
-}
+// ── Card Composables → ui/components/PlayingCardComponents.kt ─────────────────
 
 @Composable
 private fun HiddenCard(cardWidth: Dp = 28.dp, cardHeight: Dp = 40.dp) {

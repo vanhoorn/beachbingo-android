@@ -24,8 +24,8 @@ android {
         applicationId = "com.bestfriends.beachbingo"
         minSdk = 26
         targetSdk = 35
-        versionCode = 15
-        versionName = "0.15.0"
+        versionCode = 17
+        versionName = "0.17.0"
     }
 
     signingConfigs {
@@ -93,3 +93,40 @@ dependencies {
 kapt {
     correctErrorTypes = true
 }
+
+// ── Theme lint ──────────────────────────────────────────────────────────────
+// Fails the build if any .kt file outside ui/theme/ contains:
+//   - Color(0x...)        → use a named constant from ui/theme/Color.kt
+//   - fontSize = N.sp     → use MaterialTheme.typography.* or a constant from ui/theme/TextDimens.kt
+tasks.register("checkHardcodedTheme") {
+    group = "verification"
+    description = "Fails if Color(0x...) or fontSize=N.sp appear outside ui/theme/"
+    doLast {
+        val srcDir = file("src/main/java")
+        val themeDir = file("src/main/java/com/bestfriends/beachbingo/ui/theme")
+        val colorPattern = Regex("""Color\(0x""")
+        val fontSizePattern = Regex("""fontSize\s*=\s*\d+\.sp""")
+        val violations = mutableListOf<String>()
+
+        srcDir.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" && !it.absolutePath.startsWith(themeDir.absolutePath) }
+            .forEach { file ->
+                file.readLines().forEachIndexed { idx, line ->
+                    if (colorPattern.containsMatchIn(line))
+                        violations += "${file.relativeTo(srcDir)}:${idx + 1} — hardcoded Color(0x…) → use a named constant from ui/theme/Color.kt"
+                    if (fontSizePattern.containsMatchIn(line))
+                        violations += "${file.relativeTo(srcDir)}:${idx + 1} — hardcoded fontSize → use MaterialTheme.typography.* or a constant from ui/theme/TextDimens.kt"
+                }
+            }
+
+        if (violations.isNotEmpty()) {
+            throw GradleException(
+                "\n\n⚠️  checkHardcodedTheme: ${violations.size} violation(s):\n\n" +
+                violations.joinToString("\n") + "\n"
+            )
+        }
+        println("✓ checkHardcodedTheme: no violations found.")
+    }
+}
+
+tasks.named("check") { dependsOn("checkHardcodedTheme") }

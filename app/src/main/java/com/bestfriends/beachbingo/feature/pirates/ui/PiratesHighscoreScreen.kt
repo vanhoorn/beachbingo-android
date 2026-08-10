@@ -13,17 +13,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
-
-private val Purple = Color(0xFFA855F7)
-private val SandGoldHs = Color(0xFFFBBF24)
 
 private data class DiffItem(val id: String, val emoji: String, val label: String)
 private val DIFFICULTIES = listOf(
@@ -79,22 +74,22 @@ fun PiratesHighscoreScreen(onNavigateBack: () -> Unit) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Brush.linearGradient(listOf(Color(0xFF1a0a2e), Color(0xFF0a1628))))
+                    .background(Brush.linearGradient(listOf(BgPirateDark, BgDark)))
                     .padding(horizontal = 20.dp, vertical = 28.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("🏆", fontSize = 64.sp)
+                    Text("🏆", fontSize = DrawNumberPhone)
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "Deine Bestleistungen",
-                        fontSize = 20.sp,
+                        fontSize = BingoCallSize,
                         fontWeight = FontWeight.ExtraBold,
-                        color = SandGoldHs,
+                        color = SandGoldLight,
                     )
                     Text(
                         "BeachPirates – Alle Schwierigkeitsstufen",
-                        fontSize = 13.sp,
+                        fontSize = MaterialTheme.typography.labelMedium.fontSize,
                         color = TextMuted,
                     )
                 }
@@ -106,20 +101,20 @@ fun PiratesHighscoreScreen(onNavigateBack: () -> Unit) {
             ) {
                 if (loading) {
                     Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Purple)
+                        CircularProgressIndicator(color = PiratesPurple)
                     }
                 } else {
                     DIFFICULTIES.forEach { diff ->
                         val score = highScores[diff.id]
                         val hasScore = score != null
                         Surface(
-                            color = if (hasScore) Purple.copy(alpha = 0.08f) else SurfaceDark,
+                            color = if (hasScore) PiratesPurple.copy(alpha = 0.08f) else SurfaceDark,
                             shape = RoundedCornerShape(16.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .border(
                                     width = if (hasScore) 2.dp else 1.dp,
-                                    color = if (hasScore) Purple.copy(alpha = 0.5f) else BorderColor,
+                                    color = if (hasScore) PiratesPurple.copy(alpha = 0.5f) else BorderColor,
                                     shape = RoundedCornerShape(16.dp),
                                 ),
                         ) {
@@ -132,17 +127,17 @@ fun PiratesHighscoreScreen(onNavigateBack: () -> Unit) {
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                                 ) {
-                                    Text(diff.emoji, fontSize = 36.sp)
+                                    Text(diff.emoji, fontSize = MaterialTheme.typography.headlineLarge.fontSize)
                                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                         Text(
                                             diff.label,
-                                            fontSize = 16.sp,
+                                            fontSize = MaterialTheme.typography.titleSmall.fontSize,
                                             fontWeight = FontWeight.Bold,
                                             color = if (hasScore) TextPrimary else TextMuted,
                                         )
                                         Text(
                                             if (hasScore) "Persönlicher Rekord" else "Noch kein Spiel",
-                                            fontSize = 12.sp,
+                                            fontSize = ChipLabel,
                                             color = TextMuted,
                                         )
                                     }
@@ -151,18 +146,18 @@ fun PiratesHighscoreScreen(onNavigateBack: () -> Unit) {
                                     Column(horizontalAlignment = Alignment.End) {
                                         Text(
                                             "$score",
-                                            fontSize = 28.sp,
+                                            fontSize = MaterialTheme.typography.headlineMedium.fontSize,
                                             fontWeight = FontWeight.ExtraBold,
-                                            color = SandGoldHs,
+                                            color = SandGoldLight,
                                         )
                                         Text(
                                             "Punkte",
-                                            fontSize = 11.sp,
+                                            fontSize = MaterialTheme.typography.labelSmall.fontSize,
                                             color = TextMuted,
                                         )
                                     }
                                 } else {
-                                    Text("–", fontSize = 28.sp, color = TextMuted, fontWeight = FontWeight.Bold)
+                                    Text("–", fontSize = MaterialTheme.typography.headlineMedium.fontSize, color = TextMuted, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }

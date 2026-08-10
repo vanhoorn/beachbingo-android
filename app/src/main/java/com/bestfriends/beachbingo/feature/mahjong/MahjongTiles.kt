@@ -47,8 +47,8 @@ val ALL_TILE_TYPES: List<TileType> = buildList {
     add(TileType("wind_nord", TileGroup.WINDE, 4, "Leuchtturm",       "wind_nord", C_WINDE, 4))
 
     add(TileType("drache_rot",   TileGroup.DRACHEN, 1, "Roter Hai",     "drache_rot",   0xFFEF4444L, 4))
-    add(TileType("drache_gruen", TileGroup.DRACHEN, 2, "Blauer Delfin", "drache_gruen", 0xFF22C55EL, 4))
-    add(TileType("drache_weiss", TileGroup.DRACHEN, 3, "Oktopus",       "drache_weiss", 0xFFA855F7L, 4))
+    add(TileType("drache_gruen", TileGroup.DRACHEN, 2, "Blauer Delfin", "drache_gruen", 0xFF2563EBL, 4))
+    add(TileType("drache_weiss", TileGroup.DRACHEN, 3, "Oktopus",       "drache_weiss", 0xFF0D9488L, 4))
 
     add(TileType("jahreszeit_fruehling", TileGroup.JAHRESZEITEN, 1, "Fruehling", "jahreszeit_fruehling", C_JAHRESZEIT, 1))
     add(TileType("jahreszeit_sommer",    TileGroup.JAHRESZEITEN, 2, "Sommer",    "jahreszeit_sommer",    C_JAHRESZEIT, 1))

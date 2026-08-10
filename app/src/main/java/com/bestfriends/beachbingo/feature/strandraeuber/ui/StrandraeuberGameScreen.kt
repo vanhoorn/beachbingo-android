@@ -49,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -57,7 +58,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.bestfriends.beachbingo.feature.bingo.ui.components.QrCodeImage
-import com.bestfriends.beachbingo.feature.brandung.ui.CardBackScene
+import com.bestfriends.beachbingo.ui.components.CardBackScene
+import com.bestfriends.beachbingo.ui.components.CardFanRow
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.SandGold
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
@@ -69,6 +71,7 @@ import com.bestfriends.beachbingo.ui.theme.BingoCallSize
 import com.bestfriends.beachbingo.ui.theme.Crimson
 import com.bestfriends.beachbingo.ui.theme.DrawNumberTablet
 import com.bestfriends.beachbingo.ui.theme.SandGoldLight
+import com.bestfriends.beachbingo.ui.theme.CardBorderLight
 import com.bestfriends.beachbingo.ui.theme.SlateBlueDark
 import com.bestfriends.beachbingo.ui.theme.Success
 import com.bestfriends.beachbingo.ui.theme.Teal
@@ -1240,10 +1243,9 @@ fun StrandraeuberGameScreen(
                                 } else {
                                     Row(
                                         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                                        horizontalArrangement = Arrangement.spacedBy(gap),
-                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
                                     ) {
-                                        humanPlayer.hand.forEach { card ->
+                                        CardFanRow(cards = humanPlayer.hand) { card, _ ->
                                             SpFaceUpCard(card, card.pairId == "strandraeuber", cardW, cardH)
                                         }
                                     }
@@ -1600,11 +1602,12 @@ private fun SpFaceUpCard(card: SpCard, highlight: Boolean = false, cardWidth: Dp
     Box(
         modifier = Modifier
             .size(width = cardWidth, height = cardHeight)
+            .shadow(elevation = 2.dp, shape = RoundedCornerShape(8.dp))
             .clip(RoundedCornerShape(8.dp))
             .background(bgColor)
             .border(
-                width = if (highlight) 2.dp else 1.dp,
-                color = if (highlight) Crimson else SlateBlueDark,
+                width = if (highlight) 2.5.dp else 1.dp,
+                color = if (highlight) Crimson else CardBorderLight,
                 shape = RoundedCornerShape(8.dp),
             ),
         contentAlignment = Alignment.Center,

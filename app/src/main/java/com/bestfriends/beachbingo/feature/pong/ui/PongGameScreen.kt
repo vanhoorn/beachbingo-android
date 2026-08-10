@@ -15,19 +15,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import com.bestfriends.beachbingo.ui.components.GameHudBar
 import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
 import kotlinx.coroutines.tasks.await
 import androidx.compose.runtime.Composable
@@ -73,6 +70,14 @@ import com.bestfriends.beachbingo.ui.theme.Success
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
+import com.bestfriends.beachbingo.ui.theme.BorderColor
+import com.bestfriends.beachbingo.ui.theme.ChipLabelTiny
+import com.bestfriends.beachbingo.ui.theme.DarkGray
+import com.bestfriends.beachbingo.ui.theme.EmojiCelebrate
+import com.bestfriends.beachbingo.ui.theme.EmojiXLarge
+import com.bestfriends.beachbingo.ui.theme.MidGray
+import com.bestfriends.beachbingo.ui.theme.NearBlack
+import com.bestfriends.beachbingo.ui.theme.StatusTiny
 import kotlinx.coroutines.delay
 
 private val SIDE_COLOR = mapOf(
@@ -91,6 +96,8 @@ fun PongGameScreen(
     scoreLimit: Int,
     isHost: Boolean,
     mySide: String,
+    soundEnabled: Boolean = true,
+    musicEnabled: Boolean = true,
     onNavigateToLobby: () -> Unit,
     viewModel: PongGameViewModel = hiltViewModel()
 ) {
@@ -124,13 +131,8 @@ fun PongGameScreen(
     var musicStarted by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        if (uid != null) {
-            try {
-                val doc = firestore.collection("users").document(uid).get().await()
-                audio.soundEnabled = doc.getBoolean("soundEnabled") ?: true
-                audio.musicEnabled = doc.getBoolean("musicEnabled") ?: true
-            } catch (_: Exception) {}
-        }
+        audio.soundEnabled = soundEnabled
+        audio.musicEnabled = musicEnabled
         audio.startMusic()
         musicStarted = true
     }
@@ -194,68 +196,54 @@ fun PongGameScreen(
 
     val activeSides = PongGameViewModel.sidesForPaddles(totalPaddles, gs.wallSide)
 
-    Box(modifier = Modifier.fillMaxSize().background(BgDark)) {
-        Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-
-            // ── Header / Score bar ────────────────────────────────────────────
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Surface2Dark)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+    Scaffold(
+        containerColor = BgDark,
+        topBar = {
+            GameHudBar(
+                paused = manualPaused,
+                onPauseToggle = { manualPaused = !manualPaused },
+                onQuit = { manualPaused = true; showQuitDialog = true },
             ) {
-                IconButton(onClick = onNavigateToLobby) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Lobby", tint = OceanBlue)
-                }
                 Row(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     activeSides.forEachIndexed { index, side ->
                         if (index > 0) {
                             Text(
                                 " · ",
-                                color = Color(0xFF1E3050),
+                                color = BorderColor,
                                 fontWeight = FontWeight.Black,
-                                fontSize = 18.sp
+                                style = MaterialTheme.typography.titleMedium,
                             )
                         }
                         val score = PongGameViewModel.scoreOf(gs, side)
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 labelForSide(side).uppercase(),
-                                fontSize = 9.sp,
+                                fontSize = StatusTiny,
                                 color = SIDE_COLOR[side] ?: TextMuted,
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.8.sp
+                                letterSpacing = 0.8.sp,
                             )
                             Text(
                                 "$score",
-                                fontSize = 24.sp,
+                                style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Black,
                                 color = if (score >= scoreLimit - 1) Coral else TextPrimary,
-                                lineHeight = 24.sp
+                                lineHeight = 24.sp,
                             )
                         }
                     }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { manualPaused = !manualPaused }) {
-                        Icon(
-                            if (manualPaused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                            contentDescription = if (manualPaused) "Weiterspielen" else "Pause",
-                            tint = TextMuted,
-                        )
-                    }
-                    IconButton(onClick = { manualPaused = true; showQuitDialog = true }) {
-                        Icon(Icons.Filled.Close, contentDescription = "Beenden", tint = TextMuted)
-                    }
-                }
             }
+        },
+    ) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize().background(BgDark)) {
+            Column(modifier = Modifier.fillMaxSize().padding(paddingValues).navigationBarsPadding()) {
 
-            // ── Canvas ────────────────────────────────────────────────────────
+                // ── Canvas ────────────────────────────────────────────────────
             BoxWithConstraints(
                 modifier = Modifier
                     .weight(1f)
@@ -282,7 +270,7 @@ fun PongGameScreen(
                     ) {
                         Text(
                             "${((gs.pauseTimer + 29) / 30).coerceIn(1, 3)}",
-                            fontSize = 72.sp,
+                            fontSize = EmojiCelebrate,
                             fontWeight = FontWeight.Black,
                             color = Color.White.copy(alpha = 0.13f)
                         )
@@ -306,7 +294,7 @@ fun PongGameScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(zoneHeight)
-                    .background(Color(0xFF0D0D0D))
+                    .background(NearBlack)
                     .pointerInput(mySide, humanCount, is2P, cw, ch) {
                         while (true) {
                             val event = awaitPointerEventScope { awaitPointerEvent() }
@@ -335,12 +323,12 @@ fun PongGameScreen(
                     Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Box(Modifier.width(3.dp).height(28.dp).background(OceanBlue, RoundedCornerShape(2.dp)))
-                            Text("↕", fontSize = 10.sp, color = Color(0xFF444444), fontWeight = FontWeight.Bold)
+                            Text("↕", fontSize = ChipLabelTiny, color = MidGray, fontWeight = FontWeight.Bold)
                         }
                     }
                     Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("↕", fontSize = 10.sp, color = Color(0xFF444444), fontWeight = FontWeight.Bold)
+                            Text("↕", fontSize = ChipLabelTiny, color = MidGray, fontWeight = FontWeight.Bold)
                             Box(Modifier.width(3.dp).height(28.dp).background(Coral, RoundedCornerShape(2.dp)))
                         }
                     }
@@ -351,10 +339,10 @@ fun PongGameScreen(
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             if (isVert) {
                                 Box(Modifier.width(3.dp).height(32.dp).background(paddleColor, RoundedCornerShape(2.dp)))
-                                Text("↕", fontSize = 11.sp, color = Color(0xFF444444), fontWeight = FontWeight.Bold)
+                                Text("↕", style = MaterialTheme.typography.labelSmall, color = MidGray, fontWeight = FontWeight.Bold)
                             } else {
                                 Box(Modifier.width(32.dp).height(3.dp).background(paddleColor, RoundedCornerShape(2.dp)))
-                                Text("↔", fontSize = 11.sp, color = Color(0xFF444444), fontWeight = FontWeight.Bold)
+                                Text("↔", style = MaterialTheme.typography.labelSmall, color = MidGray, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -385,16 +373,16 @@ fun PongGameScreen(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                     modifier = Modifier.padding(32.dp)
                 ) {
-                    Text("🔌", fontSize = 56.sp)
+                    Text("🔌", fontSize = EmojiXLarge)
                     Text(
                         "Host nicht erreichbar",
-                        fontSize = 22.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.ExtraBold,
                         color = TextPrimary,
                     )
                     Text(
                         "Verbindung zum Host unterbrochen.",
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.labelMedium,
                         color = TextMuted,
                         textAlign = TextAlign.Center,
                     )
@@ -421,16 +409,16 @@ fun PongGameScreen(
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                     modifier = Modifier.padding(32.dp)
                 ) {
-                    Text("🏓", fontSize = 56.sp)
+                    Text("🏓", fontSize = EmojiXLarge)
                     Text(
                         "Warte auf Host...",
-                        fontSize = 22.sp,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.ExtraBold,
                         color = TextPrimary,
                     )
                     Text(
                         "Das Spiel beginnt, sobald der Host startet.",
-                        fontSize = 13.sp,
+                        style = MaterialTheme.typography.labelMedium,
                         color = TextMuted,
                         textAlign = TextAlign.Center,
                     )
@@ -468,7 +456,7 @@ fun PongGameScreen(
                             isLoser -> "😅"
                             else -> "🏓"
                         },
-                        fontSize = 72.sp
+                        fontSize = EmojiCelebrate
                     )
                     Text(
                         when {
@@ -476,7 +464,7 @@ fun PongGameScreen(
                             isWinner -> "Du gewinnst!"
                             else -> "${labelForSide(loser)} verliert!"
                         },
-                        fontSize = 24.sp,
+                        style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Black,
                         color = TextPrimary,
                         textAlign = TextAlign.Center
@@ -488,14 +476,14 @@ fun PongGameScreen(
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
                                     labelForSide(side).uppercase(),
-                                    fontSize = 10.sp,
+                                    fontSize = ChipLabelTiny,
                                     color = SIDE_COLOR[side] ?: TextMuted,
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 0.8.sp
                                 )
                                 Text(
                                     "${PongGameViewModel.scoreOf(gs, side)}",
-                                    fontSize = 28.sp,
+                                    style = MaterialTheme.typography.headlineMedium,
                                     fontWeight = FontWeight.Black,
                                     color = if (side == loser) Coral else TextPrimary
                                 )
@@ -535,6 +523,7 @@ fun PongGameScreen(
             }
         }
     }
+    } // Scaffold
 }
 
 // ── DrawScope helpers ─────────────────────────────────────────────────────────
@@ -604,7 +593,7 @@ private fun DrawScope.drawMultiField(g: PongGS, totalPaddles: Int, sx: Float, sy
     // Corner triangles (4P)
     if (totalPaddles == 4) {
         val cs = CORNER_SIZE * sx
-        val cc = Color(0xFF333333)
+        val cc = DarkGray
         drawPath(Path().apply { moveTo(0f, 0f); lineTo(cs, 0f); lineTo(0f, cs); close() }, cc)
         drawPath(Path().apply { moveTo(s, 0f); lineTo(s - cs, 0f); lineTo(s, cs); close() }, cc)
         drawPath(Path().apply { moveTo(0f, s); lineTo(cs, s); lineTo(0f, s - cs); close() }, cc)
@@ -615,10 +604,10 @@ private fun DrawScope.drawMultiField(g: PongGS, totalPaddles: Int, sx: Float, sy
     if (wall != null) {
         val thickness = (PADDLE_THICK + MARGIN) * sx
         when (wall) {
-            "left"   -> drawRect(Color(0xFF333333), Offset(0f, 0f),            Size(thickness, s))
-            "right"  -> drawRect(Color(0xFF333333), Offset(s - thickness, 0f), Size(thickness, s))
-            "top"    -> drawRect(Color(0xFF333333), Offset(0f, 0f),            Size(s, thickness))
-            "bottom" -> drawRect(Color(0xFF333333), Offset(0f, s - thickness), Size(s, thickness))
+            "left"   -> drawRect(DarkGray, Offset(0f, 0f),            Size(thickness, s))
+            "right"  -> drawRect(DarkGray, Offset(s - thickness, 0f), Size(thickness, s))
+            "top"    -> drawRect(DarkGray, Offset(0f, 0f),            Size(s, thickness))
+            "bottom" -> drawRect(DarkGray, Offset(0f, s - thickness), Size(s, thickness))
         }
     }
 

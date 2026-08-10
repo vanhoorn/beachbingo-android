@@ -8,13 +8,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.ui.theme.*
-
-private val StrandturmRed = Color(0xFFDC2626)
 
 @Composable
 fun StrandturmResultsScreen(
@@ -39,18 +36,18 @@ fun StrandturmResultsScreen(
     ) {
         val isKillScreen = level >= 22
 
-        Text(if (isKillScreen) "💀" else "🗼", fontSize = 64.sp)
+        Text(if (isKillScreen) "💀" else "🗼", fontSize = DrawNumberPhone)
 
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 if (isKillScreen) "Kill Screen erreicht!" else "SPIEL BEENDET",
-                fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp,
+                fontSize = ChipLabel, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp,
             )
-            Text("Strandturm", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+            Text("Strandturm", fontSize = MaterialTheme.typography.headlineMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
             if (isKillScreen) {
                 Text(
                     "Level 22 – der berüchtigte Kill Screen 💀\nTimer-Überlauf macht das Spiel unvollendbar.",
-                    fontSize = 12.sp, color = TextMuted, lineHeight = 18.sp,
+                    fontSize = ChipLabel, color = TextMuted, lineHeight = 18.sp,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
             }
@@ -58,7 +55,7 @@ fun StrandturmResultsScreen(
 
         if (newHighScore || newBestLevel) {
             Surface(
-                color = Color(0xFFF59E0B).copy(alpha = 0.15f),
+                color = SandGold.copy(alpha = 0.15f),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -67,13 +64,13 @@ fun StrandturmResultsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Text("🏆", fontSize = 28.sp)
+                    Text("🏆", fontSize = MaterialTheme.typography.headlineMedium.fontSize)
                     if (newHighScore && newBestLevel) {
-                        Text("Neuer Rekord & neues Höchstlevel!", fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = SandGold)
+                        Text("Neuer Rekord & neues Höchstlevel!", fontSize = MaterialTheme.typography.labelLarge.fontSize, fontWeight = FontWeight.ExtraBold, color = SandGold)
                     } else if (newHighScore) {
-                        Text("Neuer Highscore!", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = SandGold)
+                        Text("Neuer Highscore!", fontSize = MaterialTheme.typography.titleSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = SandGold)
                     } else {
-                        Text("Neues Höchstlevel!", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = SandGold)
+                        Text("Neues Höchstlevel!", fontSize = MaterialTheme.typography.titleSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = SandGold)
                     }
                 }
             }
@@ -86,8 +83,8 @@ fun StrandturmResultsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Text("$score", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = StrandturmRed)
-                    Text("Punkte", fontSize = 12.sp, color = TextMuted)
+                    Text("$score", fontSize = MaterialTheme.typography.headlineMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = StrandturmRed)
+                    Text("Punkte", fontSize = ChipLabel, color = TextMuted)
                 }
             }
             Surface(color = SurfaceDark, shape = RoundedCornerShape(16.dp), modifier = Modifier.weight(1f)) {
@@ -96,8 +93,8 @@ fun StrandturmResultsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Text("Lv. $level", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = OceanBlue)
-                    Text("Level", fontSize = 12.sp, color = TextMuted)
+                    Text("Lv. $level", fontSize = MaterialTheme.typography.headlineSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = OceanBlue)
+                    Text("Level", fontSize = ChipLabel, color = TextMuted)
                 }
             }
         }
@@ -110,9 +107,9 @@ fun StrandturmResultsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Text("🏆 REKORD", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
-                    Text(if (highScore > 0) "$highScore" else "—", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = SandGold)
-                    if (highScore > 0) Text("Punkte", fontSize = 11.sp, color = TextMuted)
+                    Text("🏆 REKORD", fontSize = ChipLabelTiny, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                    Text(if (highScore > 0) "$highScore" else "—", fontSize = TitleHero, fontWeight = FontWeight.ExtraBold, color = SandGold)
+                    if (highScore > 0) Text("Punkte", fontSize = MaterialTheme.typography.labelSmall.fontSize, color = TextMuted)
                 }
             }
             Surface(color = SurfaceDark, shape = RoundedCornerShape(16.dp), modifier = Modifier.weight(1f)) {
@@ -121,9 +118,9 @@ fun StrandturmResultsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Text("🎯 BEST", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
-                    Text(if (bestLevel > 0) "Lv. $bestLevel" else "—", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = OceanBlue)
-                    if (bestLevel > 0) Text("Level", fontSize = 11.sp, color = TextMuted)
+                    Text("🎯 BEST", fontSize = ChipLabelTiny, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                    Text(if (bestLevel > 0) "Lv. $bestLevel" else "—", fontSize = MaterialTheme.typography.headlineSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = OceanBlue)
+                    if (bestLevel > 0) Text("Level", fontSize = MaterialTheme.typography.labelSmall.fontSize, color = TextMuted)
                 }
             }
         }
@@ -135,14 +132,14 @@ fun StrandturmResultsScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = StrandturmRed),
                 shape = RoundedCornerShape(14.dp),
             ) {
-                Text("🔄 Nochmal spielen", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text("🔄 Nochmal spielen", fontSize = MaterialTheme.typography.labelLarge.fontSize, fontWeight = FontWeight.Bold)
             }
             OutlinedButton(
                 onClick = onNavigateToHome,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(14.dp),
             ) {
-                Text("🏠 Zurück zum Menü", fontSize = 15.sp, color = TextPrimary)
+                Text("🏠 Zurück zum Menü", fontSize = MaterialTheme.typography.labelLarge.fontSize, color = TextPrimary)
             }
         }
     }

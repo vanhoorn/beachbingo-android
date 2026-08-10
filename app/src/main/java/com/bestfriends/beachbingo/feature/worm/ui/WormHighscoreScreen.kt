@@ -22,8 +22,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
-private val WormGreen = Color(0xFF22C55E)
-private val SandGoldHs = Color(0xFFFBBF24)
 
 private data class HsDiff(val id: String, val emoji: String, val label: String, val sub: String)
 private val HS_DIFFICULTIES = listOf(
@@ -79,14 +77,14 @@ fun WormHighscoreScreen(onNavigateBack: () -> Unit) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Brush.linearGradient(listOf(WormGreen.copy(alpha = 0.15f), Color(0xFF0a1628))))
+                    .background(Brush.linearGradient(listOf(Success.copy(alpha = 0.15f), BgDark)))
                     .padding(horizontal = 20.dp, vertical = 28.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("🏆", fontSize = 64.sp)
-                    Text("Deine Bestleistungen", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = SandGoldHs)
-                    Text("Wattwurm – Alle Schwierigkeitsstufen", fontSize = 13.sp, color = TextMuted)
+                    Text("🏆", fontSize = DrawNumberPhone)
+                    Text("Deine Bestleistungen", fontSize = BingoCallSize, fontWeight = FontWeight.ExtraBold, color = SandGoldLight)
+                    Text("Wattwurm – Alle Schwierigkeitsstufen", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted)
                 }
             }
 
@@ -96,20 +94,20 @@ fun WormHighscoreScreen(onNavigateBack: () -> Unit) {
             ) {
                 if (loading) {
                     Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = WormGreen)
+                        CircularProgressIndicator(color = Success)
                     }
                 } else {
                     HS_DIFFICULTIES.forEach { diff ->
                         val score    = highScores[diff.id]
                         val hasScore = score != null
                         Surface(
-                            color = if (hasScore) WormGreen.copy(alpha = 0.08f) else SurfaceDark,
+                            color = if (hasScore) Success.copy(alpha = 0.08f) else SurfaceDark,
                             shape = RoundedCornerShape(16.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .border(
                                     width = if (hasScore) 2.dp else 1.dp,
-                                    color = if (hasScore) WormGreen.copy(alpha = 0.5f) else BorderColor,
+                                    color = if (hasScore) Success.copy(alpha = 0.5f) else BorderColor,
                                     shape = RoundedCornerShape(16.dp),
                                 ),
                         ) {
@@ -122,19 +120,19 @@ fun WormHighscoreScreen(onNavigateBack: () -> Unit) {
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                                 ) {
-                                    Text(diff.emoji, fontSize = 36.sp)
+                                    Text(diff.emoji, fontSize = MaterialTheme.typography.headlineLarge.fontSize)
                                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        Text(diff.label, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = if (hasScore) TextPrimary else TextMuted)
-                                        Text(if (hasScore) "Persönlicher Rekord" else diff.sub, fontSize = 12.sp, color = TextMuted)
+                                        Text(diff.label, fontSize = MaterialTheme.typography.titleSmall.fontSize, fontWeight = FontWeight.Bold, color = if (hasScore) TextPrimary else TextMuted)
+                                        Text(if (hasScore) "Persönlicher Rekord" else diff.sub, fontSize = ChipLabel, color = TextMuted)
                                     }
                                 }
                                 if (hasScore) {
                                     Column(horizontalAlignment = Alignment.End) {
-                                        Text("$score", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = SandGoldHs)
-                                        Text("Punkte", fontSize = 11.sp, color = TextMuted)
+                                        Text("$score", fontSize = MaterialTheme.typography.headlineMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = SandGoldLight)
+                                        Text("Punkte", fontSize = MaterialTheme.typography.labelSmall.fontSize, color = TextMuted)
                                     }
                                 } else {
-                                    Text("–", fontSize = 28.sp, color = TextMuted, fontWeight = FontWeight.Bold)
+                                    Text("–", fontSize = MaterialTheme.typography.headlineMedium.fontSize, color = TextMuted, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }

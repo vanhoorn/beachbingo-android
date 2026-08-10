@@ -31,8 +31,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-private val KkLobbyAccent = Color(0xFFFB7185)
-
 @Composable
 fun KuestenkriegOnlineLobbyScreen(
     gameCode: String,
@@ -112,11 +110,11 @@ fun KuestenkriegOnlineLobbyScreen(
                     modifier = Modifier.size(40.dp).border(1.dp, BorderColor, RoundedCornerShape(12.dp)).clickable { cancel() },
                 ) { Box(contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück", tint = TextSub, modifier = Modifier.size(20.dp)) } }
                 Spacer(Modifier.width(14.dp))
-                Text("⚓", fontSize = 32.sp)
+                Text("⚓", fontSize = EmojiMedium)
                 Spacer(Modifier.width(14.dp))
                 Column {
-                    Text("KÜSTENKRIEG · ONLINE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
-                    Text("Warte auf Spieler…", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Text("KÜSTENKRIEG · ONLINE", fontSize = ChipLabelTiny, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
+                    Text("Warte auf Spieler…", fontSize = BingoCallSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
                 }
             }
         }
@@ -133,10 +131,10 @@ fun KuestenkriegOnlineLobbyScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Text("SPIELCODE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
+                    Text("SPIELCODE", fontSize = MaterialTheme.typography.labelSmall.fontSize, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
                     Text(
                         gameCode,
-                        fontSize = 38.sp, fontWeight = FontWeight.ExtraBold, color = KkLobbyAccent,
+                        fontSize = ScoreHighlight, fontWeight = FontWeight.ExtraBold, color = RoseRed,
                         fontFamily = FontFamily.Monospace, letterSpacing = 6.sp,
                     )
                     OutlinedButton(
@@ -145,13 +143,13 @@ fun KuestenkriegOnlineLobbyScreen(
                             (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
                         },
                         shape = RoundedCornerShape(8.dp),
-                    ) { Text("📋 Kopieren", fontSize = 13.sp, color = TextPrimary) }
+                    ) { Text("📋 Kopieren", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextPrimary) }
                     Surface(shape = RoundedCornerShape(12.dp), color = Color.White, modifier = Modifier.padding(4.dp)) {
                         QrCodeImage(content = "https://beachbande.de/join?code=$gameCode", size = 160.dp)
                     }
                     Text(
                         "QR-Code scannen oder Code eingeben",
-                        fontSize = 12.sp, color = TextMuted, textAlign = TextAlign.Center,
+                        fontSize = ChipLabel, color = TextMuted, textAlign = TextAlign.Center,
                     )
                 }
             }
@@ -162,17 +160,17 @@ fun KuestenkriegOnlineLobbyScreen(
                 modifier = Modifier.fillMaxWidth().border(1.dp, BorderColor, RoundedCornerShape(12.dp)),
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("${playerNames.size} / 2 Spieler", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("${playerNames.size} / 2 Spieler", fontSize = CellNumber, fontWeight = FontWeight.Bold, color = TextPrimary)
                     playerNames.forEach { name ->
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("👤", fontSize = 16.sp)
-                            Text(name, fontSize = 13.sp, color = TextPrimary)
+                            Text("👤", fontSize = MaterialTheme.typography.titleSmall.fontSize)
+                            Text(name, fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextPrimary)
                         }
                     }
                     if (playerNames.size < 2) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = KkLobbyAccent)
-                            Text("Warte auf Gegner…", fontSize = 13.sp, color = TextMuted)
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = RoseRed)
+                            Text("Warte auf Gegner…", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted)
                         }
                     }
                 }
@@ -185,15 +183,15 @@ fun KuestenkriegOnlineLobbyScreen(
                     enabled = playerNames.size >= 2 && !starting,
                     modifier = Modifier.fillMaxWidth().height(54.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = KkLobbyAccent,
-                        disabledContainerColor = KkLobbyAccent.copy(alpha = 0.3f),
+                        containerColor = RoseRed,
+                        disabledContainerColor = RoseRed.copy(alpha = 0.3f),
                     ),
                     shape = RoundedCornerShape(14.dp),
                 ) {
                     if (starting) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp), color = BgDark, strokeWidth = 2.dp)
                     } else {
-                        Text("Schiffe setzen! →", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = BgDark)
+                        Text("Schiffe setzen! →", fontSize = MaterialTheme.typography.titleSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = BgDark)
                     }
                 }
             } else {
@@ -206,8 +204,8 @@ fun KuestenkriegOnlineLobbyScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = KkLobbyAccent)
-                        Text("Admin startet das Spiel…", fontSize = 13.sp, color = TextMuted)
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = RoseRed)
+                        Text("Admin startet das Spiel…", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted)
                     }
                 }
             }
@@ -217,7 +215,7 @@ fun KuestenkriegOnlineLobbyScreen(
                 modifier = Modifier.fillMaxWidth().height(46.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSub),
-            ) { Text("Abbrechen", fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+            ) { Text("Abbrechen", fontSize = CellNumber, fontWeight = FontWeight.Bold) }
         }
         Spacer(Modifier.height(32.dp))
     }

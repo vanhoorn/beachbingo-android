@@ -36,10 +36,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.core.model.PongGame
 import com.bestfriends.beachbingo.core.model.PongStatus
 import com.bestfriends.beachbingo.ui.theme.BgDark
+import com.bestfriends.beachbingo.ui.theme.DrawNumberPhone
 import com.bestfriends.beachbingo.ui.theme.OceanBlue
 import com.bestfriends.beachbingo.ui.theme.SandGold
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
@@ -186,7 +186,7 @@ fun PongResultsScreen(onNavigateBack: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text("🏓", fontSize = 64.sp)
+                Text("🏓", fontSize = DrawNumberPhone)
                 Spacer(Modifier.height(16.dp))
                 Text("Noch keine Ergebnisse", style = MaterialTheme.typography.titleMedium, color = TextMuted)
                 Spacer(Modifier.height(6.dp))
@@ -252,12 +252,12 @@ private fun PongTeamCard(team: PongTeam, currentUid: String, dateFormat: SimpleD
                 ) {
                     Text(
                         text = rankEmoji(rank, isLast, total),
-                        fontSize = 18.sp,
+                        fontSize = MaterialTheme.typography.titleMedium.fontSize,
                         modifier = Modifier.width(30.dp)
                     )
                     Text(
                         text = p.avatarUrl.ifEmpty { "🏄" },
-                        fontSize = 24.sp
+                        fontSize = MaterialTheme.typography.headlineSmall.fontSize
                     )
                     Spacer(Modifier.width(10.dp))
                     Text(
@@ -289,7 +289,7 @@ private fun PongTeamCard(team: PongTeam, currentUid: String, dateFormat: SimpleD
                 HorizontalDivider(color = Surface2Dark)
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(lastWinner?.avatarUrl?.ifEmpty { "🏓" } ?: "🏓", fontSize = 18.sp)
+                    Text(lastWinner?.avatarUrl?.ifEmpty { "🏓" } ?: "🏓", fontSize = MaterialTheme.typography.titleMedium.fontSize)
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = if (lastWinner != null) "Letztes Spiel: ${lastWinner.displayName} hat gewonnen"

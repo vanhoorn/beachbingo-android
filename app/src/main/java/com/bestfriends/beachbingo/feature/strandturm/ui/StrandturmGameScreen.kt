@@ -911,7 +911,7 @@ private fun DrawScope.drawConveyorBelt(belt: ConveyorBelt, frame: Int, s: Float)
     val rawOff = (frame * 0.5f) % period
     val scrollX = if (belt.vx > 0) rawOff else period - rawOff
     // Belt surface – industrial steel-gray, 5px overlaying the platform top edge
-    drawRect(Color(0xE0334155.toInt()), Offset(belt.x * s, py * s), Size(belt.w * s, 5f * s))
+    drawRect(StBeltSurface, Offset(belt.x * s, py * s), Size(belt.w * s, 5f * s))
     // Animated diagonal stripes via native canvas clip
     drawIntoCanvas { canvas ->
         val nc = canvas.nativeCanvas
@@ -936,12 +936,12 @@ private fun DrawScope.drawConveyorBelt(belt: ConveyorBelt, frame: Int, s: Float)
         nc.restore()
     }
     // Direction edge highlight (amber = right, blue = left)
-    val edgeColor = if (belt.vx > 0) Color(0xD9FBBF24.toInt()) else Color(0xD960A5FA.toInt())
+    val edgeColor = if (belt.vx > 0) BeltEdgeAmber else BeltEdgeBlue
     drawLine(edgeColor, Offset(belt.x * s, py * s), Offset((belt.x + belt.w) * s, py * s), 1.5f * s)
 }
 
 private fun DrawScope.drawElevatorTrack(el: Elevator, s: Float) {
-    val trackColor = Color(0x33_3B82F6.toInt()) // semi-transparent blue
+    val trackColor = ElevTrackBlue
     // Dashed left rail
     val lx = (el.x + 5) * s
     val rx = (el.x + el.w - 5) * s
@@ -959,16 +959,16 @@ private fun DrawScope.drawElevatorTrack(el: Elevator, s: Float) {
 private fun DrawScope.drawElevator(el: Elevator, s: Float) {
     val x = el.x; val y = el.y; val w = el.w
     // Shadow
-    drawRect(Color(0x4D000000.toInt()), Offset((x + 2) * s, (y + 3) * s), Size(w * s, ELEV_H * s))
+    drawRect(CanvasShadow, Offset((x + 2) * s, (y + 3) * s), Size(w * s, ELEV_H * s))
     // Main body
-    drawRect(Color(0xFF1D4ED8.toInt()), Offset(x * s, y * s), Size(w * s, ELEV_H * s))
+    drawRect(ElevBodyBlue, Offset(x * s, y * s), Size(w * s, ELEV_H * s))
     // Top highlight
-    drawRect(Color(0xFF3B82F6.toInt()), Offset(x * s, y * s), Size(w * s, 3f * s))
+    drawRect(ElevHighlight, Offset(x * s, y * s), Size(w * s, 3f * s))
     // Bottom shadow
-    drawRect(Color(0xFF1E3A8A.toInt()), Offset(x * s, (y + ELEV_H - 2) * s), Size(w * s, 2f * s))
+    drawRect(ElevShadowBlue, Offset(x * s, (y + ELEV_H - 2) * s), Size(w * s, 2f * s))
     // Side bolts
-    drawCircle(Color(0xFF93C5FD.toInt()), 2f * s, Offset((x + 7) * s, (y + ELEV_H / 2 + 1) * s))
-    drawCircle(Color(0xFF93C5FD.toInt()), 2f * s, Offset((x + w - 7) * s, (y + ELEV_H / 2 + 1) * s))
+    drawCircle(ElevBoltLight, 2f * s, Offset((x + 7) * s, (y + ELEV_H / 2 + 1) * s))
+    drawCircle(ElevBoltLight, 2f * s, Offset((x + w - 7) * s, (y + ELEV_H / 2 + 1) * s))
     // Direction arrow text
     drawIntoCanvas { canvas ->
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
@@ -985,15 +985,15 @@ private fun DrawScope.drawWeight(c: Coco, s: Float) {
     val r = 8f
     val x = c.x; val y = c.y
     // Outer border
-    drawRect(Color(0xFF111827.toInt()), Offset((x - r - 1) * s, (y - r - 1) * s), Size((r * 2 + 2) * s, (r * 2 + 2) * s))
+    drawRect(BgNightBlue, Offset((x - r - 1) * s, (y - r - 1) * s), Size((r * 2 + 2) * s, (r * 2 + 2) * s))
     // Main body
-    drawRect(Color(0xFF374151.toInt()), Offset((x - r) * s, (y - r) * s), Size(r * 2 * s, r * 2 * s))
+    drawRect(WeightBody, Offset((x - r) * s, (y - r) * s), Size(r * 2 * s, r * 2 * s))
     // Top highlight
-    drawRect(Color(0xFF4B5563.toInt()), Offset((x - r) * s, (y - r) * s), Size(r * 2 * s, 3f * s))
+    drawRect(WeightEdge, Offset((x - r) * s, (y - r) * s), Size(r * 2 * s, 3f * s))
     // Left edge
-    drawRect(Color(0xFF4B5563.toInt()), Offset((x - r) * s, (y - r) * s), Size(2f * s, r * 2 * s))
+    drawRect(WeightEdge, Offset((x - r) * s, (y - r) * s), Size(2f * s, r * 2 * s))
     // Bottom shadow
-    drawRect(Color(0xFF1F2937.toInt()), Offset((x - r + 2) * s, (y + r - 3) * s), Size((r * 2 - 2) * s, 3f * s))
+    drawRect(WeightShadow, Offset((x - r + 2) * s, (y + r - 3) * s), Size((r * 2 - 2) * s, 3f * s))
     // "KG" label + hook
     drawIntoCanvas { canvas ->
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
@@ -1025,7 +1025,7 @@ private fun DrawScope.drawWanne(c: Coco, s: Float) {
         lineTo((c.x - r + 3) * s,    (c.y + r * 0.6f) * s)
         close()
     }
-    drawPath(bodyPath, Color(0xFF78716C.toInt()))
+    drawPath(bodyPath, WanneBody)
     val cementPath = Path().apply {
         moveTo((c.x - r + 2) * s,    (c.y - r * 0.55f) * s)
         lineTo((c.x + r - 2) * s,    (c.y - r * 0.55f) * s)
@@ -1033,15 +1033,15 @@ private fun DrawScope.drawWanne(c: Coco, s: Float) {
         lineTo((c.x - r + 3.5f) * s, (c.y - r * 0.05f) * s)
         close()
     }
-    drawPath(cementPath, Color(0xFFA8A29E.toInt()))
+    drawPath(cementPath, WanneCement)
     val handlePath = Path().apply {
         moveTo((c.x - r + 2) * s,    (c.y - r * 0.55f) * s)
         lineTo((c.x - r) * s,        (c.y - r * 1.15f) * s)
         lineTo((c.x + r) * s,        (c.y - r * 1.15f) * s)
         lineTo((c.x + r - 2) * s,    (c.y - r * 0.55f) * s)
     }
-    drawPath(handlePath, Color(0xFF57534E.toInt()), style = Stroke(2f * s))
-    drawRect(Color(0xFF44403C.toInt()), Offset((c.x - r + 3) * s, (c.y + r * 0.25f) * s),
+    drawPath(handlePath, WanneHandle, style = Stroke(2f * s))
+    drawRect(WanneSlot, Offset((c.x - r + 3) * s, (c.y + r * 0.25f) * s),
         Size((r - 3) * 2 * s, r * 0.35f * s))
 }
 
@@ -1049,7 +1049,7 @@ private fun DrawScope.drawNiete(n: Niete, platY: Float, s: Float) {
     if (n.collected) return
     val x = n.x; val y = platY + PLAT_H / 2f
     // Glow
-    drawCircle(Color(0x38FBB124.toInt()), 9f * s, Offset(x * s, y * s))
+    drawCircle(NieteGlow, 9f * s, Offset(x * s, y * s))
     // Hexagonal bolt head
     val hexPath = Path().apply {
         for (i in 0..5) {
@@ -1060,10 +1060,10 @@ private fun DrawScope.drawNiete(n: Niete, platY: Float, s: Float) {
         }
         close()
     }
-    drawPath(hexPath, Color(0xFFFBBF24.toInt()))
-    drawPath(hexPath, Color(0xFFF59E0B.toInt()), style = Stroke(1f * s))
+    drawPath(hexPath, SandGoldLight)
+    drawPath(hexPath, SandGold, style = Stroke(1f * s))
     // Dark center hole
-    drawCircle(Color(0xFF78350F.toInt()), 2f * s, Offset(x * s, y * s))
+    drawCircle(NieteCenter, 2f * s, Offset(x * s, y * s))
 }
 
 private fun DrawScope.drawGoal(topPlatY: Float, s: Float, locked: Boolean = false) {

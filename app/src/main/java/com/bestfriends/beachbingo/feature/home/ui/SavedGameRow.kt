@@ -17,16 +17,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.bestfriends.beachbingo.ui.theme.BorderColor
-import com.bestfriends.beachbingo.ui.theme.SurfaceDark
-import com.bestfriends.beachbingo.ui.theme.TextMuted
-import com.bestfriends.beachbingo.ui.theme.TextPrimary
-
-private val DeleteRed = Color(0xFFEF4444)
+import com.bestfriends.beachbingo.ui.theme.*
 
 @Composable
 fun SavedGameRow(
@@ -49,8 +44,8 @@ fun SavedGameRow(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                Text(subtitle, fontSize = 12.sp, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
+                Text(title, fontSize = CellNumber, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Text(subtitle, fontSize = ChipLabel, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
             }
             OutlinedButton(
                 onClick = onResume,
@@ -63,20 +58,20 @@ fun SavedGameRow(
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
                 modifier = Modifier.height(36.dp),
             ) {
-                Text("Fortsetzen", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text("Fortsetzen", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold)
             }
             OutlinedButton(
                 onClick = onDelete,
                 colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = DeleteRed.copy(alpha = 0.15f),
-                    contentColor = DeleteRed,
+                    containerColor = Danger.copy(alpha = 0.15f),
+                    contentColor = Danger,
                 ),
-                border = BorderStroke(1.dp, DeleteRed.copy(alpha = 0.4f)),
+                border = BorderStroke(1.dp, Danger.copy(alpha = 0.4f)),
                 shape = RoundedCornerShape(8.dp),
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                 modifier = Modifier.height(36.dp),
             ) {
-                Text("✕", fontSize = 13.sp)
+                Text("✕", fontSize = MaterialTheme.typography.labelMedium.fontSize)
             }
         }
     }

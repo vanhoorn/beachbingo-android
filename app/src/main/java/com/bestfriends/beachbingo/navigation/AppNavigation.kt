@@ -412,6 +412,8 @@ fun AppNavigation() {
                 difficulty = route.difficulty,
                 seed = route.seed,
                 saveId = route.saveId,
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
                 onNavigateBack = { navController.navigate(Screen.MahjongLobby) { popUpTo(Screen.MahjongLobby) { inclusive = true } } }
             )
         }
@@ -501,6 +503,8 @@ fun AppNavigation() {
             val route: Screen.Game = backStack.toRoute()
             GameScreen(
                 gameId = route.gameId,
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
                 onNavigateBack = {
                     navController.navigate(Screen.Lobby) {
                         popUpTo(Screen.Lobby) { inclusive = true }
@@ -560,6 +564,8 @@ fun AppNavigation() {
                 difficulty = route.difficulty,
                 scoreLimit = route.scoreLimit,
                 isHost = route.isHost,
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
                 mySide = route.mySide,
                 onNavigateToLobby = {
                     navController.navigate(Screen.PongLobby) {
@@ -606,6 +612,8 @@ fun AppNavigation() {
                 aiDrinkId = route.aiDrinkId,
                 aiDifficulty = route.aiDifficulty,
                 saveId = route.saveId,
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
                 onNavigateBack = {
                     navController.navigate(Screen.VierLobby) {
                         popUpTo(Screen.VierLobby) { inclusive = true }
@@ -654,6 +662,8 @@ fun AppNavigation() {
                 fireRate = route.fireRate,
                 controlMode = route.controlMode,
                 saveId = route.saveId,
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
                 onNavigateToResults = { score, wave, highScore, newHighScore ->
                     navController.navigate(
                         Screen.PiratesResults(score, wave, route.difficulty, highScore, newHighScore)
@@ -723,6 +733,8 @@ fun AppNavigation() {
                 difficulty = route.difficulty,
                 controlMode = route.controlMode,
                 saveId = route.saveId,
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
                 onNavigateToResults = { score, length, highScore, newHighScore ->
                     navController.navigate(
                         Screen.WormResults(score, length, route.difficulty, route.controlMode, highScore, newHighScore)
@@ -792,6 +804,8 @@ fun AppNavigation() {
                 controlMode = route.controlMode,
                 startLevel  = route.startLevel,
                 saveId      = route.saveId,
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
                 onNavigateToResults = { score, level, highScore, bestLevel, newHighScore, newBestLevel ->
                     navController.navigate(
                         Screen.StrandturmResults(score, level, highScore, bestLevel, newHighScore, newBestLevel)
@@ -860,6 +874,8 @@ fun AppNavigation() {
                 aiCount = route.aiCount,
                 difficulty = route.difficulty,
                 saveId = route.saveId,
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
                 onNavigateBack = {
                     navController.navigate(Screen.BrandungLobby) {
                         popUpTo(Screen.BrandungLobby) { inclusive = true }
@@ -905,6 +921,8 @@ fun AppNavigation() {
                 aiCount = route.aiCount,
                 difficulty = route.difficulty,
                 saveId = route.saveId,
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
                 onNavigateBack = {
                     navController.navigate(Screen.MeermauLobby) {
                         popUpTo(Screen.MeermauLobby) { inclusive = true }
@@ -951,6 +969,8 @@ fun AppNavigation() {
                 difficulty = route.difficulty,
                 totalRounds = route.totalRounds,
                 saveId = route.saveId,
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
                 onNavigateBack = {
                     navController.navigate(Screen.StrandraeuberLobby) {
                         popUpTo(Screen.StrandraeuberLobby) { inclusive = true }

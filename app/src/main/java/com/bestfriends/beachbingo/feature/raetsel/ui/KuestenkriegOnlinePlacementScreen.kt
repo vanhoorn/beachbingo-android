@@ -31,7 +31,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlin.random.Random
 
-private val KkOnlinePlacementAccent = Color(0xFFFB7185)
 
 private data class OnlineDragState(val start: Pair<Int, Int>, val current: Pair<Int, Int>)
 
@@ -194,13 +193,13 @@ fun KuestenkriegOnlinePlacementScreen(
                         modifier = Modifier.size(40.dp).border(1.dp, BorderColor, RoundedCornerShape(12.dp)).clickable { onNavigateBack() },
                     ) { Box(contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück", tint = TextSub, modifier = Modifier.size(20.dp)) } }
                     Spacer(Modifier.width(14.dp))
-                    Text("⚓", fontSize = 28.sp)
+                    Text("⚓", style = MaterialTheme.typography.headlineMedium)
                     Spacer(Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("KÜSTENKRIEG · ONLINE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
-                        Text("Schiffe setzen", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                        Text("KÜSTENKRIEG · ONLINE", fontSize = ChipLabelTiny, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
+                        Text("Schiffe setzen", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
                     }
-                    Text("${fleet.size}/${FLEET_DEFS.size}", fontSize = 13.sp, color = TextMuted)
+                    Text("${fleet.size}/${FLEET_DEFS.size}", style = MaterialTheme.typography.labelMedium, color = TextMuted)
                 }
             }
 
@@ -210,14 +209,14 @@ fun KuestenkriegOnlinePlacementScreen(
                 if (currentDef != null && !fleetReady) {
                     Surface(
                         shape = RoundedCornerShape(12.dp), color = SurfaceDark,
-                        modifier = Modifier.fillMaxWidth().border(1.dp, KkOnlinePlacementAccent.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
+                        modifier = Modifier.fillMaxWidth().border(1.dp, RoseRed.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
                     ) {
                         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(currentDef.emoji, fontSize = 20.sp)
+                            Text(currentDef.emoji, fontSize = BingoCallSize)
                             Spacer(Modifier.width(10.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(currentDef.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                                Text("Länge ${currentDef.size}", fontSize = 12.sp, color = TextMuted)
+                                Text(currentDef.name, fontSize = CellNumber, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                Text("Länge ${currentDef.size}", fontSize = ChipLabel, color = TextMuted)
                             }
                             Surface(
                                 shape = RoundedCornerShape(8.dp), color = Surface2Dark,
@@ -225,7 +224,7 @@ fun KuestenkriegOnlinePlacementScreen(
                             ) {
                                 Text(
                                     if (horiz) "↔ Horizontal" else "↕ Vertikal",
-                                    fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
+                                    style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = TextPrimary,
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                                 )
                             }
@@ -276,23 +275,23 @@ fun KuestenkriegOnlinePlacementScreen(
                     Row(modifier = Modifier.padding(start = 22.dp)) {
                         repeat(BATTLE_GRID) { c ->
                             Box(modifier = Modifier.size(cellDp), contentAlignment = Alignment.Center) {
-                                Text(('A' + c).toString(), fontSize = 9.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                                Text(('A' + c).toString(), fontSize = StatusTiny, color = Color.Black, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
                     repeat(BATTLE_GRID) { r ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(modifier = Modifier.width(20.dp), contentAlignment = Alignment.CenterEnd) {
-                                Text("${r + 1}", fontSize = 9.sp, color = Color.Black, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 2.dp))
+                                Text("${r + 1}", fontSize = StatusTiny, color = Color.Black, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 2.dp))
                             }
                             repeat(BATTLE_GRID) { c ->
                                 val cellKey = Pair(r, c)
                                 val isOccupied = occupied[r][c]
                                 val isPreview = cellKey in dragPreview
                                 val cellBg = when {
-                                    isPreview && dragIsValid  -> KkOnlinePlacementAccent.copy(alpha = 0.8f)
-                                    isPreview && !dragIsValid -> Color(0xFFEF4444).copy(alpha = 0.5f)
-                                    isOccupied               -> KkOnlinePlacementAccent.copy(alpha = 0.55f)
+                                    isPreview && dragIsValid  -> RoseRed.copy(alpha = 0.8f)
+                                    isPreview && !dragIsValid -> Danger.copy(alpha = 0.5f)
+                                    isOccupied               -> RoseRed.copy(alpha = 0.55f)
                                     else                     -> Color.White
                                 }
                                 Box(modifier = Modifier
@@ -313,26 +312,26 @@ fun KuestenkriegOnlinePlacementScreen(
                             modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
                             border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
-                        ) { Text("⌫ Rückgängig", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                        ) { Text("⌫ Rückgängig", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold) }
                         OutlinedButton(
                             onClick = ::randomizeAll,
                             modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
                             border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
-                        ) { Text("🎲 Zufall", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                        ) { Text("🎲 Zufall", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold) }
                     }
                     Button(
                         onClick = ::submitFleet,
                         enabled = allPlaced && !submitting,
                         modifier = Modifier.fillMaxWidth().height(54.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = KkOnlinePlacementAccent,
-                            disabledContainerColor = KkOnlinePlacementAccent.copy(alpha = 0.3f),
+                            containerColor = RoseRed,
+                            disabledContainerColor = RoseRed.copy(alpha = 0.3f),
                         ),
                         shape = RoundedCornerShape(14.dp),
                     ) {
                         if (submitting) CircularProgressIndicator(modifier = Modifier.size(20.dp), color = BgDark, strokeWidth = 2.dp)
-                        else Text("Bereit! ✓", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = BgDark)
+                        else Text("Bereit! ✓", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.ExtraBold, color = BgDark)
                     }
                 }
             }
@@ -346,9 +345,9 @@ fun KuestenkriegOnlinePlacementScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    CircularProgressIndicator(color = KkOnlinePlacementAccent, modifier = Modifier.size(48.dp), strokeWidth = 3.dp)
-                    Text("Warte auf Gegner…", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    Text("Beide müssen ihre Schiffe setzen", fontSize = 13.sp, color = TextMuted)
+                    CircularProgressIndicator(color = RoseRed, modifier = Modifier.size(48.dp), strokeWidth = 3.dp)
+                    Text("Warte auf Gegner…", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("Beide müssen ihre Schiffe setzen", style = MaterialTheme.typography.labelMedium, color = TextMuted)
                 }
             }
         }

@@ -12,6 +12,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
+import com.bestfriends.beachbingo.ui.theme.*
 
 data class DrinkInfo(
     val id: String,
@@ -21,18 +22,18 @@ data class DrinkInfo(
 )
 
 val DRINKS = listOf(
-    DrinkInfo("lager",     "Lager",    "🍺", Color(0xFFD97706)),
-    DrinkInfo("weizen",    "Weizen",   "🍺", Color(0xFFB45309)),
-    DrinkInfo("dunkles",   "Dunkles",  "🍻", Color(0xFF6B2600)),
-    DrinkInfo("prosecco",  "Prosecco", "🥂", Color(0xFFA37C00)),
-    DrinkInfo("rotwein",   "Rotwein",  "🍷", Color(0xFFB91C1C)),
-    DrinkInfo("weisswein", "Weißwein", "🍸", Color(0xFFA16207)),
-    DrinkInfo("rose",      "Rosé",     "🍹", Color(0xFFBE185D)),
-    DrinkInfo("whisky",    "Whisky",   "🥃", Color(0xFF92400E)),
-    DrinkInfo("gin",       "Gin",      "🍸", Color(0xFF0369A1)),
-    DrinkInfo("rum",       "Rum",      "🍹", Color(0xFF7C2D12)),
-    DrinkInfo("tequila",   "Tequila",  "🥃", Color(0xFF3F6212)),
-    DrinkInfo("aperol",    "Aperol",   "🍊", Color(0xFFC2410C)),
+    DrinkInfo("lager",     "Lager",    "🍺", SandGoldDark),
+    DrinkInfo("weizen",    "Weizen",   "🍺", AmberBrown),
+    DrinkInfo("dunkles",   "Dunkles",  "🍻", DrinkDunkles),
+    DrinkInfo("prosecco",  "Prosecco", "🥂", DrinkProsecco),
+    DrinkInfo("rotwein",   "Rotwein",  "🍷", DrinkRotwein),
+    DrinkInfo("weisswein", "Weißwein", "🍸", DrinkWeisswein),
+    DrinkInfo("rose",      "Rosé",     "🍹", DrinkRose),
+    DrinkInfo("whisky",    "Whisky",   "🥃", BurntAmber),
+    DrinkInfo("gin",       "Gin",      "🍸", DrinkGin),
+    DrinkInfo("rum",       "Rum",      "🍹", DrinkRum),
+    DrinkInfo("tequila",   "Tequila",  "🥃", DrinkTequila),
+    DrinkInfo("aperol",    "Aperol",   "🍊", BeerOrange),
 )
 
 fun getDrink(id: String): DrinkInfo = DRINKS.find { it.id == id } ?: DRINKS[0]

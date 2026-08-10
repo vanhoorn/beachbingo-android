@@ -12,10 +12,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.ui.theme.*
-
-private val Purple = Color(0xFFA855F7)
 
 private fun diffLabel(diff: String) = when (diff) {
     "ROOKIE"     -> "🌊 Rookie"
@@ -46,21 +43,21 @@ fun PiratesResultsScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Brush.linearGradient(listOf(Color(0xFF1a0a2e), Color(0xFF0a1628))))
+                .background(Brush.linearGradient(listOf(BgPirateDark, BgDark)))
                 .padding(horizontal = 20.dp, vertical = 36.dp),
             contentAlignment = Alignment.Center,
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(if (newHighScore) "🏆" else "💀", fontSize = 72.sp)
+                Text(if (newHighScore) "🏆" else "💀", fontSize = EmojiCelebrate)
                 Spacer(Modifier.height(12.dp))
                 Text(
                     if (newHighScore) "Neuer Rekord!" else "Game Over",
-                    fontSize = 28.sp,
+                    fontSize = MaterialTheme.typography.headlineMedium.fontSize,
                     fontWeight = FontWeight.ExtraBold,
-                    color = if (newHighScore) Purple else TextPrimary,
+                    color = if (newHighScore) PiratesPurple else TextPrimary,
                 )
                 Spacer(Modifier.height(4.dp))
-                Text(diffLabel(difficulty), fontSize = 15.sp, color = TextMuted)
+                Text(diffLabel(difficulty), fontSize = MaterialTheme.typography.labelLarge.fontSize, color = TextMuted)
             }
         }
 
@@ -72,19 +69,19 @@ fun PiratesResultsScreen(
         ) {
             // Score cards row
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard(emoji = "⭐", label = "Score", value = "$score", color = Purple, modifier = Modifier.weight(1f))
+                StatCard(emoji = "⭐", label = "Score", value = "$score", color = PiratesPurple, modifier = Modifier.weight(1f))
                 StatCard(emoji = "🌊", label = "Welle", value = "$wave", color = OceanBlue, modifier = Modifier.weight(1f))
             }
 
             // High score card
             Surface(
-                color = if (newHighScore) Purple.copy(alpha = 0.15f) else SurfaceDark,
+                color = if (newHighScore) PiratesPurple.copy(alpha = 0.15f) else SurfaceDark,
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(
                         width = if (newHighScore) 2.dp else 1.dp,
-                        color = if (newHighScore) Purple else BorderColor,
+                        color = if (newHighScore) PiratesPurple else BorderColor,
                         shape = RoundedCornerShape(14.dp),
                     ),
             ) {
@@ -94,11 +91,11 @@ fun PiratesResultsScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Column {
-                        Text("Rekord (${diffLabel(difficulty)})", fontSize = 12.sp, color = TextMuted)
-                        Text("$highScore", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold,
-                            color = if (newHighScore) Purple else TextPrimary)
+                        Text("Rekord (${diffLabel(difficulty)})", fontSize = ChipLabel, color = TextMuted)
+                        Text("$highScore", fontSize = MaterialTheme.typography.headlineMedium.fontSize, fontWeight = FontWeight.ExtraBold,
+                            color = if (newHighScore) PiratesPurple else TextPrimary)
                     }
-                    Text(if (newHighScore) "🏆" else "🎖️", fontSize = 36.sp)
+                    Text(if (newHighScore) "🏆" else "🎖️", fontSize = MaterialTheme.typography.headlineLarge.fontSize)
                 }
             }
 
@@ -107,10 +104,10 @@ fun PiratesResultsScreen(
             Button(
                 onClick = onPlayAgain,
                 modifier = Modifier.fillMaxWidth().height(54.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Purple),
+                colors = ButtonDefaults.buttonColors(containerColor = PiratesPurple),
                 shape = RoundedCornerShape(14.dp),
             ) {
-                Text("🔄  Nochmal spielen", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text("🔄  Nochmal spielen", fontSize = MaterialTheme.typography.bodyLarge.fontSize, fontWeight = FontWeight.Bold)
             }
 
             OutlinedButton(
@@ -120,7 +117,7 @@ fun PiratesResultsScreen(
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSub),
                 border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
             ) {
-                Text("🏠  Zurück zum Menü", fontSize = 17.sp)
+                Text("🏠  Zurück zum Menü", fontSize = MaterialTheme.typography.bodyLarge.fontSize)
             }
         }
     }
@@ -138,9 +135,9 @@ private fun StatCard(emoji: String, label: String, value: String, color: Color, 
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text(emoji, fontSize = 24.sp)
-            Text(label, fontSize = 11.sp, color = TextMuted)
-            Text(value, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = color)
+            Text(emoji, fontSize = MaterialTheme.typography.headlineSmall.fontSize)
+            Text(label, fontSize = MaterialTheme.typography.labelSmall.fontSize, color = TextMuted)
+            Text(value, fontSize = MaterialTheme.typography.headlineSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = color)
         }
     }
 }

@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,7 +46,10 @@ import com.bestfriends.beachbingo.R
 import com.bestfriends.beachbingo.core.model.ACTION_GAMES
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.ui.theme.BgDark
+import com.bestfriends.beachbingo.ui.theme.BingoCallSize
 import com.bestfriends.beachbingo.ui.theme.BorderColor
+import com.bestfriends.beachbingo.ui.theme.ChipLabelTiny
+import com.bestfriends.beachbingo.ui.theme.ScoreLarge
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
 import com.bestfriends.beachbingo.ui.theme.TextMuted
@@ -98,21 +102,21 @@ fun ActionGamesScreen(
 
                 Spacer(Modifier.width(14.dp))
 
-                Text(text = "⚡", fontSize = 32.sp)
+                Text(text = "⚡", fontSize = ScoreLarge)
 
                 Spacer(Modifier.width(14.dp))
 
                 Column {
                     Text(
                         text = "KATEGORIE",
-                        fontSize = 10.sp,
+                        fontSize = ChipLabelTiny,
                         fontWeight = FontWeight.Bold,
                         color = TextMuted,
                         letterSpacing = 1.5.sp,
                     )
                     Text(
                         text = "Action",
-                        fontSize = 20.sp,
+                        fontSize = BingoCallSize,
                         fontWeight = FontWeight.ExtraBold,
                         color = TextPrimary,
                     )
@@ -155,7 +159,7 @@ fun ActionGamesScreen(
                             modifier = Modifier.size(64.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Text(text = game.emoji, fontSize = 32.sp)
+                                Text(text = game.emoji, fontSize = ScoreLarge)
                             }
                         }
 
@@ -164,14 +168,14 @@ fun ActionGamesScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = game.title,
-                                fontSize = 18.sp,
+                                fontSize = MaterialTheme.typography.titleMedium.fontSize,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary,
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 text = game.description,
-                                fontSize = 13.sp,
+                                fontSize = MaterialTheme.typography.labelMedium.fontSize,
                                 color = TextMuted,
                                 lineHeight = 18.sp,
                             )

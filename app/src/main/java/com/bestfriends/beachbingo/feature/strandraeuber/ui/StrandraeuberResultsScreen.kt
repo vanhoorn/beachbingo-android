@@ -34,16 +34,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.bestfriends.beachbingo.ui.theme.BgDark
-import com.bestfriends.beachbingo.ui.theme.Danger
-import com.bestfriends.beachbingo.ui.theme.Surface2Dark
-import com.bestfriends.beachbingo.ui.theme.SurfaceDark
-import com.bestfriends.beachbingo.ui.theme.TextMuted
-import com.bestfriends.beachbingo.ui.theme.TextPrimary
+import com.bestfriends.beachbingo.ui.theme.*
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -51,7 +44,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val SpCrimson = Color(0xFFE11D48)
 
 private data class SpResultEntry(
     val id: String,
@@ -119,7 +111,7 @@ fun StrandraeuberResultsScreen(onNavigateBack: () -> Unit) {
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück", tint = SpCrimson)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück", tint = Crimson)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark),
@@ -132,7 +124,7 @@ fun StrandraeuberResultsScreen(onNavigateBack: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                Text("🦹", fontSize = 64.sp)
+                Text("🦹", fontSize = DrawNumberPhone)
                 Spacer(Modifier.height(16.dp))
                 Text("Noch keine Ergebnisse", style = MaterialTheme.typography.titleMedium, color = TextMuted)
                 Spacer(Modifier.height(6.dp))
@@ -173,7 +165,7 @@ private fun SpResultCard(
                 Text(
                     text = if (result.mode == "ai") "🤖 Gegen KI" else "📱 Online",
                     style = MaterialTheme.typography.titleSmall,
-                    color = SpCrimson,
+                    color = Crimson,
                     fontWeight = FontWeight.ExtraBold,
                 )
                 Text(
@@ -199,7 +191,7 @@ private fun SpResultCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("🦹", fontSize = 20.sp)
+                Text("🦹", fontSize = BingoCallSize)
                 Text(
                     text = "${result.loserAvatar} ${result.loserName} hält den Strandräuber!",
                     style = MaterialTheme.typography.bodyMedium,

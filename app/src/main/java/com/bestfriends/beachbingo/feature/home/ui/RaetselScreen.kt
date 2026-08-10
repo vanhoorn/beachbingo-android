@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,7 +41,11 @@ import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.core.model.RIDDLE_GAMES
 import com.bestfriends.beachbingo.ui.theme.BgDark
+import com.bestfriends.beachbingo.ui.theme.BingoCallSize
 import com.bestfriends.beachbingo.ui.theme.BorderColor
+import com.bestfriends.beachbingo.ui.theme.ChipLabelTiny
+import com.bestfriends.beachbingo.ui.theme.EmojiMedium
+import com.bestfriends.beachbingo.ui.theme.ScoreLarge
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
 import com.bestfriends.beachbingo.ui.theme.TextMuted
@@ -103,17 +108,17 @@ fun RaetselScreen(
                     }
                 }
                 Spacer(Modifier.width(14.dp))
-                Text(text = "🧩", fontSize = 32.sp)
+                Text(text = "🧩", fontSize = ScoreLarge)
                 Spacer(Modifier.width(14.dp))
                 Column {
                     Text(
                         text = "KATEGORIE",
-                        fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                        fontSize = ChipLabelTiny, fontWeight = FontWeight.Bold,
                         color = TextMuted, letterSpacing = 1.5.sp,
                     )
                     Text(
                         text = "Rätsel",
-                        fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
+                        fontSize = BingoCallSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
                     )
                 }
             }
@@ -130,7 +135,7 @@ fun RaetselScreen(
         ) {
             Text(
                 text = "🧠 Logik-Rätsel für Solo-Spieler — von Sudoku bis Schiffe Versenken. Tippe auf ℹ für die Anleitung.",
-                fontSize = 13.sp, color = TextMuted, lineHeight = 20.sp,
+                fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted, lineHeight = 20.sp,
                 modifier = Modifier.padding(14.dp),
             )
         }
@@ -156,13 +161,13 @@ fun RaetselScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(shape = RoundedCornerShape(14.dp), color = accentColor.copy(alpha = 0.15f), modifier = Modifier.size(64.dp)) {
-                            Box(contentAlignment = Alignment.Center) { Text(text = game.emoji, fontSize = 30.sp) }
+                            Box(contentAlignment = Alignment.Center) { Text(text = game.emoji, fontSize = EmojiMedium) }
                         }
                         Spacer(Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = game.title, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                            Text(text = game.title, fontSize = MaterialTheme.typography.bodyLarge.fontSize, fontWeight = FontWeight.Bold, color = TextPrimary)
                             Spacer(Modifier.height(4.dp))
-                            Text(text = game.description, fontSize = 13.sp, color = TextMuted, lineHeight = 18.sp)
+                            Text(text = game.description, fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted, lineHeight = 18.sp)
                         }
                         Spacer(Modifier.width(8.dp))
                         Surface(

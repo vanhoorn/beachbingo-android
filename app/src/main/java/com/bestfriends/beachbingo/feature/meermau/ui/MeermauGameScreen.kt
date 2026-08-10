@@ -57,8 +57,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.bestfriends.beachbingo.feature.brandung.ui.CardBackScene
+import com.bestfriends.beachbingo.ui.components.BeachSuitIcon
+import com.bestfriends.beachbingo.ui.components.CardBackScene
+import com.bestfriends.beachbingo.ui.components.CardFanRow
+import com.bestfriends.beachbingo.ui.components.PlayingCard
 import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
+import com.bestfriends.beachbingo.ui.components.suitColor
+import com.bestfriends.beachbingo.ui.components.suitName
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.Danger
 import com.bestfriends.beachbingo.ui.theme.SandGold
@@ -68,18 +73,11 @@ import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
 import com.bestfriends.beachbingo.ui.theme.BadgeTiny
 import com.bestfriends.beachbingo.ui.theme.BorderColor
-import com.bestfriends.beachbingo.ui.theme.CardBack
-import com.bestfriends.beachbingo.ui.theme.CardBorderLight
-import com.bestfriends.beachbingo.ui.theme.CardColorDark
-import com.bestfriends.beachbingo.ui.theme.CardFace
 import com.bestfriends.beachbingo.ui.theme.CardFrame
-import com.bestfriends.beachbingo.ui.theme.CardOptionBg
 import com.bestfriends.beachbingo.ui.theme.CardTable
 import com.bestfriends.beachbingo.ui.theme.ChipLabelTiny
-import com.bestfriends.beachbingo.ui.theme.DangerVivid
 import com.bestfriends.beachbingo.ui.theme.DrawNumberTablet
 import com.bestfriends.beachbingo.ui.theme.GreenVivid
-import com.bestfriends.beachbingo.ui.theme.InkBlack
 import com.bestfriends.beachbingo.ui.theme.OrangeVivid
 import com.bestfriends.beachbingo.ui.theme.PurpleDeep
 import com.bestfriends.beachbingo.ui.theme.TextSub
@@ -103,7 +101,6 @@ import kotlin.random.Random
 
 private val MM_SUITS = listOf("♣", "♠", "♥", "♦")
 private val MM_RANKS = listOf("7", "8", "9", "10", "J", "Q", "K", "A")
-private val MM_RED_SUITS = setOf("♥", "♦")
 private val MM_CARD_POINTS = mapOf("7" to 7, "8" to 8, "9" to 9, "10" to 10, "J" to 20, "Q" to 10, "K" to 10, "A" to 11)
 
 @Serializable
@@ -572,6 +569,8 @@ fun MeermauGameScreen(
     aiCount: Int,
     difficulty: String,
     saveId: String? = null,
+    soundEnabled: Boolean = true,
+    musicEnabled: Boolean = true,
     onNavigateBack: () -> Unit,
 ) {
     val auth = FirebaseAuth.getInstance()
@@ -608,15 +607,7 @@ fun MeermauGameScreen(
 
     // ── Audio startup ──────────────────────────────────────────────────────────
     LaunchedEffect(Unit) {
-        try {
-            val snap = db.collection("users").document(uid).get().await()
-            audioManager.startMusic(
-                snap.getBoolean("soundEnabled") ?: true,
-                snap.getBoolean("musicEnabled") ?: true,
-            )
-        } catch (_: Exception) {
-            audioManager.startMusic(soundEnabled = true, musicEnabled = true)
-        }
+        audioManager.startMusic(soundEnabled, musicEnabled)
     }
 
     if (showRules) {
@@ -1075,14 +1066,14 @@ fun MeermauGameScreen(
                         }
                         Text(if (st.direction == 1) "→" else "←", style = MaterialTheme.typography.headlineSmall, color = PurpleDeep)
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            if (topCard != null) MMPlayingCard(rank = topCard.rank, suit = topCard.suit, faceUp = true, selected = false, cardWidth = scaledCardW, cardHeight = scaledCardH)
+                            if (topCard != null) PlayingCard(accentColor = PurpleDeep,rank = topCard.rank, suit = topCard.suit, faceUp = true, selected = false, cardWidth = scaledCardW, cardHeight = scaledCardH)
                             Text("Ablage", style = MaterialTheme.typography.labelSmall, color = TextMuted)
                         }
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                         if (st.wishSuit != null) {
                             Surface(color = PurpleDeep.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp)) {
-                                Text("Farbe: ${st.wishSuit}", modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), color = PurpleDeep, fontWeight = FontWeight.Bold)
+                                Text("Farbe: " + suitName(st.wishSuit ?: ""), modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), color = PurpleDeep, fontWeight = FontWeight.Bold)
                             }
                         }
                         if (st.lastSkippedId != null) {
@@ -1123,39 +1114,41 @@ fun MeermauGameScreen(
                     "Du · ${myHand.size + if (drawnCard != null && isMyTurn) 1 else 0} Karten · ${myPlayer?.totalScore ?: 0} Punkte",
                     style = MaterialTheme.typography.labelSmall, color = TextMuted, modifier = Modifier.padding(bottom = 6.dp),
                 )
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    myHand.forEach { card ->
-                        val canPlay = topCard != null && isMyTurn && st.phase == "PLAYING" && playableIds.contains(card.id)
-                        MMPlayingCard(
-                            rank = card.rank, suit = card.suit, faceUp = true,
-                            selected = selectedCardId == card.id,
-                            cardWidth = scaledCardW, cardHeight = scaledCardH,
-                            modifier = Modifier
-                                .clickable(enabled = isMyTurn && st.phase == "PLAYING") {
-                                    selectedCardId = if (selectedCardId == card.id) null
-                                    else if (canPlay || selectedCardId != null) card.id
-                                    else null
-                                }
-                                .alpha(if (canPlay || selectedCardId == card.id || !isMyTurn) 1f else 0.45f)
-                                .offset(y = if (selectedCardId == card.id) (-8).dp else 0.dp),
-                        )
-                    }
-                    if (drawnCard != null && isMyTurn) {
-                        val canPlayDrawn = topCard != null && canPlayMM(drawnCard, topCard, st.wishSuit, st.drawPending, st.settings)
-                        Box {
-                            MMPlayingCard(
-                                rank = drawnCard.rank, suit = drawnCard.suit, faceUp = true,
-                                selected = selectedCardId == drawnCard.id,
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
+                        CardFanRow(cards = myHand) { card, _ ->
+                            val canPlay = topCard != null && isMyTurn && st.phase == "PLAYING" && playableIds.contains(card.id)
+                            PlayingCard(accentColor = PurpleDeep,
+                                rank = card.rank, suit = card.suit, faceUp = true,
+                                selected = selectedCardId == card.id,
                                 cardWidth = scaledCardW, cardHeight = scaledCardH,
                                 modifier = Modifier
-                                    .clickable(enabled = isMyTurn && canPlayDrawn) {
-                                        selectedCardId = if (selectedCardId == drawnCard.id) null else drawnCard.id
+                                    .clickable(enabled = isMyTurn && st.phase == "PLAYING") {
+                                        selectedCardId = if (selectedCardId == card.id) null
+                                        else if (canPlay || selectedCardId != null) card.id
+                                        else null
                                     }
-                                    .alpha(if (isMyTurn && canPlayDrawn) 1f else 0.5f)
-                                    .offset(y = if (selectedCardId == drawnCard.id) (-8).dp else 0.dp),
+                                    .alpha(if (canPlay || selectedCardId == card.id || !isMyTurn) 1f else 0.45f)
+                                    .offset(y = if (selectedCardId == card.id) (-8).dp else 0.dp),
                             )
-                            Surface(color = PurpleDeep, shape = RoundedCornerShape(4.dp), modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp)) {
-                                Text("NEU", fontSize = BadgeTiny, color = Color.White, modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp))
+                        }
+                        if (drawnCard != null && isMyTurn) {
+                            val canPlayDrawn = topCard != null && canPlayMM(drawnCard, topCard, st.wishSuit, st.drawPending, st.settings)
+                            Box {
+                                PlayingCard(accentColor = PurpleDeep,
+                                    rank = drawnCard.rank, suit = drawnCard.suit, faceUp = true,
+                                    selected = selectedCardId == drawnCard.id,
+                                    cardWidth = scaledCardW, cardHeight = scaledCardH,
+                                    modifier = Modifier
+                                        .clickable(enabled = isMyTurn && canPlayDrawn) {
+                                            selectedCardId = if (selectedCardId == drawnCard.id) null else drawnCard.id
+                                        }
+                                        .alpha(if (isMyTurn && canPlayDrawn) 1f else 0.5f)
+                                        .offset(y = if (selectedCardId == drawnCard.id) (-8).dp else 0.dp),
+                                )
+                                Surface(color = PurpleDeep, shape = RoundedCornerShape(4.dp), modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp)) {
+                                    Text("NEU", fontSize = BadgeTiny, color = Color.White, modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp))
+                                }
                             }
                         }
                     }
@@ -1347,7 +1340,7 @@ fun MeermauGameScreen(
                     Text("Farbe wählen", style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         MM_SUITS.forEach { suit ->
-                            val isRed = suit in MM_RED_SUITS
+                            val sc = suitColor(suit)
                             Button(
                                 onClick = {
                                     if (st.discardPile.isEmpty()) return@Button
@@ -1376,27 +1369,33 @@ fun MeermauGameScreen(
                                             } else {
                                                 st.copy(wishSuit = suit, phase = "PLAYING", currentPlayerIndex = ni,
                                                     mauPlayerId = null, pendingMau = player2.userId,
-                                                    lastActionText = "${player2.displayName} wünscht $suit!")
+                                                    lastActionText = "${player2.displayName} wünscht ${suitName(suit)}!")
                                             }
                                         }
                                         else -> {
                                             val ni = nextMMIdx(playerIdx, st.direction, st.players)
                                             st.copy(wishSuit = suit, phase = "PLAYING", currentPlayerIndex = ni,
-                                                lastActionText = "${player2.displayName} wünscht $suit!")
+                                                lastActionText = "${player2.displayName} wünscht ${suitName(suit)}!")
                                         }
                                     }
                                     localState = ns; writeOnline(ns)
                                 },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = CardOptionBg,
-                                    contentColor = if (isRed) DangerVivid else InkBlack,
+                                    containerColor = sc.copy(alpha = 0.12f),
+                                    contentColor = sc,
                                 ),
                                 shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.size(64.dp),
+                                modifier = Modifier.size(width = 66.dp, height = 76.dp),
                                 contentPadding = PaddingValues(0.dp),
                             ) {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Text(suit, style = MaterialTheme.typography.headlineMedium, lineHeight = 28.sp)
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                ) {
+                                    BeachSuitIcon(suit = suit, sizeDp = 32.dp)
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(suitName(suit), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -1468,38 +1467,3 @@ fun MeermauGameScreen(
 }
 
 // ── Playing card composable ───────────────────────────────────────────────────
-
-@Composable
-private fun MMPlayingCard(
-    rank: String,
-    suit: String,
-    faceUp: Boolean,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    cardWidth: Dp = 56.dp,
-    cardHeight: Dp = 80.dp,
-) {
-    val isRed = suit in MM_RED_SUITS
-    val cardColor = if (isRed) Danger else CardColorDark
-    val borderColor = if (selected) PurpleDeep else CardBorderLight
-
-    Box(
-        modifier = modifier
-            .size(width = cardWidth, height = cardHeight)
-            .clip(RoundedCornerShape(8.dp))
-            .border(width = if (selected) 2.5.dp else 1.dp, color = borderColor, shape = RoundedCornerShape(8.dp))
-            .background(if (faceUp) CardFace else CardBack),
-    ) {
-        if (faceUp) {
-            Column(modifier = Modifier.fillMaxSize().padding(4.dp)) {
-                Text(rank, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = cardColor, lineHeight = 12.sp)
-                Text(suit, fontSize = ChipLabelTiny, color = cardColor, lineHeight = 11.sp)
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(suit, style = MaterialTheme.typography.titleLarge, color = cardColor)
-                }
-            }
-        } else {
-            CardBackScene(modifier = Modifier.fillMaxSize())
-        }
-    }
-}

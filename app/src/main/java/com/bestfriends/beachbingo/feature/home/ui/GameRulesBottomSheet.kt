@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -34,7 +35,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.core.model.GameRule
+import com.bestfriends.beachbingo.ui.theme.BingoCallSize
 import com.bestfriends.beachbingo.ui.theme.BorderColor
+import com.bestfriends.beachbingo.ui.theme.CellNumber
+import com.bestfriends.beachbingo.ui.theme.ChipLabel
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
 import com.bestfriends.beachbingo.ui.theme.TextMuted
@@ -83,7 +87,7 @@ fun GameRulesBottomSheet(
                                 modifier = Modifier.size(38.dp)
                             )
                         } else {
-                            Text(text = rule.emoji, fontSize = 28.sp)
+                            Text(text = rule.emoji, fontSize = MaterialTheme.typography.headlineMedium.fontSize)
                         }
                     }
                 }
@@ -93,13 +97,13 @@ fun GameRulesBottomSheet(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = rule.title,
-                        fontSize = 20.sp,
+                        fontSize = BingoCallSize,
                         fontWeight = FontWeight.ExtraBold,
                         color = TextPrimary,
                     )
                     Text(
                         text = rule.tagline,
-                        fontSize = 13.sp,
+                        fontSize = MaterialTheme.typography.labelMedium.fontSize,
                         color = TextMuted,
                         lineHeight = 18.sp,
                     )
@@ -130,7 +134,7 @@ fun GameRulesBottomSheet(
                 Column(modifier = Modifier.padding(14.dp)) {
                     Text(
                         text = "🎯 ZIEL",
-                        fontSize = 11.sp,
+                        fontSize = MaterialTheme.typography.labelSmall.fontSize,
                         fontWeight = FontWeight.Bold,
                         color = accentColor,
                         letterSpacing = 1.2.sp,
@@ -138,7 +142,7 @@ fun GameRulesBottomSheet(
                     Spacer(Modifier.height(6.dp))
                     Text(
                         text = rule.goal,
-                        fontSize = 14.sp,
+                        fontSize = CellNumber,
                         color = TextPrimary,
                         lineHeight = 20.sp,
                     )
@@ -150,7 +154,7 @@ fun GameRulesBottomSheet(
             // Rules section label
             Text(
                 text = "📋 SPIELREGELN",
-                fontSize = 12.sp,
+                fontSize = ChipLabel,
                 fontWeight = FontWeight.Bold,
                 color = TextMuted,
                 letterSpacing = 1.2.sp,
@@ -174,7 +178,7 @@ fun GameRulesBottomSheet(
                             Box(contentAlignment = Alignment.Center) {
                                 Text(
                                     text = "${index + 1}",
-                                    fontSize = 11.sp,
+                                    fontSize = MaterialTheme.typography.labelSmall.fontSize,
                                     fontWeight = FontWeight.Bold,
                                     color = accentColor,
                                 )
@@ -183,7 +187,7 @@ fun GameRulesBottomSheet(
                         Spacer(Modifier.width(12.dp))
                         Text(
                             text = ruleText,
-                            fontSize = 14.sp,
+                            fontSize = CellNumber,
                             color = TextPrimary,
                             lineHeight = 20.sp,
                             modifier = Modifier.padding(top = 2.dp),
@@ -207,12 +211,12 @@ fun GameRulesBottomSheet(
                     modifier = Modifier.padding(14.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
-                    Text(text = "💡", fontSize = 20.sp)
+                    Text(text = "💡", fontSize = BingoCallSize)
                     Spacer(Modifier.width(12.dp))
                     Column {
                         Text(
                             text = "PRO-TIPP",
-                            fontSize = 11.sp,
+                            fontSize = MaterialTheme.typography.labelSmall.fontSize,
                             fontWeight = FontWeight.Bold,
                             color = TextMuted,
                             letterSpacing = 1.2.sp,
@@ -220,7 +224,7 @@ fun GameRulesBottomSheet(
                         Spacer(Modifier.height(4.dp))
                         Text(
                             text = rule.proTip,
-                            fontSize = 13.sp,
+                            fontSize = MaterialTheme.typography.labelMedium.fontSize,
                             color = TextSub,
                             lineHeight = 19.sp,
                             fontStyle = FontStyle.Italic,

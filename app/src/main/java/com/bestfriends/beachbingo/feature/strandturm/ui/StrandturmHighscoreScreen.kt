@@ -16,13 +16,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.ui.theme.*
+
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
-
-private val StrandturmRed = Color(0xFFDC2626)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,14 +69,14 @@ fun StrandturmHighscoreScreen(onNavigateBack: () -> Unit) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Brush.linearGradient(listOf(StrandturmRed.copy(alpha = 0.15f), Color(0xFF0a1628))))
+                    .background(Brush.linearGradient(listOf(StrandturmRed.copy(alpha = 0.15f), BgDark)))
                     .padding(horizontal = 20.dp, vertical = 28.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("🏆", fontSize = 64.sp)
-                    Text("Deine Bestleistungen", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = SandGold)
-                    Text("Strandturm – Küsten-Klara", fontSize = 13.sp, color = TextMuted)
+                    Text("🏆", fontSize = DrawNumberPhone)
+                    Text("Deine Bestleistungen", fontSize = BingoCallSize, fontWeight = FontWeight.ExtraBold, color = SandGold)
+                    Text("Strandturm – Küsten-Klara", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted)
                 }
             }
 
@@ -115,9 +113,9 @@ fun StrandturmHighscoreScreen(onNavigateBack: () -> Unit) {
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
-                                Text("🗼", fontSize = 40.sp)
-                                Text("Noch kein Spiel gespielt", fontSize = 14.sp, color = TextMuted)
-                                Text("Klettere den Pier hoch und lass dir von Mega-Möwe kein Kokosnuss den Weg versperren!", fontSize = 12.sp, color = TextSub)
+                                Text("🗼", fontSize = EmojiLarge)
+                                Text("Noch kein Spiel gespielt", fontSize = CellNumber, color = TextMuted)
+                                Text("Klettere den Pier hoch und lass dir von Mega-Möwe kein Kokosnuss den Weg versperren!", fontSize = ChipLabel, color = TextSub)
                             }
                         }
                     }
@@ -150,18 +148,18 @@ private fun ScoreCard(emoji: String, label: String, sub: String, value: String?,
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Text(emoji, fontSize = 36.sp)
+                Text(emoji, fontSize = MaterialTheme.typography.headlineLarge.fontSize)
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(label, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = if (hasValue) TextPrimary else TextMuted)
-                    Text(if (hasValue) "Persönlicher Rekord" else sub, fontSize = 12.sp, color = TextMuted)
+                    Text(label, fontSize = MaterialTheme.typography.titleSmall.fontSize, fontWeight = FontWeight.Bold, color = if (hasValue) TextPrimary else TextMuted)
+                    Text(if (hasValue) "Persönlicher Rekord" else sub, fontSize = ChipLabel, color = TextMuted)
                 }
             }
             if (hasValue) {
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(value!!, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = accentColor)
+                    Text(value!!, fontSize = MaterialTheme.typography.headlineSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = accentColor)
                 }
             } else {
-                Text("–", fontSize = 28.sp, color = TextMuted, fontWeight = FontWeight.Bold)
+                Text("–", fontSize = MaterialTheme.typography.headlineMedium.fontSize, color = TextMuted, fontWeight = FontWeight.Bold)
             }
         }
     }

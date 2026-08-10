@@ -36,12 +36,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.core.model.VierGame
 import com.bestfriends.beachbingo.core.model.VierPlayer
 import com.bestfriends.beachbingo.core.model.VierStatus
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.Coral
+import com.bestfriends.beachbingo.ui.theme.DrawNumberPhone
 import com.bestfriends.beachbingo.ui.theme.SandGold
 import com.bestfriends.beachbingo.ui.theme.SurfaceDark
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
@@ -196,7 +196,7 @@ fun VierResultsScreen(onNavigateBack: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text("🍺", fontSize = 64.sp)
+                Text("🍺", fontSize = DrawNumberPhone)
                 Spacer(Modifier.height(16.dp))
                 Text("Noch keine Ergebnisse", style = MaterialTheme.typography.titleMedium, color = TextMuted)
                 Spacer(Modifier.height(6.dp))
@@ -260,7 +260,7 @@ private fun VierTeamCard(team: VierTeam, currentUid: String, dateFormat: SimpleD
                 ) {
                     Text(
                         text = rankEmoji(rank, isLast, total),
-                        fontSize = 18.sp,
+                        fontSize = MaterialTheme.typography.titleMedium.fontSize,
                         modifier = Modifier.width(30.dp)
                     )
                     DrinkPiece(drinkId = p.drinkId, size = 28.dp)
@@ -299,7 +299,7 @@ private fun VierTeamCard(team: VierTeam, currentUid: String, dateFormat: SimpleD
                             lastWinner != null -> ""
                             else -> "🍺"
                         },
-                        fontSize = 18.sp
+                        fontSize = MaterialTheme.typography.titleMedium.fontSize
                     )
                     if (lastWinner != null) {
                         DrinkPiece(drinkId = lastWinner.drinkId, size = 20.dp)

@@ -48,7 +48,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestfriends.beachbingo.feature.auth.viewmodel.AuthViewModel
@@ -236,19 +235,19 @@ fun AvatarPicker(
                     ) {
                         Text(
                             text = emoji.substring(0, 2),
-                            fontSize = 22.sp,
+                            fontSize = MaterialTheme.typography.titleLarge.fontSize,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                         Text(
                             text = emoji.substring(2),
-                            fontSize = 18.sp,
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                     }
                 } else {
                     Text(
                         text = emoji,
-                        fontSize = 28.sp,
+                        fontSize = MaterialTheme.typography.headlineMedium.fontSize,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }

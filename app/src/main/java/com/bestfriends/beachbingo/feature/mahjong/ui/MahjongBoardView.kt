@@ -13,10 +13,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.feature.mahjong.MahjongTile
 import com.bestfriends.beachbingo.feature.mahjong.isFree
 import com.bestfriends.beachbingo.feature.raetsel.ui.ZoomableGrid
+import com.bestfriends.beachbingo.ui.theme.ChipLabelTiny
 import kotlin.math.max
 
 private const val PAD = 16f
@@ -28,6 +28,7 @@ data class BoardMetrics(
     val boardH: Float,
     val offsetX: Float,
     val offsetY: Float,
+    val initialZoom: Float = 1f,
 )
 
 fun computeMetrics(tiles: List<MahjongTile>, containerW: Float, containerH: Float): BoardMetrics {
@@ -51,8 +52,10 @@ fun computeMetrics(tiles: List<MahjongTile>, containerW: Float, containerH: Floa
 
     val tileWByW = (availW - layerExtraW) / colSpan
     val tileWByH = (availH - layerExtraH) / (rowSpan * 1.3f)
-    val tileW    = max(8f, minOf(tileWByW, tileWByH, 60f))
-    val tileH    = tileW * 1.3f
+    val naturalTileW = minOf(tileWByW, tileWByH, 60f)
+    val tileW        = max(26f, naturalTileW)
+    val tileH        = tileW * 1.3f
+    val initialZoom  = (naturalTileW / tileW).coerceIn(0.25f, 1f)
 
     val EDGE_R = tileW * 0.12f
     val EDGE_B = tileH * 0.10f
@@ -63,7 +66,7 @@ fun computeMetrics(tiles: List<MahjongTile>, containerW: Float, containerH: Floa
     val offsetX = ((containerW - boardW) / 2f).coerceAtLeast(PAD)
     val offsetY = ((containerH - boardH) / 2f).coerceAtLeast(PAD)
 
-    return BoardMetrics(tileW, tileH, boardW, boardH, offsetX, offsetY)
+    return BoardMetrics(tileW, tileH, boardW, boardH, offsetX, offsetY, initialZoom)
 }
 
 private fun tilePixelX(tile: MahjongTile, m: BoardMetrics, minCol: Int): Float =
@@ -111,6 +114,7 @@ fun MahjongBoardView(
 
         ZoomableGrid(
             modifier = Modifier.fillMaxSize(),
+            initialZoom = metrics.initialZoom,
             onTap = { gx, gy ->
                 val hit = sorted.lastOrNull { tile ->
                     if (tile.removed) return@lastOrNull false
@@ -150,7 +154,7 @@ fun MahjongBoardView(
         Text(
             text = "Doppeltippen: Zoom zurücksetzen",
             color = Color.White.copy(alpha = 0.30f),
-            fontSize = 10.sp,
+            fontSize = ChipLabelTiny,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = with(density) { 4f.toDp() }),

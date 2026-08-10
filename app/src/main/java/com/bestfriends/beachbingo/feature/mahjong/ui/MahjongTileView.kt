@@ -6,10 +6,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -17,25 +17,40 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.platform.LocalDensity
 import com.bestfriends.beachbingo.feature.mahjong.MahjongTile
 import com.bestfriends.beachbingo.feature.mahjong.TileGroup
 import com.bestfriends.beachbingo.feature.mahjong.getTileType
+import com.bestfriends.beachbingo.ui.theme.*
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.sin
 
-const val TILE_LAYER_DX = 3f
-const val TILE_LAYER_DY = -3f
+const val TILE_LAYER_DX = 5f
+const val TILE_LAYER_DY = -5f
 
 private const val EDGE_R_FRAC = 0.12f
 private const val EDGE_B_FRAC = 0.10f
+
+private fun Color.lighten(f: Float) = Color(
+    red   = (red   + (1f - red)   * f).coerceIn(0f, 1f),
+    green = (green + (1f - green) * f).coerceIn(0f, 1f),
+    blue  = (blue  + (1f - blue)  * f).coerceIn(0f, 1f),
+    alpha = alpha,
+)
+
+private fun Color.darken(f: Float) = Color(
+    red   = (red   * (1f - f)).coerceIn(0f, 1f),
+    green = (green * (1f - f)).coerceIn(0f, 1f),
+    blue  = (blue  * (1f - f)).coerceIn(0f, 1f),
+    alpha = alpha,
+)
 
 @Composable
 fun MahjongTileCanvas(
@@ -56,19 +71,18 @@ fun MahjongTileCanvas(
     val borderW = max(1f, tileW * 0.04f)
 
     val isFreeHint = showFreeHighlight && free && !selected
-    // All backgrounds fully opaque — never transparent (avoids seeing tiles below)
     val faceBg = when {
-        removing   -> Color(0xFFFFF176)  // gold flash on removal
-        selected   -> Color(0xFFBEE3F8)
-        hinted     -> Color(0xFFFFD6B0)
-        isFreeHint -> Color(0xFFDCF5E5)
-        free       -> Color(0xFFFAF0DC)
-        else       -> Color(0xFFEDD9B8)  // blocked: slightly dimmed sand
+        removing   -> TileRemoveFlash
+        selected   -> TileSelected
+        hinted     -> TileHinted
+        isFreeHint -> TileFreeHint
+        free       -> TileFree
+        else       -> TileBlocked
     }
     val borderColor = when {
-        selected   -> Color(0xFF0EA5E9)
-        hinted     -> Color(0xFFF97316)
-        isFreeHint -> Color(0xFF22C55E)
+        selected   -> OceanBlue
+        hinted     -> Coral
+        isFreeHint -> Success
         else       -> if (free) accentColor else accentColor.copy(alpha = 0.55f)
     }
 
@@ -82,23 +96,42 @@ fun MahjongTileCanvas(
 
     Box(modifier = Modifier.size(tileWDp, tileHDp)) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            // Right edge
+            // Drop shadow — drawn first, below edges and face
             drawRoundRect(
-                color = Color(0xFFBB9C78),
+                color = Color.Black.copy(alpha = 0.18f),
+                topLeft = Offset(3f, 4f),
+                size = Size(innerW, innerH),
+                cornerRadius = CornerRadius(cornerR),
+            )
+            // Right edge — gradient top-light to bottom-dark
+            drawRoundRect(
+                brush = Brush.linearGradient(
+                    colors = listOf(TileSandLight.lighten(0.08f), TileSandLight.darken(0.12f)),
+                    start = Offset(innerW, edgeH),
+                    end   = Offset(innerW, edgeH + innerH),
+                ),
                 topLeft = Offset(innerW, edgeH),
                 size = Size(edgeW, innerH),
                 cornerRadius = CornerRadius(cornerR),
             )
-            // Bottom edge
+            // Bottom edge — gradient left-light to right-dark
             drawRoundRect(
-                color = Color(0xFFA88B65),
+                brush = Brush.linearGradient(
+                    colors = listOf(TileSandDark.lighten(0.06f), TileSandDark.darken(0.10f)),
+                    start = Offset(edgeW, innerH),
+                    end   = Offset(edgeW + innerW, innerH),
+                ),
                 topLeft = Offset(edgeW, innerH),
                 size = Size(innerW, edgeH),
                 cornerRadius = CornerRadius(cornerR),
             )
-            // Face background
+            // Face background with subtle gradient (light top-left → darker bottom-right)
             drawRoundRect(
-                color = faceBg,
+                brush = Brush.linearGradient(
+                    colors = listOf(faceBg.lighten(0.07f), faceBg.darken(0.06f)),
+                    start = Offset(0f, 0f),
+                    end = Offset(innerW * 0.5f, innerH),
+                ),
                 topLeft = Offset.Zero,
                 size = Size(innerW, innerH),
                 cornerRadius = CornerRadius(cornerR),
@@ -114,34 +147,70 @@ fun MahjongTileCanvas(
                 )
             }
 
-            // Icon (scale from 32x32 SVG space)
-            val iconYOffset = if (isSuit) innerH * 0.12f else (innerH - iconSize) / 2f
-            val iconXOffset = (innerW - iconSize) / 2f
-            withTransform({
-                translate(left = iconXOffset, top = iconYOffset)
-                scale(iconSize / 32f, pivot = Offset.Zero)
-            }) {
-                drawTileIcon(tt.svgIcon, iconColor)
-            }
-
-            // Rank number for suit tiles
-            if (isSuit && iconSize >= 10f) {
-                drawIntoCanvas { canvas ->
-                    val paint = android.graphics.Paint().apply {
-                        textSize    = max(6f, iconSize * 0.45f)
-                        this.color  = iconColor.toArgb()
-                        typeface    = android.graphics.Typeface.DEFAULT_BOLD
-                        textAlign   = android.graphics.Paint.Align.CENTER
-                        isAntiAlias = true
-                    }
-                    canvas.nativeCanvas.drawText(
-                        tt.rank.toString(),
-                        innerW / 2f,
-                        innerH - innerH * 0.08f,
-                        paint,
-                    )
+            // Pip pattern for suit tiles; single icon for all others
+            if (isSuit) {
+                drawSuitPips(tt.svgIcon, tt.rank, iconColor, innerW, innerH)
+            } else {
+                val iconYOffset = (innerH - iconSize) / 2f
+                val iconXOffset = (innerW - iconSize) / 2f
+                withTransform({
+                    translate(left = iconXOffset, top = iconYOffset)
+                    scale(scaleX = iconSize / 32f, scaleY = iconSize / 32f, pivot = Offset.Zero)
+                }) {
+                    drawTileIcon(tt.svgIcon, iconColor)
                 }
             }
+        }
+    }
+}
+
+/** Draws N pips (mini copies of the suit icon) in a playing-card arrangement. */
+private fun DrawScope.drawSuitPips(
+    svgIcon: String,
+    rank: Int,
+    color: Color,
+    faceW: Float,
+    faceH: Float,
+) {
+    val pad    = faceW * 0.08f
+    val availW = faceW - 2f * pad
+    val availH = faceH - 2f * pad
+    val startX = pad
+    val startY = pad
+
+    val pipScale = when {
+        rank == 1 -> 0.52f
+        rank <= 3 -> 0.36f
+        rank <= 5 -> 0.30f
+        rank <= 8 -> 0.25f
+        else      -> 0.22f
+    }
+    val pipSize = min(availW, availH) * pipScale
+
+    val positions: List<Pair<Float, Float>> = when (rank) {
+        1 -> listOf(0.5f to 0.5f)
+        2 -> listOf(0.5f to 0.25f, 0.5f to 0.75f)
+        3 -> listOf(0.5f to 0.2f, 0.5f to 0.5f, 0.5f to 0.8f)
+        4 -> listOf(0.25f to 0.25f, 0.75f to 0.25f, 0.25f to 0.75f, 0.75f to 0.75f)
+        5 -> listOf(0.25f to 0.25f, 0.75f to 0.25f, 0.5f to 0.5f, 0.25f to 0.75f, 0.75f to 0.75f)
+        6 -> listOf(0.25f to 0.2f, 0.75f to 0.2f, 0.25f to 0.5f, 0.75f to 0.5f, 0.25f to 0.8f, 0.75f to 0.8f)
+        7 -> listOf(0.25f to 0.2f, 0.75f to 0.2f, 0.5f to 0.35f, 0.25f to 0.5f, 0.75f to 0.5f, 0.25f to 0.8f, 0.75f to 0.8f)
+        8 -> listOf(0.25f to 0.2f, 0.75f to 0.2f, 0.5f to 0.3f, 0.25f to 0.5f, 0.75f to 0.5f, 0.5f to 0.7f, 0.25f to 0.8f, 0.75f to 0.8f)
+        else -> listOf(
+            0.2f to 0.2f, 0.5f to 0.2f, 0.8f to 0.2f,
+            0.2f to 0.5f, 0.5f to 0.5f, 0.8f to 0.5f,
+            0.2f to 0.8f, 0.5f to 0.8f, 0.8f to 0.8f,
+        )
+    }
+
+    positions.forEach { (xf, yf) ->
+        val cx = startX + availW * xf
+        val cy = startY + availH * yf
+        withTransform({
+            translate(cx - pipSize / 2f, cy - pipSize / 2f)
+            scale(scaleX = pipSize / 32f, scaleY = pipSize / 32f, pivot = Offset.Zero)
+        }) {
+            drawTileIcon(svgIcon, color)
         }
     }
 }
@@ -151,22 +220,45 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
     val sw      = 3.5f
     val stroke  = Stroke(sw,         cap = StrokeCap.Round, join = StrokeJoin.Round)
     val stroke1 = Stroke(sw - 0.5f,  cap = StrokeCap.Round, join = StrokeJoin.Round)
-    val stroke2 = Stroke(sw - 1f,    cap = StrokeCap.Round, join = StrokeJoin.Round)
+
+    val outline = Color.Black.copy(alpha = 0.25f)
+    val oStroke = Stroke(0.8f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+
+    // Local helpers: fill a closed shape then add thin dark outline for depth
+    fun filled(path: Path) {
+        drawPath(path, color)
+        drawPath(path, outline, style = oStroke)
+    }
+    fun filledOval(tl: Offset, sz: Size) {
+        drawOval(color, topLeft = tl, size = sz)
+        drawOval(outline, topLeft = tl, size = sz, style = Stroke(0.8f))
+    }
+    fun filledCircle(r: Float, c: Offset) {
+        drawCircle(color, r, c)
+        drawCircle(outline, r, c, style = Stroke(0.8f))
+    }
+    fun filledRect(tl: Offset, sz: Size) {
+        drawRect(color, topLeft = tl, size = sz)
+        drawRect(outline, topLeft = tl, size = sz, style = Stroke(0.8f))
+    }
+
+    val detail = Color.Black.copy(alpha = 0.35f)
+    val eye    = Color.Black.copy(alpha = 0.7f)
 
     when {
         // ── Muscheln ──────────────────────────────────────────────────────────
         svgIcon.startsWith("muscheln") -> {
-            drawOval(color, topLeft = Offset(5f, 13f), size = Size(22f, 14f), style = stroke)
+            filledOval(Offset(5f, 13f), Size(22f, 14f))
             val shell = Path().apply {
                 moveTo(16f, 13f)
                 cubicTo(10f, 8f, 6f, 14f, 16f, 20f)
                 cubicTo(26f, 14f, 22f, 8f, 16f, 13f)
                 close()
             }
-            drawPath(shell, color, style = stroke1)
-            drawLine(color, Offset(16f, 13f), Offset(16f, 20f), sw - 1f)
-            drawLine(color, Offset(10f, 15f), Offset(16f, 20f), sw - 1.5f)
-            drawLine(color, Offset(22f, 15f), Offset(16f, 20f), sw - 1.5f)
+            filled(shell)
+            drawLine(detail, Offset(16f, 13f), Offset(16f, 20f), sw - 1f)
+            drawLine(detail, Offset(10f, 15f), Offset(16f, 20f), sw - 1.5f)
+            drawLine(detail, Offset(22f, 15f), Offset(16f, 20f), sw - 1.5f)
         }
 
         // ── Wellen ────────────────────────────────────────────────────────────
@@ -190,18 +282,17 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
                 cubicTo(22f, 24f, 10f, 24f, 6f, 16f)
                 close()
             }
-            drawPath(body, color, style = stroke)
+            filled(body)
             val tail = Path().apply {
                 moveTo(24f, 16f); lineTo(30f, 10f); lineTo(30f, 22f); close()
             }
-            drawPath(tail, color, style = stroke1)
-            drawCircle(color, 1.5f, Offset(11f, 14f))
+            filled(tail)
+            drawCircle(eye, 1.5f, Offset(11f, 14f))
         }
 
         // ── Sonne (Sonnenaufgang) ─────────────────────────────────────────────
         svgIcon == "wind_ost" -> {
-            drawCircle(color, 6f, Offset(16f, 16f), style = stroke)
-            listOf(0f to 90f, 90f to 0f).forEach { (a, _) -> } // silence unused warning
+            filledCircle(6f, Offset(16f, 16f))
             drawLine(color, Offset(16f, 4f),  Offset(16f, 8f),  sw)
             drawLine(color, Offset(16f, 24f), Offset(16f, 28f), sw)
             drawLine(color, Offset(4f,  16f), Offset(8f,  16f), sw)
@@ -214,22 +305,31 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
 
         // ── Palme ─────────────────────────────────────────────────────────────
         svgIcon == "wind_sued" -> {
-            drawLine(color, Offset(16f, 30f), Offset(16f, 16f), sw, StrokeCap.Round)
+            val trunk = Path().apply {
+                moveTo(16f, 30f); cubicTo(18f, 24f, 17f, 18f, 16f, 14f)
+            }
+            drawPath(trunk, color, style = stroke)
             val l1 = Path().apply {
-                moveTo(16f, 16f); cubicTo(12f, 8f, 4f, 6f, 2f, 10f)
-                cubicTo(6f, 10f, 10f, 14f, 16f, 16f); close()
+                moveTo(16f, 14f); cubicTo(10f, 8f, 2f, 6f, 0f, 10f)
+                cubicTo(5f, 10f, 11f, 13f, 16f, 14f); close()
             }
             val l2 = Path().apply {
-                moveTo(16f, 16f); cubicTo(20f, 8f, 28f, 6f, 30f, 10f)
-                cubicTo(26f, 10f, 22f, 14f, 16f, 16f); close()
+                moveTo(16f, 14f); cubicTo(22f, 8f, 30f, 6f, 32f, 10f)
+                cubicTo(27f, 10f, 21f, 13f, 16f, 14f); close()
             }
             val l3 = Path().apply {
-                moveTo(16f, 16f); cubicTo(14f, 6f, 8f, 2f, 6f, 4f)
-                cubicTo(8f, 8f, 12f, 12f, 16f, 16f); close()
+                moveTo(16f, 14f); cubicTo(12f, 6f, 6f, 2f, 4f, 4f)
+                cubicTo(7f, 7f, 12f, 11f, 16f, 14f); close()
             }
-            drawPath(l1, color, style = stroke1)
-            drawPath(l2, color, style = stroke1)
-            drawPath(l3, color, style = stroke1)
+            val l4 = Path().apply {
+                moveTo(16f, 14f); cubicTo(20f, 6f, 26f, 2f, 28f, 4f)
+                cubicTo(25f, 7f, 20f, 11f, 16f, 14f); close()
+            }
+            val l5 = Path().apply {
+                moveTo(16f, 14f); cubicTo(14f, 8f, 14f, 2f, 16f, 2f)
+                cubicTo(18f, 2f, 18f, 8f, 16f, 14f); close()
+            }
+            filled(l1); filled(l2); filled(l3); filled(l4); filled(l5)
         }
 
         // ── Sonnenuntergang ───────────────────────────────────────────────────
@@ -246,16 +346,23 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
 
         // ── Leuchtturm ────────────────────────────────────────────────────────
         svgIcon == "wind_nord" -> {
-            drawRect(color, topLeft = Offset(12f, 14f), size = Size(8f, 14f), style = stroke1)
+            filledRect(Offset(12f, 14f), Size(8f, 14f))
             val top = Path().apply {
                 moveTo(10f, 14f); lineTo(22f, 14f); lineTo(19f, 6f); lineTo(13f, 6f); close()
             }
-            drawPath(top, color, style = stroke1)
-            drawRect(color, topLeft = Offset(14f, 4f), size = Size(4f, 3f), style = stroke2)
-            drawLine(color, Offset(8f,  18f), Offset(12f, 18f), sw - 1f)
-            drawLine(color, Offset(20f, 18f), Offset(24f, 18f), sw - 1f)
-            drawLine(color, Offset(12f, 23f), Offset(20f, 23f), sw - 1f)
-            drawLine(color, Offset(14f, 28f), Offset(18f, 28f), sw - 1f)
+            filled(top)
+            filledRect(Offset(13f, 3f), Size(6f, 4f))
+            // Balcony rail at gallery level
+            drawLine(color, Offset(8f, 14f), Offset(24f, 14f), sw - 0.5f, StrokeCap.Round)
+            // Stripe, window, door
+            drawLine(detail, Offset(12f, 20f), Offset(20f, 20f), sw - 0.5f)
+            drawLine(detail, Offset(14f, 10f), Offset(18f, 10f), sw - 1.5f)
+            drawLine(detail, Offset(14f, 28f), Offset(14f, 24f), sw - 1.5f)
+            drawLine(detail, Offset(18f, 28f), Offset(18f, 24f), sw - 1.5f)
+            // Light rays from lantern
+            drawLine(color, Offset(16f, 4f), Offset(4f, 10f), sw - 2f, StrokeCap.Round)
+            drawLine(color, Offset(16f, 4f), Offset(28f, 10f), sw - 2f, StrokeCap.Round)
+            drawLine(color, Offset(16f, 3f), Offset(16f, 0f), sw - 2f, StrokeCap.Round)
         }
 
         // ── Hai ───────────────────────────────────────────────────────────────
@@ -264,21 +371,18 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
                 moveTo(4f, 22f)
                 quadraticBezierTo(10f, 10f, 20f, 14f)
                 quadraticBezierTo(28f, 18f, 28f, 22f)
-            }
-            drawPath(body, color, style = stroke)
-            val fin = Path().apply {
-                moveTo(16f, 14f); lineTo(18f, 6f); lineTo(22f, 14f)
-            }
-            drawPath(fin, color, style = stroke1)
-            val belly = Path().apply {
-                moveTo(28f, 22f)
                 quadraticBezierTo(20f, 28f, 12f, 26f)
                 quadraticBezierTo(6f, 24f, 4f, 22f)
+                close()
             }
-            drawPath(belly, color, style = stroke)
-            drawOval(color, topLeft = Offset(20f, 18.5f), size = Size(4f, 3f))
-            drawLine(color, Offset(8f,  24f), Offset(6f,  28f), sw - 1f)
-            drawLine(color, Offset(12f, 26f), Offset(11f, 30f), sw - 1f)
+            filled(body)
+            val fin = Path().apply {
+                moveTo(16f, 14f); lineTo(18f, 6f); lineTo(22f, 14f); close()
+            }
+            filled(fin)
+            drawOval(eye, topLeft = Offset(20f, 18.5f), size = Size(4f, 3f))
+            drawLine(detail, Offset(8f,  24f), Offset(6f,  28f), sw - 1f)
+            drawLine(detail, Offset(12f, 26f), Offset(11f, 30f), sw - 1f)
         }
 
         // ── Delfin ────────────────────────────────────────────────────────────
@@ -291,21 +395,21 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
                 quadraticBezierTo(4f, 20f, 4f, 18f)
                 close()
             }
-            drawPath(body, color, style = stroke)
+            filled(body)
             val tail = Path().apply {
                 moveTo(26f, 16f); lineTo(30f, 10f); lineTo(28f, 18f); close()
             }
-            drawPath(tail, color, style = stroke1)
-            drawCircle(color, 1.5f, Offset(12f, 16f))
+            filled(tail)
             val dorsal = Path().apply {
-                moveTo(16f, 8f); quadraticBezierTo(19f, 4f, 22f, 8f)
+                moveTo(16f, 8f); quadraticBezierTo(19f, 4f, 22f, 8f); close()
             }
-            drawPath(dorsal, color, style = stroke1)
+            filled(dorsal)
+            drawCircle(eye, 1.5f, Offset(12f, 16f))
         }
 
         // ── Oktopus ───────────────────────────────────────────────────────────
         svgIcon == "drache_weiss" -> {
-            drawOval(color, topLeft = Offset(8f, 7f), size = Size(16f, 14f), style = stroke)
+            filledOval(Offset(8f, 7f), Size(16f, 14f))
             val fromXs = listOf(8f, 11f, 14f, 17f, 20f, 23f)
             val toXs   = listOf(8f, 12f, 15f, 17f, 20f, 24f)
             val toYs   = listOf(28f, 29f, 30f, 30f, 29f, 28f)
@@ -317,8 +421,8 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
                 }
                 drawPath(p, color, style = stroke1)
             }
-            drawCircle(color, 1.5f, Offset(12f, 12f))
-            drawCircle(color, 1.5f, Offset(20f, 12f))
+            drawCircle(eye, 1.5f, Offset(12f, 12f))
+            drawCircle(eye, 1.5f, Offset(20f, 12f))
         }
 
         // ── Fruehling (Pflanze) ────────────────────────────────────────────────
@@ -332,13 +436,12 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
                 moveTo(16f, 20f); cubicTo(20f, 16f, 26f, 12f, 28f, 8f)
                 cubicTo(24f, 6f, 18f, 14f, 16f, 20f); close()
             }
-            drawPath(leaf1, color, style = stroke1)
-            drawPath(leaf2, color, style = stroke1)
+            filled(leaf1); filled(leaf2)
         }
 
         // ── Sommer (Sonne mit Strahlen) ────────────────────────────────────────
         svgIcon == "jahreszeit_sommer" -> {
-            drawCircle(color, 7f, Offset(16f, 16f), style = stroke)
+            filledCircle(7f, Offset(16f, 16f))
             listOf(0, 45, 90, 135, 180, 225, 270, 315).forEach { a ->
                 val rad = a * PI.toFloat() / 180f
                 drawLine(
@@ -362,7 +465,7 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
                 quadraticBezierTo(12f, 12f, 16f, 8f)
                 close()
             }
-            drawPath(leaf, color, style = stroke1)
+            filled(leaf)
             drawLine(color, Offset(16f, 24f), Offset(16f, 30f), sw, StrokeCap.Round)
         }
 
@@ -381,10 +484,10 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
                 val rad = a * PI.toFloat() / 180f
                 val cx = 16f + 8f * cos(rad); val cy = 16f + 8f * sin(rad)
                 withTransform({ rotate(a.toFloat(), Offset(cx, cy)) }) {
-                    drawOval(color, topLeft = Offset(cx - 5f, cy - 3f), size = Size(10f, 6f), style = Stroke(sw - 1f))
+                    filledOval(Offset(cx - 5f, cy - 3f), Size(10f, 6f))
                 }
             }
-            drawCircle(color, 3f, Offset(16f, 16f), style = Stroke(sw - 0.5f))
+            filledCircle(3f, Offset(16f, 16f))
         }
 
         // ── Seeanemone (6 Strahlen) ───────────────────────────────────────────
@@ -398,7 +501,7 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
                     sw - 0.5f,
                 )
             }
-            drawCircle(color, 4f, Offset(16f, 16f), style = stroke)
+            filledCircle(4f, Offset(16f, 16f))
         }
 
         // ── Seerose (8 Blütenblätter) ─────────────────────────────────────────
@@ -407,17 +510,17 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
                 val rad = a * PI.toFloat() / 180f
                 val cx = 16f + 7f * cos(rad); val cy = 16f + 7f * sin(rad)
                 withTransform({ rotate(a.toFloat(), Offset(cx, cy)) }) {
-                    drawOval(color, topLeft = Offset(cx - 6f, cy - 4f), size = Size(12f, 8f), style = Stroke(sw - 1f))
+                    filledOval(Offset(cx - 6f, cy - 4f), Size(12f, 8f))
                 }
             }
             listOf(45, 135, 225, 315).forEach { a ->
                 val rad = a * PI.toFloat() / 180f
                 val cx = 16f + 7f * cos(rad); val cy = 16f + 7f * sin(rad)
                 withTransform({ rotate(a.toFloat(), Offset(cx, cy)) }) {
-                    drawOval(color, topLeft = Offset(cx - 5f, cy - 3f), size = Size(10f, 6f), style = Stroke(sw - 1f))
+                    filledOval(Offset(cx - 5f, cy - 3f), Size(10f, 6f))
                 }
             }
-            drawCircle(color, 3f, Offset(16f, 16f))
+            filledCircle(3f, Offset(16f, 16f))
         }
 
         // ── Stranddistel (12 Strahlen) ────────────────────────────────────────
@@ -432,7 +535,7 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
                     StrokeCap.Round,
                 )
             }
-            drawCircle(color, 4f, Offset(16f, 16f), style = Stroke(sw - 0.5f))
+            filledCircle(4f, Offset(16f, 16f))
         }
 
         // ── Fallback ──────────────────────────────────────────────────────────

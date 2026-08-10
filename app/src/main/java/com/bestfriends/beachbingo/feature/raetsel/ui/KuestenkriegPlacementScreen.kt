@@ -30,8 +30,6 @@ import com.bestfriends.beachbingo.feature.raetsel.*
 import com.bestfriends.beachbingo.ui.theme.*
 import kotlin.random.Random
 
-private val KkAccent = Color(0xFFFB7185)
-private val DragInvalidColor = Color(0xFFEF4444)
 
 private data class DragState(val start: Pair<Int, Int>, val current: Pair<Int, Int>)
 
@@ -136,13 +134,13 @@ fun KuestenkriegPlacementScreen(
                     }
                 }
                 Spacer(Modifier.width(14.dp))
-                Text("⚓", fontSize = 28.sp)
+                Text("⚓", style = MaterialTheme.typography.headlineMedium)
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("KÜSTENKRIEG", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
-                    Text("Schiffe setzen", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Text("KÜSTENKRIEG", fontSize = ChipLabelTiny, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
+                    Text("Schiffe setzen", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
                 }
-                Text("${fleet.size}/${FLEET_DEFS.size} gesetzt", fontSize = 13.sp, color = TextMuted)
+                Text("${fleet.size}/${FLEET_DEFS.size} gesetzt", style = MaterialTheme.typography.labelMedium, color = TextMuted)
             }
         }
 
@@ -153,14 +151,14 @@ fun KuestenkriegPlacementScreen(
                 Surface(shape = RoundedCornerShape(12.dp), color = SurfaceDark,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .border(1.dp, KkAccent.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                        .border(1.dp, RoseRed.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                 ) {
                     Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(currentDef.emoji, fontSize = 20.sp)
+                        Text(currentDef.emoji, fontSize = BingoCallSize)
                         Spacer(Modifier.width(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(currentDef.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                            Text("Länge ${currentDef.size}", fontSize = 12.sp, color = TextMuted)
+                            Text(currentDef.name, fontSize = CellNumber, fontWeight = FontWeight.Bold, color = TextPrimary)
+                            Text("Länge ${currentDef.size}", fontSize = ChipLabel, color = TextMuted)
                         }
                         Surface(shape = RoundedCornerShape(8.dp), color = Surface2Dark,
                             modifier = Modifier
@@ -169,7 +167,7 @@ fun KuestenkriegPlacementScreen(
                         ) {
                             Text(
                                 if (horiz) "↔ Horizontal" else "↕ Vertikal",
-                                fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary,
+                                style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = TextPrimary,
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                             )
                         }
@@ -228,14 +226,14 @@ fun KuestenkriegPlacementScreen(
                 Row(modifier = Modifier.padding(start = 22.dp)) {
                     repeat(BATTLE_GRID) { c ->
                         Box(modifier = Modifier.size(cellDp), contentAlignment = Alignment.Center) {
-                            Text(('A' + c).toString(), fontSize = 9.sp, color = Color.Black, fontWeight = FontWeight.Bold)
+                            Text(('A' + c).toString(), fontSize = StatusTiny, color = Color.Black, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
                 repeat(BATTLE_GRID) { r ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(modifier = Modifier.width(20.dp), contentAlignment = Alignment.CenterEnd) {
-                            Text("${r + 1}", fontSize = 9.sp, color = Color.Black, fontWeight = FontWeight.Bold,
+                            Text("${r + 1}", fontSize = StatusTiny, color = Color.Black, fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(end = 2.dp))
                         }
                         repeat(BATTLE_GRID) { c ->
@@ -243,9 +241,9 @@ fun KuestenkriegPlacementScreen(
                             val isOccupied = occupied[r][c]
                             val isPreview = cellKey in dragPreview
                             val cellBg = when {
-                                isPreview && dragIsValid  -> KkAccent.copy(alpha = 0.8f)
-                                isPreview && !dragIsValid -> DragInvalidColor.copy(alpha = 0.5f)
-                                isOccupied               -> KkAccent.copy(alpha = 0.55f)
+                                isPreview && dragIsValid  -> RoseRed.copy(alpha = 0.8f)
+                                isPreview && !dragIsValid -> Danger.copy(alpha = 0.5f)
+                                isOccupied               -> RoseRed.copy(alpha = 0.55f)
                                 else                     -> Color.White
                             }
                             Box(modifier = Modifier
@@ -267,14 +265,14 @@ fun KuestenkriegPlacementScreen(
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
                     border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
-                ) { Text("⌫ Rückgängig", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                ) { Text("⌫ Rückgängig", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold) }
                 OutlinedButton(
                     onClick = ::randomizeAll,
                     modifier = Modifier.weight(1f).height(46.dp),
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
                     border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
-                ) { Text("🎲 Zufällig", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                ) { Text("🎲 Zufällig", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold) }
             }
 
             // Fleet checklist
@@ -284,17 +282,17 @@ fun KuestenkriegPlacementScreen(
                     val active = i == activeIdx && !allPlaced
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = if (placed) KkAccent.copy(alpha = 0.1f) else SurfaceDark,
+                        color = if (placed) RoseRed.copy(alpha = 0.1f) else SurfaceDark,
                         modifier = Modifier.border(
                             1.dp,
-                            if (active) KkAccent else if (placed) KkAccent.copy(alpha = 0.4f) else BorderColor,
+                            if (active) RoseRed else if (placed) RoseRed.copy(alpha = 0.4f) else BorderColor,
                             RoundedCornerShape(8.dp)
                         )
                     ) {
                         Text(
                             "${def.emoji} ${def.name}",
-                            fontSize = 12.sp,
-                            color = if (placed) KkAccent else TextMuted,
+                            fontSize = ChipLabel,
+                            color = if (placed) RoseRed else TextMuted,
                             fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
                             textDecoration = TextDecoration.None,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
@@ -309,7 +307,7 @@ fun KuestenkriegPlacementScreen(
                 enabled = allPlaced,
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = KkAccent,
+                    containerColor = RoseRed,
                     disabledContainerColor = SurfaceDark
                 ),
                 shape = RoundedCornerShape(14.dp)
@@ -317,7 +315,7 @@ fun KuestenkriegPlacementScreen(
                 Text(
                     if (allPlaced) "⚓ Auf ins Gefecht!"
                     else "Noch ${FLEET_DEFS.size - fleet.size} Schiff${if (FLEET_DEFS.size - fleet.size != 1) "e" else ""} platzieren",
-                    fontSize = 16.sp, fontWeight = FontWeight.ExtraBold,
+                    style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.ExtraBold,
                     color = if (allPlaced) BgDark else TextMuted
                 )
             }

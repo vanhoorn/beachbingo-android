@@ -75,7 +75,9 @@ import androidx.compose.material.icons.outlined.HelpOutline
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.bestfriends.beachbingo.ui.theme.BgDark
+import com.bestfriends.beachbingo.ui.theme.BingoCallSize
 import com.bestfriends.beachbingo.ui.theme.BorderColor
+import com.bestfriends.beachbingo.ui.theme.CellNumber
 import com.bestfriends.beachbingo.ui.theme.Coral
 import com.bestfriends.beachbingo.ui.theme.Danger
 import com.bestfriends.beachbingo.ui.theme.OceanBlue
@@ -225,7 +227,7 @@ fun PongLobbyScreen(
                     IconButton(onClick = { toggleFavorite() }) {
                         Text(
                             if (isFavorite) "★" else "☆",
-                            fontSize = 22.sp,
+                            fontSize = MaterialTheme.typography.titleLarge.fontSize,
                             color = if (isFavorite) SandGold else TextMuted,
                         )
                     }
@@ -371,7 +373,7 @@ fun PongLobbyScreen(
                         "$scoreLimit Punkte",
                         modifier = Modifier.weight(1f),
                         textAlign = TextAlign.Center,
-                        fontSize = 24.sp,
+                        fontSize = MaterialTheme.typography.headlineSmall.fontSize,
                         fontWeight = FontWeight.ExtraBold,
                         color = TextPrimary
                     )
@@ -460,7 +462,7 @@ fun PongLobbyScreen(
                             textStyle = TextStyle(
                                 color = TextPrimary,
                                 fontFamily = FontFamily.Monospace,
-                                fontSize = 15.sp,
+                                fontSize = MaterialTheme.typography.labelLarge.fontSize,
                                 letterSpacing = 2.sp,
                             ),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -559,7 +561,7 @@ private fun LobbyCard(
                 Text(
                     game.gameId,
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 18.sp,
+                    fontSize = MaterialTheme.typography.titleMedium.fontSize,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 3.sp,
                     color = SandGold
@@ -598,7 +600,7 @@ private fun LobbyCard(
                         .padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(player.avatarUrl.ifEmpty { "🏄" }, fontSize = 22.sp)
+                    Text(player.avatarUrl.ifEmpty { "🏄" }, fontSize = MaterialTheme.typography.titleLarge.fontSize)
                     Spacer(Modifier.width(10.dp))
                     Text(
                         player.displayName,
@@ -623,7 +625,7 @@ private fun LobbyCard(
                         .padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("🤖", fontSize = 22.sp)
+                    Text("🤖", fontSize = MaterialTheme.typography.titleLarge.fontSize)
                     Spacer(Modifier.width(10.dp))
                     Text(
                         "${totalPaddles - game.humanCount}× KI (${
@@ -658,7 +660,7 @@ private fun LobbyCard(
                     if (canStart) "🏓 Spiel starten" else "⏳ Warte… (${game.players.size}/${game.humanCount})",
                     fontWeight = FontWeight.ExtraBold,
                     color = Color.White,
-                    fontSize = 14.sp
+                    fontSize = CellNumber
                 )
             }
             IconButton(
@@ -712,7 +714,7 @@ private fun PillButton(
             label,
             textAlign = TextAlign.Center,
             fontWeight = FontWeight.Bold,
-            fontSize = 13.sp,
+            fontSize = MaterialTheme.typography.labelMedium.fontSize,
             color = TextPrimary,
             lineHeight = 18.sp
         )
@@ -731,6 +733,6 @@ private fun StepButton(label: String, onClick: () -> Unit) {
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+        Text(label, fontSize = BingoCallSize, fontWeight = FontWeight.Bold, color = TextPrimary)
     }
 }
