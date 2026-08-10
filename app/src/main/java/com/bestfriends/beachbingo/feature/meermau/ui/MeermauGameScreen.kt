@@ -526,7 +526,7 @@ private fun parseOnlineMMState(data: Map<String, Any>, difficulty: String): Pair
 }
 
 private fun serializeMMState(state: MMState, adminId: String, playerIds: List<String>): Map<String, Any?> = mapOf(
-    "adminId" to adminId, "status" to "RUNNING", "playerIds" to playerIds,
+    "adminId" to adminId, "status" to if (state.phase == "GAME_OVER") "FINISHED" else "RUNNING", "playerIds" to playerIds,
     "players"      to state.players.associate { p -> p.userId to serializeMMPlayerOnline(p) },
     "drawPile"     to state.drawPile.map  { serializeMMCard(it) },
     "discardPile"  to state.discardPile.map { serializeMMCard(it) },
@@ -897,7 +897,9 @@ fun MeermauGameScreen(
         val mauTxt = "${mp.displayName}: MAU!"
         val entry = MoveLogEntry(s.round, mp.displayName, mauTxt, System.currentTimeMillis())
         audioManager.playSound("mau")
-        localState = s.copy(pendingMau = null, mauPlayerId = uid, lastActionText = mauTxt, moveLog = s.moveLog + entry)
+        val newState = s.copy(pendingMau = null, mauPlayerId = uid, lastActionText = mauTxt, moveLog = s.moveLog + entry)
+        localState = newState
+        if (postPlay) writeOnline(newState)
     }
 
     fun handleMauMau() {
@@ -907,12 +909,14 @@ fun MeermauGameScreen(
             val entry = MoveLogEntry(s.round, ph.displayName, "🏆 ${ph.displayName}: MAU MAU!", System.currentTimeMillis())
             val winnerIdx = s.players.indexOfFirst { it.userId == uid }
             audioManager.playSound("maumau")
-            localState = mmResolveRound(
+            val newState = mmResolveRound(
                 s.copy(pendingMauMau = null, roundWinnerId = uid,
                     lastActionText = "🏆 ${ph.displayName}: MAU MAU!",
                     moveLog = s.moveLog + entry),
                 winnerIdx,
             )
+            localState = newState
+            writeOnline(newState)
             return
         }
         if (!isMyTurn || s.phase != "PLAYING" || myHand.size != 1 || !hasAnyPlayable || s.mauMauReady || drawnCard != null) return

@@ -173,16 +173,27 @@ private fun removeClues(
     val target = (when (size) { 12 -> REMOVE_12; 16 -> REMOVE_16; else -> REMOVE_9 })[difficulty] ?: 45
     val given = solution.map { it.clone() }.toTypedArray()
     val cells = (0 until size * size).toMutableList().shuffledWith(rng)
+    // Large boards (12×12, 16×16) and irregular hard/expert time out in countSolutions,
+    // returning 0 → every cell treated as non-unique → zero blanks. Skip uniqueness here.
+    val skipUniqueness =
+        (size > 9 || regions != null) &&
+        (difficulty == "schwer" || difficulty == "experte")
+
     var removed = 0
     for (idx in cells) {
         if (removed >= target) break
         val r = idx / size; val c = idx % size
         if (given[r][c] == 0) continue
-        val backup = given[r][c]
-        given[r][c] = 0
-        val test = given.map { it.clone() }.toTypedArray()
-        if (countSolutions(test, size, 2, diagonal, regions) != 1) given[r][c] = backup
-        else removed++
+        if (skipUniqueness) {
+            given[r][c] = 0
+            removed++
+        } else {
+            val backup = given[r][c]
+            given[r][c] = 0
+            val test = given.map { it.clone() }.toTypedArray()
+            if (countSolutions(test, size, 2, diagonal, regions) != 1) given[r][c] = backup
+            else removed++
+        }
     }
     return given
 }
