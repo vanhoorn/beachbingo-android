@@ -134,8 +134,10 @@ private fun countSolutions(
     diagonal: Boolean = false, regions: Array<IntArray>? = null,
 ): Int {
     var count = 0
+    var steps = 0
     fun solve(): Boolean {
         if (count >= max) return true
+        if (++steps > 60_000) return true
         var bestR = -1; var bestC = -1; var bestN = Int.MAX_VALUE
         for (r in 0 until size) for (c in 0 until size) {
             if (board[r][c] == 0) {
