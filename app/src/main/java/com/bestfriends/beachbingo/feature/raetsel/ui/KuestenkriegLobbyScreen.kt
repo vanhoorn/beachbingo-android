@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -34,6 +35,50 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+private data class KkOnlineResultItem(
+    val opponentId: String,
+    val opponentName: String,
+    val opponentAvatar: String,
+    val myWins: Int,
+    val theirWins: Int,
+    val totalGames: Int,
+    val lastGameAt: Long,
+    val lastWinnerId: String,
+    val constellationTitle: String,
+)
+
+private val KK_CONSTELLATION_NAMES_LOBBY = listOf(
+    "Korallenflotte|Sandburgbataillon", "SprottenGirls|DorschBabys",
+    "PalmenBoys|SchlauchbootMatrosen", "Wattjäger|Muschelsammler",
+    "Möwenpiraten|Krakenflüsterer", "Brandungsreiter|Sandkastenkapitäne",
+    "Tintenfischbande|Strandwächter", "Nordseeadler|Wattwurmbrigade",
+    "Barrakuda-Crew|Seepferdchen-Staffel", "Wellenreiter|Sanddünenkommando",
+    "Heringsjäger|Austernretter", "Salzwasserwölfe|Bademeister-Union",
+    "Kormorantruppe|Strandkorbverteidiger", "Anker-Asse|Flaggen-Flatterer",
+    "Neptunsgarde|Strandräuber-Koalition", "Krabbenklau-Clan|Muschelpiraten",
+    "Tiefseebande|Flachlandmatrosen", "Sturmflut-Staffel|Sandburg-Söldner",
+    "Möwenkönige|Plastikenten-Piraten", "Blauwal-Brigade|Minigolf-Miliz",
+    "Sardellen-Syndrom|Lachs-Legion", "Schaumkronen-Crew|Treibholz-Truppe",
+    "Quallen-Quartier|Sonnencrème-Söldner", "Brandungs-Barbaren|Wellenbrecher",
+    "Ebbe-Allianz|Flut-Front",
+)
+
+private fun kkConstellationTitle(uid1: String, uid2: String): String {
+    val sorted = listOf(uid1, uid2).sorted()
+    val key = sorted.joinToString("|")
+    var hash = 0L
+    for (c in key) hash = ((hash * 31L) + c.code.toLong()) and Long.MAX_VALUE
+    val idx = (hash % 25L).toInt()
+    val pair = KK_CONSTELLATION_NAMES_LOBBY[idx].split("|")
+    return if ((hash / 25L) % 2L == 0L) "${pair[0]} vs. ${pair[1]}" else "${pair[1]} vs. ${pair[0]}"
+}
+
+private fun formatGameDate(ms: Long): String =
+    SimpleDateFormat("d. MMM", Locale.GERMAN).format(Date(ms))
 
 private fun fleetLabel(fleet: List<Int>): String {
     val counts = fleet.groupBy { it }
@@ -78,6 +123,9 @@ fun KuestenkriegLobbyScreen(
     val difficulties = listOf("leicht", "mittel", "schwer", "experte")
     val diffLabels = mapOf("leicht" to "Leicht", "mittel" to "Mittel", "schwer" to "Schwer", "experte" to "Experte")
     var showStats by remember { mutableStateOf(false) }
+    var statsTab by remember { mutableStateOf(0) }
+    var onlineResultItems by remember { mutableStateOf<List<KkOnlineResultItem>>(emptyList()) }
+    var loadingOnline by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
     var isFavorite by remember { mutableStateOf(false) }
 
@@ -94,6 +142,50 @@ fun KuestenkriegLobbyScreen(
         isFavorite = !isFavorite
         val update = if (isFavorite) FieldValue.arrayUnion("kuestenkrieg") else FieldValue.arrayRemove("kuestenkrieg")
         if (uid.isNotBlank()) db.collection("users").document(uid).update("favoriteGames", update)
+    }
+
+    LaunchedEffect(showStats) {
+        if (!showStats || uid.isBlank()) return@LaunchedEffect
+        loadingOnline = true
+        try {
+            val snaps = db.collection("kuestenkriegResults")
+                .whereArrayContains("playerIds", uid)
+                .get().await()
+            val docs = snaps.documents.sortedByDescending { it.getLong("createdAt") ?: 0L }
+            val grouped = mutableMapOf<String, MutableList<com.google.firebase.firestore.DocumentSnapshot>>()
+            for (doc in docs) {
+                @Suppress("UNCHECKED_CAST")
+                val pIds = (doc.get("playerIds") as? List<*>)?.filterIsInstance<String>() ?: continue
+                val oppId = pIds.find { it != uid } ?: continue
+                grouped.getOrPut(oppId) { mutableListOf() }.add(doc)
+            }
+            onlineResultItems = grouped.entries.map { (oppId, gameDocs) ->
+                val myWins = gameDocs.count { it.getString("winnerId") == uid }
+                val theirWins = gameDocs.count { it.getString("winnerId") == oppId }
+                val lastDoc = gameDocs.first()
+                @Suppress("UNCHECKED_CAST")
+                val pIds = (lastDoc.get("playerIds") as? List<*>)?.filterIsInstance<String>() ?: listOf("", "")
+                @Suppress("UNCHECKED_CAST")
+                val pNames = (lastDoc.get("playerNames") as? List<*>)?.filterIsInstance<String>() ?: listOf("", "")
+                @Suppress("UNCHECKED_CAST")
+                val pAvatars = (lastDoc.get("playerAvatars") as? List<*>)?.filterIsInstance<String>() ?: listOf("👤", "👤")
+                val oppIdx = pIds.indexOf(oppId).takeIf { it >= 0 } ?: 1
+                val oppName = pNames.getOrElse(oppIdx) { "Gegner" }
+                val oppAvatar = pAvatars.getOrElse(oppIdx) { "👤" }
+                KkOnlineResultItem(
+                    opponentId = oppId,
+                    opponentName = oppName,
+                    opponentAvatar = oppAvatar,
+                    myWins = myWins,
+                    theirWins = theirWins,
+                    totalGames = gameDocs.size,
+                    lastGameAt = lastDoc.getLong("createdAt") ?: 0L,
+                    lastWinnerId = lastDoc.getString("winnerId") ?: "",
+                    constellationTitle = kkConstellationTitle(pIds.getOrElse(0) { "" }, pIds.getOrElse(1) { "" }),
+                )
+            }.sortedByDescending { it.lastGameAt }
+        } catch (_: Exception) {}
+        loadingOnline = false
     }
 
     // Online state
@@ -428,29 +520,88 @@ fun KuestenkriegLobbyScreen(
     }
 
     if (showStats) {
-        Dialog(onDismissRequest = { showStats = false }) {
+        Dialog(onDismissRequest = { showStats = false; statsTab = 0 }) {
             Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
                 Column(modifier = Modifier.padding(24.dp)) {
-                    Text("🏆 Bestzeiten", fontSize = MaterialTheme.typography.titleMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
+                    Text("🏆 Statistik", fontSize = MaterialTheme.typography.titleMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
                         textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp))
-                    listOf("leicht" to "mittel", "schwer" to "experte").forEach { (d1, d2) ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            listOf(d1, d2).forEach { d ->
-                                val best = SoloGameSaveManager.getBestTimeAny(context, "kuestenkrieg", d)
-                                Surface(shape = RoundedCornerShape(12.dp), color = BgDark, modifier = Modifier.weight(1f)) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(14.dp)) {
-                                        Text(diffLabels[d] ?: d, fontSize = MaterialTheme.typography.labelSmall.fontSize, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
-                                        Spacer(Modifier.height(6.dp))
-                                        Text(if (best != null) SoloGameSaveManager.formatElapsed(best) else "—",
-                                            fontSize = MaterialTheme.typography.titleMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = if (best != null) RoseRed else TextMuted)
-                                        Text("Bestzeit", fontSize = ChipLabelTiny, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
+
+                    // Tabs
+                    Surface(shape = RoundedCornerShape(8.dp), color = BgDark, modifier = Modifier.fillMaxWidth()) {
+                        Row {
+                            listOf("Bestzeiten", "Online Duelle").forEachIndexed { i, label ->
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (statsTab == i) RoseRed else Color.Transparent,
+                                    modifier = Modifier.weight(1f).clickable { statsTab = i },
+                                ) {
+                                    Text(label, fontSize = ChipLabel, fontWeight = FontWeight.Bold,
+                                        color = if (statsTab == i) BgDark else TextMuted,
+                                        textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 8.dp))
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    if (statsTab == 0) {
+                        listOf("leicht" to "mittel", "schwer" to "experte").forEach { (d1, d2) ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                listOf(d1, d2).forEach { d ->
+                                    val best = SoloGameSaveManager.getBestTimeAny(context, "kuestenkrieg", d)
+                                    Surface(shape = RoundedCornerShape(12.dp), color = BgDark, modifier = Modifier.weight(1f)) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(14.dp)) {
+                                            Text(diffLabels[d] ?: d, fontSize = MaterialTheme.typography.labelSmall.fontSize, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                                            Spacer(Modifier.height(6.dp))
+                                            Text(if (best != null) SoloGameSaveManager.formatElapsed(best) else "—",
+                                                fontSize = MaterialTheme.typography.titleMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = if (best != null) RoseRed else TextMuted)
+                                            Text("Bestzeit", fontSize = ChipLabelTiny, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
+                                        }
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(10.dp))
+                        }
+                    } else {
+                        if (loadingOnline) {
+                            Box(modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(modifier = Modifier.size(28.dp), color = RoseRed, strokeWidth = 2.dp)
+                            }
+                        } else if (onlineResultItems.isEmpty()) {
+                            Text("Noch keine Online-Duelle gespielt.", fontSize = MaterialTheme.typography.labelMedium.fontSize,
+                                color = TextMuted, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp))
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                onlineResultItems.forEach { item ->
+                                    Surface(shape = RoundedCornerShape(12.dp), color = BgDark, modifier = Modifier.fillMaxWidth()) {
+                                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                                Text(item.constellationTitle, fontSize = ChipLabelTiny, color = TextMuted, modifier = Modifier.weight(1f))
+                                                Text("${item.totalGames} Spiele", fontSize = ChipLabelTiny, color = TextMuted)
+                                            }
+                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                Text(if (item.myWins >= item.theirWins) "🥇" else "🥈", fontSize = MaterialTheme.typography.labelLarge.fontSize)
+                                                Text("Du: ${item.myWins}", fontSize = CellNumber, fontWeight = FontWeight.ExtraBold,
+                                                    color = if (item.myWins > item.theirWins) RoseRed else TextSub)
+                                                Text("·", color = TextMuted, fontSize = ChipLabel)
+                                                Text(item.opponentAvatar, fontSize = MaterialTheme.typography.labelLarge.fontSize)
+                                                Text("${item.opponentName}: ${item.theirWins}", fontSize = CellNumber, fontWeight = FontWeight.ExtraBold,
+                                                    color = if (item.theirWins > item.myWins) RoseRed else TextSub)
+                                            }
+                                            Text(
+                                                "Letztes: ${if (item.lastWinnerId == uid) "Du" else item.opponentName} gewonnen · ${formatGameDate(item.lastGameAt)}",
+                                                fontSize = ChipLabelTiny, color = TextMuted,
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
-                        Spacer(Modifier.height(10.dp))
                     }
-                    Button(onClick = { showStats = false }, modifier = Modifier.fillMaxWidth(),
+
+                    Spacer(Modifier.height(16.dp))
+                    Button(onClick = { showStats = false; statsTab = 0 }, modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = RoseRed),
                         shape = RoundedCornerShape(10.dp)
                     ) { Text("Schliessen", fontWeight = FontWeight.Bold, color = BgDark) }

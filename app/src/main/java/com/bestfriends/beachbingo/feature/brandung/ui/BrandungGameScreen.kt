@@ -843,6 +843,8 @@ fun BrandungGameScreen(
     var showQuitDialog by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
     var isPaused by remember { mutableStateOf(false) }
+    var abandonedByOpponent by remember { mutableStateOf(false) }
+    var abandonedPlayerName by remember { mutableStateOf("") }
 
     BackHandler { showQuitDialog = true }
 
@@ -911,13 +913,65 @@ fun BrandungGameScreen(
                                 modifier = Modifier.weight(1f).height(44.dp),
                             ) { Text("Bleiben", color = TextPrimary) }
                             Button(
-                                onClick = { showQuitDialog = false; onNavigateBack() },
+                                onClick = {
+                                    showQuitDialog = false
+                                    scope.launch {
+                                        if (gameId != null) {
+                                            val os = onlineState
+                                            val winnerId = os?.playerIds?.firstOrNull { it != uid } ?: ""
+                                            try {
+                                                db.collection("brandungGames").document(gameId)
+                                                    .update(mapOf(
+                                                        "abandoned" to true,
+                                                        "abandonedBy" to uid,
+                                                        "status" to "FINISHED",
+                                                    )).await()
+                                                db.collection("brandungResults").add(mapOf(
+                                                    "playerIds" to (os?.playerIds ?: listOf(uid)),
+                                                    "winnerId" to winnerId,
+                                                    "rounds" to (os?.round ?: 1),
+                                                    "mode" to "abandoned",
+                                                    "createdAt" to System.currentTimeMillis(),
+                                                )).await()
+                                            } catch (_: Exception) {}
+                                        }
+                                        onNavigateBack()
+                                    }
+                                },
                                 modifier = Modifier.weight(1f).height(44.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Teal),
                                 shape = RoundedCornerShape(10.dp),
                             ) { Text("Verlassen", color = Color.White) }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    if (abandonedByOpponent) {
+        Dialog(onDismissRequest = {}) {
+            androidx.compose.material3.Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = SurfaceDark,
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text("🏆", style = MaterialTheme.typography.headlineLarge)
+                    Text("Du gewinnst!", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = TextPrimary)
+                    Text(
+                        "$abandonedPlayerName hat das Spiel verlassen.",
+                        style = MaterialTheme.typography.labelMedium, color = TextMuted, textAlign = TextAlign.Center,
+                    )
+                    Button(
+                        onClick = { onNavigateBack() },
+                        modifier = Modifier.fillMaxWidth().height(44.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Teal),
+                        shape = RoundedCornerShape(10.dp),
+                    ) { Text("Weiter", color = Color.White) }
                 }
             }
         }
@@ -981,6 +1035,14 @@ fun BrandungGameScreen(
         val listener = db.collection("brandungGames").document(gameId)
             .addSnapshotListener { snap, _ ->
                 val data = snap?.data ?: return@addSnapshotListener
+                val abandoned = data["abandoned"] as? Boolean ?: false
+                val abandonedBy = data["abandonedBy"] as? String ?: ""
+                if (abandoned && abandonedBy != uid) {
+                    val os = parseOnlineState(data)
+                    abandonedPlayerName = os.players[abandonedBy]?.displayName ?: "Dein Gegner"
+                    abandonedByOpponent = true
+                    return@addSnapshotListener
+                }
                 onlineState = parseOnlineState(data)
             }
         try { awaitCancellation() } finally { listener.remove() }

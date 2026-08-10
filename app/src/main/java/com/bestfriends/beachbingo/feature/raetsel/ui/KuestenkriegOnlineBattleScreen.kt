@@ -42,6 +42,32 @@ private fun parseOnlineShip(map: Map<*, *>): PlacedShip? {
     return PlacedShip(id, size, row, col, horiz)
 }
 
+private val KK_CONSTELLATION_NAMES = listOf(
+    "Korallenflotte|Sandburgbataillon", "SprottenGirls|DorschBabys",
+    "PalmenBoys|SchlauchbootMatrosen", "Wattjäger|Muschelsammler",
+    "Möwenpiraten|Krakenflüsterer", "Brandungsreiter|Sandkastenkapitäne",
+    "Tintenfischbande|Strandwächter", "Nordseeadler|Wattwurmbrigade",
+    "Barrakuda-Crew|Seepferdchen-Staffel", "Wellenreiter|Sanddünenkommando",
+    "Heringsjäger|Austernretter", "Salzwasserwölfe|Bademeister-Union",
+    "Kormorantruppe|Strandkorbverteidiger", "Anker-Asse|Flaggen-Flatterer",
+    "Neptunsgarde|Strandräuber-Koalition", "Krabbenklau-Clan|Muschelpiraten",
+    "Tiefseebande|Flachlandmatrosen", "Sturmflut-Staffel|Sandburg-Söldner",
+    "Möwenkönige|Plastikenten-Piraten", "Blauwal-Brigade|Minigolf-Miliz",
+    "Sardellen-Syndrom|Lachs-Legion", "Schaumkronen-Crew|Treibholz-Truppe",
+    "Quallen-Quartier|Sonnencrème-Söldner", "Brandungs-Barbaren|Wellenbrecher",
+    "Ebbe-Allianz|Flut-Front",
+)
+
+private fun constellationTitle(uid1: String, uid2: String): String {
+    val sorted = listOf(uid1, uid2).sorted()
+    val key = sorted.joinToString("|")
+    var hash = 0L
+    for (c in key) hash = ((hash * 31L) + c.code.toLong()) and Long.MAX_VALUE
+    val idx = (hash % 25L).toInt()
+    val pair = KK_CONSTELLATION_NAMES[idx].split("|")
+    return if ((hash / 25L) % 2L == 0L) "${pair[0]} vs. ${pair[1]}" else "${pair[1]} vs. ${pair[0]}"
+}
+
 private fun isOnlineShipSunk(ship: PlacedShip, shots: List<String>): Boolean =
     shipCells(ship).all { (r, c) ->
         val v = shots.getOrNull(r * BATTLE_GRID + c) ?: "unknown"
@@ -89,7 +115,10 @@ fun KuestenkriegOnlineBattleScreen(
     var oppFleet by remember { mutableStateOf<List<PlacedShip>>(emptyList()) }
     var myShots by remember { mutableStateOf(List(BATTLE_GRID * BATTLE_GRID) { "unknown" }) }
     var oppShots by remember { mutableStateOf(List(BATTLE_GRID * BATTLE_GRID) { "unknown" }) }
+    var myName by remember { mutableStateOf("") }
+    var myAvatar by remember { mutableStateOf("") }
     var oppName by remember { mutableStateOf("Gegner") }
+    var oppAvatar by remember { mutableStateOf("") }
     var shooting by remember { mutableStateOf(false) }
     var lastMsg by remember { mutableStateOf<String?>(null) }
 
@@ -118,6 +147,9 @@ fun KuestenkriegOnlineBattleScreen(
                 myFleet = parseFleet(uid)
                 oppFleet = parseFleet(oId)
                 oppName = ((playersMap[oId] as? Map<*, *>)?.get("displayName") as? String) ?: "Gegner"
+                myName = ((playersMap[uid] as? Map<*, *>)?.get("displayName") as? String) ?: "Du"
+                myAvatar = ((playersMap[uid] as? Map<*, *>)?.get("avatarUrl") as? String) ?: "👤"
+                oppAvatar = ((playersMap[oId] as? Map<*, *>)?.get("avatarUrl") as? String) ?: "👤"
                 @Suppress("UNCHECKED_CAST")
                 val shotsMap = snap.get("shots") as? Map<*, *> ?: emptyMap<Any, Any>()
                 myShots = (shotsMap[uid] as? List<*>)?.mapNotNull { it as? String } ?: List(BATTLE_GRID * BATTLE_GRID) { "unknown" }
@@ -151,6 +183,21 @@ fun KuestenkriegOnlineBattleScreen(
                 val updates = mutableMapOf<String, Any>("shots.$uid" to newShots, "turn" to if (isWinner) uid else if (isHit) uid else oppId)
                 if (isWinner) { updates["winner"] = uid; updates["status"] = "FINISHED" }
                 db.collection("kuestenkriegGames").document(gameCode).update(updates).await()
+                if (isWinner) {
+                    db.collection("kuestenkriegResults").add(mapOf(
+                        "gameCode" to gameCode,
+                        "winnerId" to uid,
+                        "loserId" to oppId,
+                        "playerIds" to listOf(uid, oppId),
+                        "playerNames" to listOf(myName, oppName),
+                        "playerAvatars" to listOf(myAvatar, oppAvatar),
+                        "shotsFiredByWinner" to newShots.count { it != "unknown" },
+                        "shotsFiredByLoser" to oppShots.count { it != "unknown" },
+                        "constellationTitle" to constellationTitle(uid, oppId),
+                        "mode" to "online",
+                        "createdAt" to System.currentTimeMillis(),
+                    )).await()
+                }
             } catch (_: Exception) {}
             shooting = false
         }
