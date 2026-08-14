@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.bestfriends.beachbingo.ui.components.GameHudBar
+import androidx.activity.compose.BackHandler
 import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
 import com.bestfriends.beachbingo.feature.raetsel.GameSave
@@ -185,6 +186,8 @@ fun PiratesGameScreen(
     var showRules      by remember { mutableStateOf(false) }
     var resultHandled  by remember { mutableStateOf(false) }
     var musicStarted   by remember { mutableStateOf(false) }
+
+    BackHandler { paused = true; showQuitDialog = true }
 
     // Restore checkpoint save (score + lives + wave)
     LaunchedEffect(saveId) {

@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.bestfriends.beachbingo.core.model.ALL_GAMES
 import com.bestfriends.beachbingo.feature.raetsel.*
 import com.bestfriends.beachbingo.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
@@ -47,6 +48,7 @@ fun WortWelleLobbyScreen(
     var showStats by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
     var isFavorite by remember { mutableStateOf(false) }
+    val gameEmoji = ALL_GAMES.first { it.id == "wortwelle" }.emoji
 
     LaunchedEffect(uid) {
         if (uid == null) return@LaunchedEffect
@@ -100,7 +102,7 @@ fun WortWelleLobbyScreen(
                     modifier = Modifier.size(40.dp).border(1.dp, BorderColor, RoundedCornerShape(12.dp)).clickable { onNavigateBack() }
                 ) { Box(contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück", tint = TextSub, modifier = Modifier.size(20.dp)) } }
                 Spacer(Modifier.width(14.dp))
-                Text("🌊", fontSize = EmojiMedium)
+                Text(gameEmoji, fontSize = EmojiMedium)
                 Spacer(Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text("RÄTSEL", fontSize = ChipLabelTiny, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
@@ -194,7 +196,7 @@ fun WortWelleLobbyScreen(
                         shape = RoundedCornerShape(10.dp),
                     ) {
                         Text(
-                            if (dailyPlayed) "Heute bereits gespielt" else "🌊 Tageswort spielen (${cfg.wordLength} Buchstaben)",
+                            if (dailyPlayed) "Heute bereits gespielt" else "$gameEmoji Tageswort spielen (${cfg.wordLength} Buchstaben)",
                             fontSize = CellNumber, fontWeight = FontWeight.ExtraBold,
                             color = if (dailyPlayed) TextMuted else BgDark,
                         )
@@ -209,7 +211,7 @@ fun WortWelleLobbyScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = CyanBright),
                 shape = RoundedCornerShape(14.dp),
             ) {
-                Text("🌊 Zufälliges Spiel starten", fontSize = MaterialTheme.typography.titleSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = BgDark)
+                Text("$gameEmoji Zufälliges Spiel starten", fontSize = MaterialTheme.typography.titleSmall.fontSize, fontWeight = FontWeight.ExtraBold, color = BgDark)
             }
 
             // ── Gespeicherte Spiele ───────────────────────────────────────────
@@ -345,7 +347,7 @@ fun WortWelleLobbyScreen(
         Dialog(onDismissRequest = { showRules = false }) {
             Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
                 Column(modifier = Modifier.padding(24.dp)) {
-                    Text("🌊 WortWelle", fontSize = BingoCallSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
+                    Text("$gameEmoji WortWelle", fontSize = BingoCallSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary,
                         textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                     Text("Wordle auf Deutsch", fontSize = ChipLabel, color = CyanBright,
                         textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp))

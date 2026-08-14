@@ -21,6 +21,9 @@ import androidx.compose.ui.window.Dialog
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.bestfriends.beachbingo.feature.raetsel.*
+import androidx.activity.compose.BackHandler
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lightbulb
 import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +47,8 @@ fun KuestenkriegGameScreen(
     var showRules by remember { mutableStateOf(false) }
     var activeTool by remember { mutableStateOf(ShipMark.SHIP) }
     val saveIdRef = remember { saveId ?: SoloGameSaveManager.generateId() }
+
+    BackHandler { running = false; showQuit = true }
 
     LaunchedEffect(seed) {
         val p = withContext(Dispatchers.Default) { generateBattleship(difficulty, seed.toInt()) }
@@ -207,9 +212,7 @@ fun KuestenkriegGameScreen(
                             val correct = if (p.solution[hint.first][hint.second]) ShipMark.SHIP else ShipMark.WATER
                             gs = setKriegMark(state, hint.first, hint.second, correct)
                         }
-                    }, border = androidx.compose.foundation.BorderStroke(1.dp, RoseRed.copy(alpha = 0.5f))) { Text("💡", color = RoseRed, fontWeight = FontWeight.Bold) }
-                    OutlinedButton(onClick = { running = !running }, border = androidx.compose.foundation.BorderStroke(1.dp, OceanBlue.copy(alpha = 0.5f))) { Text(if (running) "⏸" else "▶", color = OceanBlue, fontWeight = FontWeight.Bold) }
-                    OutlinedButton(onClick = { running = false; showQuit = true }, border = androidx.compose.foundation.BorderStroke(1.dp, Danger.copy(alpha = 0.5f))) { Text("✕", color = Danger, fontWeight = FontWeight.Bold) }
+                    }, border = androidx.compose.foundation.BorderStroke(1.dp, RoseRed.copy(alpha = 0.5f))) { Icon(Icons.Filled.Lightbulb, contentDescription = "Tipp", tint = RoseRed, modifier = Modifier.size(18.dp)) }
                 }
             }
         }

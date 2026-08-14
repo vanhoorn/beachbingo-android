@@ -30,6 +30,7 @@ import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import androidx.activity.compose.BackHandler
 import kotlinx.coroutines.launch
 
 private val KEYBOARD_ROWS = listOf(
@@ -91,6 +92,8 @@ fun WortWelleGameScreen(
     val shakeX      = remember { Animatable(0f) }
     val resultSaved = remember { mutableStateOf(false) }
     val saveIdRef   = remember { if (!isDaily) saveId ?: SoloGameSaveManager.generateId() else "" }
+
+    BackHandler { running = false; showQuit = true }
 
     // ── Flip-Animation ───────────────────────────────────────────────────────
     val preRevealedRows = remember { (0 until init.guesses.size).toSet() }
@@ -241,7 +244,7 @@ fun WortWelleGameScreen(
             val availH = maxHeight.value
 
             val keyboardH   = 226f
-            val controlsH   = 52f
+            val controlsH   = 0f
             val errorH      = 30f
             val gridPad     = 16f
             val gridGapDp   = 5f
@@ -340,71 +343,6 @@ fun WortWelleGameScreen(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp), textAlign = TextAlign.Center)
                         }
                     }
-                }
-
-                // ── Controls-Leiste ───────────────────────────────────────────
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(controlsH.dp)
-                        .padding(horizontal = 4.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (!isDaily) {
-                        OutlinedButton(
-                            onClick = {
-                                if (saveIdRef.isNotEmpty()) {
-                                    SoloGameSaveManager.savePuzzle(context, PuzzleSave(
-                                        id = saveIdRef, gameType = "wortwelle", variant = "random",
-                                        difficulty = difficulty, seed = 0L,
-                                        puzzleState = serializeWwState(targetWord, guesses, cells.joinToString(""), gameStatus),
-                                        startedAt = System.currentTimeMillis(), elapsedSeconds = elapsed,
-                                    ))
-                                }
-                                onNavigateBack()
-                            },
-                            border = androidx.compose.foundation.BorderStroke(1.dp, OceanBlue.copy(alpha = 0.33f)),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = OceanBlue.copy(alpha = 0.13f),
-                                contentColor = OceanBlue,
-                            ),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                        ) { Text("💾", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold) }
-                    }
-                    if (gameStatus == "playing") {
-                        OutlinedButton(
-                            onClick = { paused = !paused },
-                            border = androidx.compose.foundation.BorderStroke(1.dp, CyanBright.copy(alpha = 0.33f)),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = CyanBright.copy(alpha = 0.13f),
-                                contentColor = CyanBright,
-                            ),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                        ) { Text(if (paused) "▶" else "⏸", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold) }
-                    }
-                    OutlinedButton(
-                        onClick = { running = false; showRules = true },
-                        border = androidx.compose.foundation.BorderStroke(1.dp, TextSub.copy(alpha = 0.33f)),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = TextSub.copy(alpha = 0.13f),
-                            contentColor = TextSub,
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    ) { Text("?", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold) }
-                    OutlinedButton(
-                        onClick = { running = false; showQuit = true },
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Danger.copy(alpha = 0.33f)),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = Danger.copy(alpha = 0.13f),
-                            contentColor = Danger,
-                        ),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    ) { Text("✕", fontSize = MaterialTheme.typography.labelMedium.fontSize, fontWeight = FontWeight.Bold) }
                 }
 
                 // ── QWERTZ-Tastatur ───────────────────────────────────────────

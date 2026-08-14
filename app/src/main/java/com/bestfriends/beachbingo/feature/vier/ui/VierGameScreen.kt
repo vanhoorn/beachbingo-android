@@ -43,6 +43,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.bestfriends.beachbingo.ui.components.GameHudBar
+import androidx.activity.compose.BackHandler
 import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
 import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
@@ -177,6 +178,8 @@ fun VierGameScreen(
     var manualPaused by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
+
+    BackHandler { manualPaused = true; showQuitDialog = true }
 
     val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
     val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()

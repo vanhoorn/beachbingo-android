@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.ui.components.GameHudBar
+import androidx.activity.compose.BackHandler
 import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
 import com.bestfriends.beachbingo.feature.raetsel.GameSave
@@ -1163,6 +1164,8 @@ fun StrandturmGameScreen(
     var showQuitDialog by remember { mutableStateOf(false) }
     var showRules      by remember { mutableStateOf(false) }
     var showGameOver   by remember { mutableStateOf(false) }
+
+    BackHandler { paused = true; showQuitDialog = true }
     var savedHighScore by remember { mutableIntStateOf(0) }
     var savedBestLevel by remember { mutableIntStateOf(0) }
     var isNewHighScore by remember { mutableStateOf(false) }

@@ -106,6 +106,7 @@ import com.bestfriends.beachbingo.feature.bingo.ui.components.QrCodeImage
 import com.bestfriends.beachbingo.feature.bingo.viewmodel.BingoViewModel
 import com.bestfriends.beachbingo.feature.bingo.viewmodel.TabletUiState
 import com.bestfriends.beachbingo.ui.components.GameHudBar
+import androidx.activity.compose.BackHandler
 import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
@@ -152,6 +153,8 @@ fun GameScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
+
+    BackHandler { showQuitDialog = true }
 
     val bingoAuth = com.google.firebase.auth.FirebaseAuth.getInstance()
     val bingoFirestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()

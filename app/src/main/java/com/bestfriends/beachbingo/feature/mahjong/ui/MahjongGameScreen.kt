@@ -28,6 +28,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import androidx.activity.compose.BackHandler
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -89,6 +90,8 @@ fun MahjongGameScreen(
         if (state.won && diff == MahjongDifficulty.BOSS)
             SoloGameSaveManager.getBestTime(context, "mahjong", layoutId.name, diff.name) else null
     }
+
+    BackHandler { paused = true; showQuit = true }
 
     // ── Timer ────────────────────────────────────────────────────────────────
     LaunchedEffect(paused, state.won, state.gameOver) {
@@ -209,8 +212,6 @@ fun MahjongGameScreen(
                 state         = state,
                 hintLimit     = hintLimit,
                 shuffleLimit  = shuffleLimit,
-                paused        = paused,
-                onPause       = { paused = !paused; hintIds = emptySet() },
                 onHint        = {
                     if (state.hintsUsed < hintLimit) {
                         val pair = getHint(state.tiles)
@@ -234,7 +235,6 @@ fun MahjongGameScreen(
                     state = undoLast(state)
                     hintIds = emptySet()
                 },
-                onRules       = { showRules = true },
             )
         }
 
@@ -424,12 +424,9 @@ private fun ControlBar(
     state: MahjongState,
     hintLimit: Int,
     shuffleLimit: Int,
-    paused: Boolean,
-    onPause: () -> Unit,
     onHint: () -> Unit,
     onShuffle: () -> Unit,
     onUndo: () -> Unit,
-    onRules: () -> Unit,
 ) {
     val canHint    = state.hintsUsed < hintLimit
     val canShuffle = state.shufflesUsed < shuffleLimit
@@ -444,14 +441,6 @@ private fun ControlBar(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Pause
-            CtrlBtn(
-                label = if (paused) "▶" else "⏸",
-                active = paused,
-                accent = MahjongGold,
-                onClick = onPause,
-            )
-
             // Hint
             if (hintLimit > 0) {
                 val countLabel = if (hintLimit == Int.MAX_VALUE) "💡" else "💡 ${hintLimit - state.hintsUsed}"
@@ -483,14 +472,6 @@ private fun ControlBar(
                 accent = MahjongGold,
                 enabled = canUndo,
                 onClick = onUndo,
-            )
-
-            // Regeln
-            CtrlBtn(
-                label = "?",
-                active = false,
-                accent = MahjongGold,
-                onClick = onRules,
             )
         }
         } // Box

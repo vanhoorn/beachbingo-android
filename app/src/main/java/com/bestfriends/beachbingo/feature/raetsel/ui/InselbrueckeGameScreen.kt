@@ -26,6 +26,9 @@ import androidx.compose.ui.window.Dialog
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.bestfriends.beachbingo.feature.raetsel.*
+import androidx.activity.compose.BackHandler
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lightbulb
 import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
 import com.bestfriends.beachbingo.ui.theme.*
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +55,8 @@ fun InselbrueckeGameScreen(
     // Incrementing this key forces ZoomableGrid to recreate its state (= zoom reset)
     var zoomResetKey by remember { mutableIntStateOf(0) }
     val saveIdRef = remember { saveId ?: SoloGameSaveManager.generateId() }
+
+    BackHandler { running = false; showQuit = true }
 
     LaunchedEffect(seed) {
         val ps = withContext(Dispatchers.Default) { generateHashiWithSolution(difficulty, seed.toInt()) }
@@ -234,10 +239,6 @@ fun InselbrueckeGameScreen(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
                     ) {
                         OutlinedButton(
-                            onClick = { running = !running },
-                            border = BorderStroke(1.dp, OceanBlue.copy(alpha = 0.5f)),
-                        ) { Text(if (running) "⏸" else "▶", color = OceanBlue, fontWeight = FontWeight.Bold) }
-                        OutlinedButton(
                             onClick = { zoomResetKey++ },
                             border = BorderStroke(1.dp, TextSub.copy(alpha = 0.5f)),
                         ) { Text("↺", color = TextSub, fontWeight = FontWeight.Bold) }
@@ -249,15 +250,7 @@ fun InselbrueckeGameScreen(
                                 if (hint != null) gs = toggleHashiBridge(currentState, hint.first, hint.second)
                             },
                             border = BorderStroke(1.dp, LimeGreen.copy(alpha = 0.5f)),
-                        ) { Text("💡", color = LimeGreen, fontWeight = FontWeight.Bold) }
-                        OutlinedButton(
-                            onClick = { running = false; showHelp = true },
-                            border = BorderStroke(1.dp, TextSub.copy(alpha = 0.5f)),
-                        ) { Text("?", color = TextSub, fontWeight = FontWeight.Bold) }
-                        OutlinedButton(
-                            onClick = { running = false; showQuit = true },
-                            border = BorderStroke(1.dp, Danger.copy(alpha = 0.5f)),
-                        ) { Text("✕", color = Danger, fontWeight = FontWeight.Bold) }
+                        ) { Icon(Icons.Filled.Lightbulb, contentDescription = "Tipp", tint = LimeGreen, modifier = Modifier.size(18.dp)) }
                     }
                 }
             }

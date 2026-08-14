@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import com.bestfriends.beachbingo.ui.components.GameHudBar
+import androidx.activity.compose.BackHandler
 import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
 import kotlinx.coroutines.tasks.await
 import androidx.compose.runtime.Composable
@@ -122,6 +123,8 @@ fun PongGameScreen(
     val isPhysicsOwner = humanCount == 1 || isHost
     var manualPaused by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
+
+    BackHandler { manualPaused = true; showQuitDialog = true }
 
     val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
     val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
