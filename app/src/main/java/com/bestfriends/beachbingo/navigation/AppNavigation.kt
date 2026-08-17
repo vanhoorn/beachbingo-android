@@ -6,6 +6,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -85,6 +86,11 @@ import com.bestfriends.beachbingo.feature.raetsel.ui.WortWelleGameScreen
 import com.bestfriends.beachbingo.feature.mahjong.ui.MahjongLobbyScreen
 import com.bestfriends.beachbingo.feature.mahjong.ui.MahjongGameScreen
 import com.bestfriends.beachbingo.feature.mahjong.ui.MahjongSettingsScreen
+import com.bestfriends.beachbingo.feature.perlentaucher.ui.PerlentaucherLobbyScreen
+import com.bestfriends.beachbingo.feature.perlentaucher.ui.PerlentaucherGameScreen
+import com.bestfriends.beachbingo.feature.perlentaucher.ui.PerlentaucherResultsScreen
+import com.bestfriends.beachbingo.feature.perlentaucher.ui.PerlentaucherSettingsScreen
+import com.bestfriends.beachbingo.feature.perlentaucher.ui.createFreshPerlentaucherSave
 import com.bestfriends.beachbingo.feature.raetsel.PuzzleSave
 
 @Composable
@@ -165,6 +171,7 @@ fun AppNavigation() {
                 onNavigateToWellensummeLobby = { navController.navigate(Screen.WellensummeLobby) },
                 onNavigateToKuestenkriegLobby = { navController.navigate(Screen.KuestenkriegLobby) },
                 onNavigateToWortWelleLobby = { navController.navigate(Screen.WortWelleLobby) },
+                onNavigateToPerlentaucherLobby = { navController.navigate(Screen.PerlentaucherLobby) },
                 onNavigateToRaetselGame = { save ->
                     when (save.gameType) {
                         "duenenschatten" -> navController.navigate(Screen.DuenenschattenLobby)
@@ -248,6 +255,7 @@ fun AppNavigation() {
                 onNavigateToWellensummeLobby = { navController.navigate(Screen.WellensummeLobby) },
                 onNavigateToKuestenkriegLobby = { navController.navigate(Screen.KuestenkriegLobby) },
                 onNavigateToWortWelleLobby = { navController.navigate(Screen.WortWelleLobby) },
+                onNavigateToPerlentaucherLobby = { navController.navigate(Screen.PerlentaucherLobby) },
             )
         }
 
@@ -417,6 +425,75 @@ fun AppNavigation() {
                 onNavigateBack = { navController.navigate(Screen.MahjongLobby) { popUpTo(Screen.MahjongLobby) { inclusive = true } } }
             )
         }
+        // ── Perlentaucher ──────────────────────────────────────────────────────
+        composable<Screen.PerlentaucherLobby> {
+            PerlentaucherLobbyScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToGame = { level, saveId ->
+                    navController.navigate(Screen.PerlentaucherGame(level, saveId)) {
+                        popUpTo(Screen.PerlentaucherLobby)
+                    }
+                },
+                onNavigateToSettings = { navController.navigate(Screen.PerlentaucherSettings) },
+            )
+        }
+        composable<Screen.PerlentaucherSettings> {
+            PerlentaucherSettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable<Screen.PerlentaucherGame> { backStack ->
+            val route: Screen.PerlentaucherGame = backStack.toRoute()
+            PerlentaucherGameScreen(
+                level = route.level,
+                saveId = route.saveId,
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
+                onNavigateBack = {
+                    navController.navigate(Screen.PerlentaucherLobby) {
+                        popUpTo(Screen.PerlentaucherLobby) { inclusive = true }
+                    }
+                },
+                onNavigateToGame = { nextLevel, nextSaveId ->
+                    navController.navigate(Screen.PerlentaucherGame(nextLevel, nextSaveId)) {
+                        popUpTo(Screen.PerlentaucherLobby)
+                    }
+                },
+                onNavigateToResults = { level, score, movesLeft, bestScore, newBestScore ->
+                    navController.navigate(Screen.PerlentaucherResults(level, score, movesLeft, bestScore, newBestScore)) {
+                        popUpTo(Screen.PerlentaucherLobby)
+                    }
+                },
+            )
+        }
+        composable<Screen.PerlentaucherResults> { backStack ->
+            val route: Screen.PerlentaucherResults = backStack.toRoute()
+            val context = LocalContext.current
+            PerlentaucherResultsScreen(
+                level = route.level,
+                score = route.score,
+                movesLeft = route.movesLeft,
+                bestScore = route.bestScore,
+                newBestScore = route.newBestScore,
+                onNextLevel = {
+                    navController.navigate(Screen.PerlentaucherGame(route.level + 1, null)) {
+                        popUpTo(Screen.PerlentaucherLobby)
+                    }
+                },
+                onSaveAndQuit = {
+                    if (route.level < 150) createFreshPerlentaucherSave(context, route.level + 1)
+                    navController.navigate(Screen.PerlentaucherLobby) {
+                        popUpTo(Screen.PerlentaucherLobby) { inclusive = true }
+                    }
+                },
+                onNavigateToLobby = {
+                    navController.navigate(Screen.PerlentaucherLobby) {
+                        popUpTo(Screen.PerlentaucherLobby) { inclusive = true }
+                    }
+                },
+            )
+        }
+
         composable<Screen.KuestenkriegPlacement> { backStack ->
             val route: Screen.KuestenkriegPlacement = backStack.toRoute()
             KuestenkriegPlacementScreen(
@@ -454,6 +531,7 @@ fun AppNavigation() {
                 onNavigateToWellensummeLobby = { navController.navigate(Screen.WellensummeLobby) },
                 onNavigateToKuestenkriegLobby = { navController.navigate(Screen.KuestenkriegLobby) },
                 onNavigateToWortWelleLobby = { navController.navigate(Screen.WortWelleLobby) },
+                onNavigateToPerlentaucherLobby = { navController.navigate(Screen.PerlentaucherLobby) },
             )
         }
 

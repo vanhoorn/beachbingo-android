@@ -14,6 +14,7 @@ coil = "2.7.0"
 kotlinSerialization = "1.7.3"
 googleServices = "4.4.2"
 zxing = "4.3.0"
+konfetti = "2.0.4"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -38,6 +39,7 @@ kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "ko
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinSerialization" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 zxing-android-embedded = { group = "com.journeyapps", name = "zxing-android-embedded", version.ref = "zxing" }
+konfetti-compose = { group = "nl.dionsegijn", name = "konfetti-compose", version.ref = "konfetti" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

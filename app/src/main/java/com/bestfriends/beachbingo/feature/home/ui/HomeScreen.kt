@@ -151,6 +151,7 @@ fun HomeScreen(
     onNavigateToWellensummeLobby: () -> Unit = {},
     onNavigateToKuestenkriegLobby: () -> Unit = {},
     onNavigateToWortWelleLobby: () -> Unit = {},
+    onNavigateToPerlentaucherLobby: () -> Unit = {},
     onNavigateToRaetselGame: (save: PuzzleSave) -> Unit = {},
     onRejoinGame: (type: String, gameId: String) -> Unit = { _, _ -> },
     viewModel: AuthViewModel = hiltViewModel(),

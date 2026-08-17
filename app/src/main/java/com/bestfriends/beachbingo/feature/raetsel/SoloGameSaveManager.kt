@@ -35,6 +35,7 @@ object SoloGameSaveManager {
     private const val PREFS_BEST = "beachbande_puzzle_best"
     private const val PREFS_GAME  = "beachbande_game_saves"
     private const val KEY_GAME    = "saves"
+    private const val KEY_PERLENTAUCHER_LEVEL = "perlentaucher_highest_level"
 
     // ── Game save CRUD ────────────────────────────────────────────────────────
 
@@ -165,6 +166,29 @@ object SoloGameSaveManager {
             .edit().putString(KEY_SAVES, arr.toString()).apply()
     }
 
+    fun getHighestPerlentaucherLevel(context: Context): Int {
+        val prefs = context.getSharedPreferences(PREFS_BEST, Context.MODE_PRIVATE)
+        return prefs.getInt(KEY_PERLENTAUCHER_LEVEL, 1)
+    }
+
+    fun saveHighestPerlentaucherLevel(context: Context, level: Int) {
+        val prefs = context.getSharedPreferences(PREFS_BEST, Context.MODE_PRIVATE)
+        val current = prefs.getInt(KEY_PERLENTAUCHER_LEVEL, 1)
+        if (level > current) prefs.edit().putInt(KEY_PERLENTAUCHER_LEVEL, level.coerceIn(1, 150)).apply()
+    }
+
+    fun getBestPerlentaucherScore(context: Context, level: Int): Int? {
+        val prefs = context.getSharedPreferences(PREFS_BEST, Context.MODE_PRIVATE)
+        val v = prefs.getInt("perlentaucher_score_$level", -1)
+        return if (v == -1) null else v
+    }
+
+    fun saveBestPerlentaucherScore(context: Context, level: Int, score: Int) {
+        val prefs = context.getSharedPreferences(PREFS_BEST, Context.MODE_PRIVATE)
+        val current = prefs.getInt("perlentaucher_score_$level", -1)
+        if (current == -1 || score > current) prefs.edit().putInt("perlentaucher_score_$level", score).apply()
+    }
+
     fun formatElapsed(seconds: Int): String {
         val m = seconds / 60
         val s = seconds % 60
@@ -180,6 +204,7 @@ val PUZZLE_GAME_INFO = mapOf(
     "duenenschatten" to Triple("DünenSchatten",  "◼",  0xFFFBBF24L),
     "inselbruecke"   to Triple("Inselbrücke",    "🌉", 0xFF4ADE80L),
     "mahjong"        to Triple("GezeitenSteine", "🀄", 0xFFD4A820L),
+    "perlentaucher"  to Triple("Perlentaucher",  "🤿", 0xFF0EA5E9L),
 )
 
 val PUZZLE_DIFFICULTY_LABELS = mapOf(

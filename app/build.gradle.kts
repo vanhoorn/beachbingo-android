@@ -88,6 +88,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.coil.compose)
     implementation(libs.zxing.android.embedded)
+    implementation(libs.konfetti.compose)
 }
 
 kapt {

@@ -183,4 +183,18 @@ sealed interface Screen {
         val seed: Long,
         val saveId: String? = null,
     ) : Screen
+    // Perlentaucher
+    @Serializable object PerlentaucherLobby : Screen
+    @Serializable object PerlentaucherSettings : Screen
+    @Serializable data class PerlentaucherGame(
+        val level: Int,
+        val saveId: String? = null,
+    ) : Screen
+    @Serializable data class PerlentaucherResults(
+        val level: Int,
+        val score: Int,
+        val movesLeft: Int,
+        val bestScore: Int,
+        val newBestScore: Boolean,
+    ) : Screen
 }

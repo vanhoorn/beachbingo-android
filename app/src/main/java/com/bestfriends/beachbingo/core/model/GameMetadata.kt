@@ -171,6 +171,15 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         playerCounts = listOf(PlayerCount.ONE_TWO),
         genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
     ),
+    GameMetadata(
+        id = "perlentaucher",
+        emoji = "🤿",
+        title = "Perlentaucher",
+        description = "Match-3 Puzzle mit Meeresschätzen — tauche tief und sammle Perlen!",
+        color = 0xFF0EA5E9,
+        playerCounts = listOf(PlayerCount.ONE_TWO),
+        genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
+    ),
 )
 
 val CARD_GAMES: List<GameMetadata>   = ALL_GAMES.filter { GameGenre.CARD   in it.genres }

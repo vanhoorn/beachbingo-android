@@ -47,6 +47,9 @@ val WormDeathFlash    = Color(0xEFEF4444.toInt()) // deadly-wall border (A=EF R=
 val FreeCellYellow    = Color(0xFFFFD600)   // FREE center cell background
 val FreeCellBrown     = Color(0xFF5D4037)   // FREE center cell text
 
+// Perlentaucher piece colors
+val PearlWhite        = Color(0xFFF5EFE0)   // Perle — Kreis + Glanzring
+
 // Mahjong / GezeitenSteine tile colors
 val MahjongGold      = Color(0xFFD4A820)   // Mahjong accent / active dot
 val TileRemoveFlash  = Color(0xFFFFF176)   // gold flash on tile removal

@@ -74,6 +74,7 @@ fun AllGamesScreen(
     onNavigateToWellensummeLobby: () -> Unit = {},
     onNavigateToKuestenkriegLobby: () -> Unit = {},
     onNavigateToWortWelleLobby: () -> Unit = {},
+    onNavigateToPerlentaucherLobby: () -> Unit = {},
 ) {
     val games = ALL_GAMES.sortedBy { it.title }
     var rulesGameId by remember { mutableStateOf<String?>(null) }
@@ -174,6 +175,7 @@ fun AllGamesScreen(
                                     "wellensumme"    -> onNavigateToWellensummeLobby()
                                     "kuestenkrieg"   -> onNavigateToKuestenkriegLobby()
                                     "wortwelle"      -> onNavigateToWortWelleLobby()
+                                    "perlentaucher"  -> onNavigateToPerlentaucherLobby()
                                 }
                             }
                             .padding(20.dp),
