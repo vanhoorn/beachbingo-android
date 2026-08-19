@@ -91,6 +91,8 @@ import com.bestfriends.beachbingo.feature.perlentaucher.ui.PerlentaucherGameScre
 import com.bestfriends.beachbingo.feature.perlentaucher.ui.PerlentaucherResultsScreen
 import com.bestfriends.beachbingo.feature.perlentaucher.ui.PerlentaucherSettingsScreen
 import com.bestfriends.beachbingo.feature.perlentaucher.ui.createFreshPerlentaucherSave
+import com.bestfriends.beachbingo.feature.sonnenrad.ui.SonnenradBonusScreen
+import com.bestfriends.beachbingo.feature.sonnenrad.ui.SonnenradLobbyScreen
 import com.bestfriends.beachbingo.feature.raetsel.PuzzleSave
 
 @Composable
@@ -243,6 +245,7 @@ fun AppNavigation() {
                 onNavigateToVierLobby = { navController.navigate(Screen.VierLobby) },
                 onNavigateToWormLobby = { navController.navigate(Screen.WormLobby) },
                 onNavigateToMahjongLobby = { navController.navigate(Screen.MahjongLobby) },
+                onNavigateToSonnenrad = { navController.navigate(Screen.SonnenradLobby) },
             )
         }
 
@@ -491,6 +494,21 @@ fun AppNavigation() {
                         popUpTo(Screen.PerlentaucherLobby) { inclusive = true }
                     }
                 },
+            )
+        }
+
+        // ── Sonnenrad ──────────────────────────────────────────────────────────
+        composable<Screen.SonnenradLobby> {
+            SonnenradLobbyScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToGame = { navController.navigate(Screen.Sonnenrad) },
+            )
+        }
+        composable<Screen.Sonnenrad> {
+            SonnenradBonusScreen(
+                onNavigateBack = { navController.popBackStack() },
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
             )
         }
 

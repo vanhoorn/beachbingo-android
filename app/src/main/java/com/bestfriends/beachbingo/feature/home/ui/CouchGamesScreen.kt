@@ -51,6 +51,16 @@ import com.bestfriends.beachbingo.ui.theme.SurfaceDark
 import com.bestfriends.beachbingo.ui.theme.TextMuted
 import com.bestfriends.beachbingo.ui.theme.TextPrimary
 import com.bestfriends.beachbingo.ui.theme.TextSub
+import android.content.Context
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
+import java.util.Calendar
 
 @Composable
 fun CouchGamesScreen(
@@ -59,10 +69,37 @@ fun CouchGamesScreen(
     onNavigateToVierLobby: () -> Unit,
     onNavigateToWormLobby: () -> Unit,
     onNavigateToMahjongLobby: () -> Unit = {},
+    onNavigateToSonnenrad: () -> Unit = {},
 ) {
     val games = COUCH_GAMES.sortedBy { it.title }
     var rulesGameId by remember { mutableStateOf<String?>(null) }
     val activeRule = rulesGameId?.let { ALL_GAME_RULES[it] }
+
+    val context = LocalContext.current
+    val sonnenradBonusAvailable = remember {
+        val prefs = context.getSharedPreferences("sonnenrad", Context.MODE_PRIVATE)
+        val last = prefs.getLong("last_claimed", 0L)
+        if (last == 0L) true else {
+            val now = Calendar.getInstance()
+            val prev = Calendar.getInstance().apply { timeInMillis = last }
+            now.get(Calendar.YEAR) != prev.get(Calendar.YEAR) ||
+                now.get(Calendar.DAY_OF_YEAR) != prev.get(Calendar.DAY_OF_YEAR)
+        }
+    }
+    val sonnenradPoints = remember {
+        context.getSharedPreferences("sonnenrad", Context.MODE_PRIVATE)
+            .getInt("lifetime_points", 0)
+    }
+    val infiniteTransition = rememberInfiniteTransition(label = "sonnenrad_glow")
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.85f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(950, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "glow",
+    )
 
     Column(
         modifier = Modifier
@@ -133,8 +170,10 @@ fun CouchGamesScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .border(
-                            width = 1.5.dp,
-                            color = accentColor.copy(alpha = 0.35f),
+                            width = if (game.id == "sonnenrad" && sonnenradBonusAvailable) 2.dp else 1.5.dp,
+                            color = accentColor.copy(
+                                alpha = if (game.id == "sonnenrad" && sonnenradBonusAvailable) glowAlpha else 0.35f
+                            ),
                             shape = RoundedCornerShape(16.dp)
                         )
                 ) {
@@ -142,10 +181,11 @@ fun CouchGamesScreen(
                         modifier = Modifier
                             .clickable {
                                 when (game.id) {
-                                    "bingo"    -> onNavigateToBingoLobby()
-                                    "vier"     -> onNavigateToVierLobby()
-                                    "worm"     -> onNavigateToWormLobby()
-                                    "mahjong"  -> onNavigateToMahjongLobby()
+                                    "bingo"     -> onNavigateToBingoLobby()
+                                    "vier"      -> onNavigateToVierLobby()
+                                    "worm"      -> onNavigateToWormLobby()
+                                    "mahjong"   -> onNavigateToMahjongLobby()
+                                    "sonnenrad" -> onNavigateToSonnenrad()
                                 }
                             }
                             .padding(20.dp),
@@ -177,6 +217,18 @@ fun CouchGamesScreen(
                                 color = TextMuted,
                                 lineHeight = 18.sp,
                             )
+                            if (game.id == "sonnenrad") {
+                                Spacer(Modifier.height(5.dp))
+                                Text(
+                                    text = if (sonnenradBonusAvailable)
+                                        "☀️ Bonus heute verfügbar!"
+                                    else
+                                        "⭐ $sonnenradPoints Pkt. gesamt",
+                                    fontSize = MaterialTheme.typography.labelSmall.fontSize,
+                                    color = if (sonnenradBonusAvailable) accentColor else TextMuted,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                            }
                         }
 
                         Spacer(Modifier.width(8.dp))

@@ -197,4 +197,7 @@ sealed interface Screen {
         val bestScore: Int,
         val newBestScore: Boolean,
     ) : Screen
+    // Sonnenrad
+    @Serializable object SonnenradLobby : Screen
+    @Serializable object Sonnenrad : Screen
 }

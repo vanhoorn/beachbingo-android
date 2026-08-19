@@ -1,5 +1,6 @@
 package com.bestfriends.beachbingo.feature.auth.ui
 
+import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
@@ -45,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -95,6 +97,10 @@ fun ProfileScreen(
     }
     var soundEnabled by remember(currentUser) { mutableStateOf(currentUser?.soundEnabled ?: true) }
     var musicEnabled by remember(currentUser) { mutableStateOf(currentUser?.musicEnabled ?: true) }
+    val context = LocalContext.current
+    val sonnenradPoints = remember {
+        context.getSharedPreferences("sonnenrad", Context.MODE_PRIVATE).getInt("lifetime_points", 0)
+    }
     var newEmail by remember { mutableStateOf("") }
     var emailPassword by remember { mutableStateOf("") }
     var activeTab by remember(selectedAvatar) {
@@ -252,6 +258,28 @@ fun ProfileScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Switch(checked = soundEnabled, onCheckedChange = { soundEnabled = it })
+            }
+
+            if (sonnenradPoints > 0) {
+                HorizontalDivider()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text("☀️ Tagesbonus gesamt", style = MaterialTheme.typography.bodyMedium)
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                    ) {
+                        Text(
+                            text = "$sonnenradPoints Pkt.",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        )
+                    }
+                }
             }
 
             HorizontalDivider()

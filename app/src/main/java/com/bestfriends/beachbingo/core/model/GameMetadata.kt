@@ -180,6 +180,16 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         playerCounts = listOf(PlayerCount.ONE_TWO),
         genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
     ),
+    // ── Sonnenrad ──────────────────────────────────────────────────────────────
+    GameMetadata(
+        id = "sonnenrad",
+        emoji = "☀️",
+        title = "Sonnenrad",
+        description = "Enthülle Muschelfelder und erklimme die Bonusleiter! Einmal täglich gratis.",
+        color = 0xFFD4A820,
+        playerCounts = listOf(PlayerCount.ONE_TWO),
+        genres = listOf(GameGenre.COUCH),
+    ),
 )
 
 val CARD_GAMES: List<GameMetadata>   = ALL_GAMES.filter { GameGenre.CARD   in it.genres }

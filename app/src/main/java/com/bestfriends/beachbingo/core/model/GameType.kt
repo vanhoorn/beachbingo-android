@@ -18,4 +18,5 @@ enum class GameType {
     INSELBRUECKE,
     WORTWELLE,
     PERLENTAUCHER,
+    SONNENRAD,
 }

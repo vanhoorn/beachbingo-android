@@ -74,7 +74,7 @@ fun suitName(suit: String): String = when (suit) {
 
 // ── Beach suit icons ──────────────────────────────────────────────────────────
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawSun(cx: Float, cy: Float, r: Float, color: Color) {
+internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawSun(cx: Float, cy: Float, r: Float, color: Color) {
     drawCircle(color.copy(alpha = 0.22f), radius = r * 0.50f, center = Offset(cx, cy))
     drawCircle(color, radius = r * 0.30f, center = Offset(cx, cy))
     drawCircle(Color.White.copy(alpha = 0.35f), radius = r * 0.14f, center = Offset(cx - r * 0.08f, cy - r * 0.09f))
@@ -87,7 +87,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawSun(cx: Float, 
     }
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawWave(cx: Float, cy: Float, r: Float, color: Color) {
+internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawWave(cx: Float, cy: Float, r: Float, color: Color) {
     val p1 = Path()
     p1.moveTo(cx - r * 0.85f, cy - r * 0.18f)
     p1.quadraticBezierTo(cx - r * 0.42f, cy - r * 0.56f, cx, cy - r * 0.18f)
@@ -100,7 +100,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawWave(cx: Float,
     drawPath(p2, color = color.copy(alpha = 0.60f), style = Stroke(width = r * 0.14f, cap = StrokeCap.Round))
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPalm(cx: Float, cy: Float, r: Float, color: Color) {
+internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPalm(cx: Float, cy: Float, r: Float, color: Color) {
     val tx = cx + r * 0.05f; val ty = cy - r * 0.25f
     val bx = cx - r * 0.04f; val by = cy + r * 0.68f
     drawLine(TrunkBrown, Offset(bx, by), Offset(tx, ty), strokeWidth = r * 0.16f, cap = StrokeCap.Round)
@@ -115,7 +115,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPalm(cx: Float,
     }
 }
 
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawShell(cx: Float, cy: Float, r: Float, color: Color) {
+internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawShell(cx: Float, cy: Float, r: Float, color: Color) {
     val botY = cy + r * 0.48f; val rad = r * 0.70f
     drawArc(color, startAngle = 180f, sweepAngle = 180f, useCenter = false,
         topLeft = Offset(cx - rad, botY - rad), size = Size(rad * 2f, rad * 2f),
