@@ -246,6 +246,8 @@ fun AppNavigation() {
                 onNavigateToWormLobby = { navController.navigate(Screen.WormLobby) },
                 onNavigateToMahjongLobby = { navController.navigate(Screen.MahjongLobby) },
                 onNavigateToSonnenrad = { navController.navigate(Screen.SonnenradLobby) },
+                onNavigateToKuestenkriegLobby = { navController.navigate(Screen.KuestenkriegLobby) },
+                onNavigateToPerlentaucherLobby = { navController.navigate(Screen.PerlentaucherLobby) },
             )
         }
 

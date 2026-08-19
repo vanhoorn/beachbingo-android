@@ -142,7 +142,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         description = "Solo-Logik-Rätsel oder klassisches 2-Spieler-Duell — Flotten versenken!",
         color = 0xFFFB7185,
         playerCounts = listOf(PlayerCount.ONE_TWO),
-        genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
+        genres = listOf(GameGenre.COUCH, GameGenre.LOGICAL),
     ),
     GameMetadata(
         id = "duenenschatten",
@@ -178,7 +178,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         description = "Match-3 Puzzle mit Meeresschätzen — tauche tief und sammle Perlen!",
         color = 0xFF0EA5E9,
         playerCounts = listOf(PlayerCount.ONE_TWO),
-        genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
+        genres = listOf(GameGenre.COUCH, GameGenre.LOGICAL),
     ),
     // ── Sonnenrad ──────────────────────────────────────────────────────────────
     GameMetadata(
