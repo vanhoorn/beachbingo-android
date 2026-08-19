@@ -39,8 +39,6 @@ import com.bestfriends.beachbingo.ui.theme.Teal
 import kotlin.math.cos
 import kotlin.math.sin
 
-// ── Flip-Karte ────────────────────────────────────────────────────────────────
-
 @Composable
 fun SonnenradSymbolCard(
     symbol: SonnenradSymbol?,
@@ -73,7 +71,6 @@ fun SonnenradSymbolCard(
                     .fillMaxSize()
                     .graphicsLayer { scaleX = -1f },
             ) {
-                // Kartenvorderseite
                 drawRect(color = CardFace)
                 val r = minOf(size.width, size.height) * 0.36f
                 val cx = size.width / 2f
@@ -91,61 +88,54 @@ fun SonnenradSymbolCard(
     }
 }
 
-// ── Sonnenschirm ──────────────────────────────────────────────────────────────
-
 internal fun DrawScope.drawParasol(cx: Float, cy: Float, r: Float) {
     val cTop = cy - r * 0.15f
     val cRad = r * 0.76f
 
-    // 6 abwechselnde Tortenstücke, obere Halbkreis (180° = links, UZ bis 360°)
     for (i in 0 until 6) {
         val startAngle = 180f + i * 30f
         val color = if (i % 2 == 0) PiratesPurple else PurpleLight
         drawArc(
-            color = color,
+            color      = color,
             startAngle = startAngle,
             sweepAngle = 30f,
-            useCenter = true,
-            topLeft = Offset(cx - cRad, cTop - cRad),
-            size = Size(cRad * 2f, cRad * 2f),
+            useCenter  = true,
+            topLeft    = Offset(cx - cRad, cTop - cRad),
+            size       = Size(cRad * 2f, cRad * 2f),
         )
     }
 
-    // Scallop-Punkte am Rand jedes Segments
     for (i in 0 until 6) {
         val angleMid = Math.toRadians(180.0 + i * 30.0 + 15.0)
         val bx = (cx + cos(angleMid) * cRad).toFloat()
         val by = (cTop + sin(angleMid) * cRad).toFloat()
         drawCircle(
-            color = PurpleDeep.copy(alpha = 0.55f),
+            color  = PurpleDeep.copy(alpha = 0.55f),
             radius = cRad * 0.12f,
             center = Offset(bx, by),
         )
     }
 
-    // Außenrand
     drawArc(
-        color = PurpleDeep,
+        color      = PurpleDeep,
         startAngle = 180f,
         sweepAngle = 180f,
-        useCenter = false,
-        topLeft = Offset(cx - cRad, cTop - cRad),
-        size = Size(cRad * 2f, cRad * 2f),
-        style = Stroke(width = r * 0.055f),
+        useCenter  = false,
+        topLeft    = Offset(cx - cRad, cTop - cRad),
+        size       = Size(cRad * 2f, cRad * 2f),
+        style      = Stroke(width = r * 0.055f),
     )
 
-    // Stiel
     val poleBotX = cx + r * 0.06f
     val poleBotY = cy + r * 0.64f
     drawLine(
-        color = PurpleDeep,
-        start = Offset(cx, cTop),
-        end = Offset(poleBotX, poleBotY),
+        color       = PurpleDeep,
+        start       = Offset(cx, cTop),
+        end         = Offset(poleBotX, poleBotY),
         strokeWidth = r * 0.09f,
-        cap = StrokeCap.Round,
+        cap         = StrokeCap.Round,
     )
 
-    // Standfuß
     val gPath = Path()
     gPath.moveTo(poleBotX - r * 0.22f, poleBotY + r * 0.04f)
     gPath.quadraticBezierTo(
@@ -153,7 +143,7 @@ internal fun DrawScope.drawParasol(cx: Float, cy: Float, r: Float) {
         poleBotX + r * 0.22f, poleBotY + r * 0.04f,
     )
     drawPath(
-        path = gPath,
+        path  = gPath,
         color = SandGold.copy(alpha = 0.6f),
         style = Stroke(width = r * 0.08f, cap = StrokeCap.Round),
     )

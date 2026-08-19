@@ -594,9 +594,9 @@ private fun SonnenradLadder(
                 else         -> "Stufe $step"
             }
             val markerIcon = when {
-                isMarkerTarget -> " ⬆️"  // ⬆️
-                isMarkerBase   -> " ◄"          // ◄
-                isSecured && !isClimbing -> " ✓" // ✓
+                isMarkerTarget -> " ⬆️"
+                isMarkerBase   -> " ◄"
+                isSecured && !isClimbing -> " ✓"
                 else -> ""
             }
 

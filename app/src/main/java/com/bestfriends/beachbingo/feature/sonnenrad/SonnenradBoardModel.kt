@@ -24,7 +24,7 @@ enum class SonnenradSymbol {
 
 enum class SonnenradPhase {
     LOADING,
-    BONUS_READY,      // immer spielbar; isBonusRound zeigt ob Tagesbonus verfügbar
+    BONUS_READY,
     SHUFFLING,
     REVEALING,
     AWAITING_CHOICE,
@@ -90,15 +90,13 @@ class SonnenradBoardModel(application: Application) : AndroidViewModel(applicati
 
     fun startShuffle() {
         if (_state.value.phase != SonnenradPhase.BONUS_READY) return
-        _state.update { it.copy(phase = SonnenradPhase.SHUFFLING) }
+        val symbols = generateSymbols()
+        _state.update { it.copy(phase = SonnenradPhase.SHUFFLING, symbols = symbols) }
     }
 
     fun onShuffleComplete() {
         if (_state.value.phase != SonnenradPhase.SHUFFLING) return
-        _state.update { it.copy(
-            phase   = SonnenradPhase.REVEALING,
-            symbols = generateSymbols(),
-        )}
+        _state.update { it.copy(phase = SonnenradPhase.REVEALING) }
     }
 
     fun onRevealComplete() {
@@ -168,6 +166,18 @@ class SonnenradBoardModel(application: Application) : AndroidViewModel(applicati
 
     // ── Private Helpers ───────────────────────────────────────────────────────
 
+    private fun generateSymbols(): List<SonnenradSymbol> {
+        val total = symbolWeights.sum()
+        return List(3) {
+            val roll = (0 until total).random()
+            var cumul = 0
+            SonnenradSymbol.entries.first { sym ->
+                cumul += symbolWeights[sym.ordinal]
+                roll < cumul
+            }
+        }
+    }
+
     private fun launchTimingMarker() {
         timingJob?.cancel()
         timingJob = viewModelScope.launch {
@@ -213,18 +223,6 @@ class SonnenradBoardModel(application: Application) : AndroidViewModel(applicati
                 }
                 _state.update { it.copy(nextBonusMs = ms) }
                 delay(1_000L)
-            }
-        }
-    }
-
-    private fun generateSymbols(): List<SonnenradSymbol> {
-        val total = symbolWeights.sum()
-        return List(3) {
-            val roll = (0 until total).random()
-            var cumul = 0
-            SonnenradSymbol.entries.first { sym ->
-                cumul += symbolWeights[sym.ordinal]
-                roll < cumul
             }
         }
     }
