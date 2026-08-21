@@ -20,7 +20,6 @@ import com.bestfriends.beachbingo.feature.shared.rankEmoji
 import com.bestfriends.beachbingo.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.tasks.await
 
 private val KlontauschAccent = Color(0xFF8B5CF6)
 
@@ -32,6 +31,7 @@ private data class KlonResult(
     val players: List<Triple<String, String, String>>,  // userId, displayName, avatarUrl
     val mode: String,
     val difficulty: String,
+    val createdAt: Long = 0L,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,39 +46,38 @@ fun KlontauschResultsScreen(
     var results by remember { mutableStateOf<List<KlonResult>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
 
-    LaunchedEffect(uid) {
-        if (uid == null) { loading = false; return@LaunchedEffect }
-        try {
-            val snap = db.collection("klontauschResults")
-                .whereArrayContains("playerIds", uid)
-                .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
-                .limit(20)
-                .get().await()
-
-            results = snap.documents.mapNotNull { doc ->
-                val winnerId   = doc.getString("winnerId") ?: return@mapNotNull null
-                val winnerName = doc.getString("winnerName") ?: ""
-                val winnerAvatar = doc.getString("winnerAvatar") ?: "🃏"
-                val team = doc.getString("teamName") ?: ""
-                val mode = doc.getString("mode") ?: ""
-                val difficulty = doc.getString("difficulty") ?: ""
-                @Suppress("UNCHECKED_CAST")
-                val rawPlayers = (doc.get("players") as? List<*>) ?: emptyList<Any>()
-                val players = rawPlayers.mapNotNull { raw ->
-                    @Suppress("UNCHECKED_CAST")
-                    val pm = raw as? Map<String, Any> ?: return@mapNotNull null
-                    Triple(
-                        pm["userId"] as? String ?: "",
-                        pm["displayName"] as? String ?: "",
-                        pm["avatarUrl"] as? String ?: "🃏",
-                    )
+    DisposableEffect(uid) {
+        if (uid == null) { loading = false; return@DisposableEffect onDispose {} }
+        val listener = db.collection("klontauschResults")
+            .whereArrayContains("playerIds", uid)
+            .addSnapshotListener { snap, _ ->
+                if (snap != null) {
+                    results = snap.documents.mapNotNull { doc ->
+                        val winnerId     = doc.getString("winnerId") ?: return@mapNotNull null
+                        val winnerName   = doc.getString("winnerName") ?: ""
+                        val winnerAvatar = doc.getString("winnerAvatar") ?: "🃏"
+                        val team         = doc.getString("teamName") ?: ""
+                        val mode         = doc.getString("mode") ?: ""
+                        val difficulty   = doc.getString("difficulty") ?: ""
+                        val createdAt    = doc.getLong("createdAt") ?: 0L
+                        @Suppress("UNCHECKED_CAST")
+                        val rawPlayers = (doc.get("players") as? List<*>) ?: emptyList<Any>()
+                        val players = rawPlayers.mapNotNull { raw ->
+                            @Suppress("UNCHECKED_CAST")
+                            val pm = raw as? Map<String, Any> ?: return@mapNotNull null
+                            Triple(
+                                pm["userId"] as? String ?: "",
+                                pm["displayName"] as? String ?: "",
+                                pm["avatarUrl"] as? String ?: "🃏",
+                            )
+                        }
+                        val sorted = players.sortedByDescending { it.first == winnerId }
+                        KlonResult(team, winnerId, winnerName, winnerAvatar, sorted, mode, difficulty, createdAt)
+                    }.sortedByDescending { it.createdAt }
                 }
-                // Winner first, then others
-                val sorted = players.sortedByDescending { it.first == winnerId }
-                KlonResult(team, winnerId, winnerName, winnerAvatar, sorted, mode, difficulty)
+                loading = false
             }
-        } catch (_: Exception) {}
-        loading = false
+        onDispose { listener.remove() }
     }
 
     Scaffold(

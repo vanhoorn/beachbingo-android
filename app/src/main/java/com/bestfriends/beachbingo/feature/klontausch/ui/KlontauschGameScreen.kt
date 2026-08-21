@@ -8,8 +8,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -232,6 +234,34 @@ fun KlontauschGameScreen(
         prevCardsHolder.clear(); prevCardsHolder.addAll(detectorMyCards)
     }
 
+    // ── Save result to Firestore — called directly at win, never in a coroutine ──
+    var resultSaved by remember { mutableStateOf(false) }
+
+    fun saveResult(st: KlonGameState) {
+        if (resultSaved) return
+        resultSaved = true
+        val winnerId  = st.winnerId
+        val playerIds = st.playerIds
+        db.collection("klontauschResults").add(mapOf(
+            "winnerId"    to winnerId,
+            "winnerName"  to (st.players[winnerId]?.displayName ?: ""),
+            "winnerAvatar" to (st.players[winnerId]?.avatarUrl ?: ""),
+            "playerIds"   to playerIds,
+            "players"     to playerIds.mapNotNull { pid ->
+                val p = st.players[pid] ?: return@mapNotNull null
+                mapOf("userId" to pid, "displayName" to p.displayName, "avatarUrl" to p.avatarUrl)
+            },
+            "teamName"    to teamName(playerIds.sorted().joinToString("|")),
+            "mode"        to mode,
+            "difficulty"  to difficulty,
+            "createdAt"   to System.currentTimeMillis(),
+        ))
+    }
+
+    LaunchedEffect(gameState?.status) {
+        if (gameState?.status == "FINISHED") showWinDialog = true
+    }
+
     // ── AI loop: AI's own turn ────────────────────────────────────────────────
     LaunchedEffect(gameState) {
         val st = gameState ?: return@LaunchedEffect
@@ -254,10 +284,12 @@ fun KlontauschGameScreen(
 
         val targets = aiTargets[turnUid] ?: emptyList()
         val winner = newState.players[turnUid]
-        gameState = if (winner != null && winner.hasWon(targets)) {
-            newState.copy(status = "FINISHED", winnerId = turnUid)
+        if (winner != null && winner.hasWon(targets)) {
+            val finalState = newState.copy(status = "FINISHED", winnerId = turnUid)
+            saveResult(finalState)
+            gameState = finalState
         } else {
-            newState
+            gameState = newState
         }
     }
 
@@ -284,35 +316,6 @@ fun KlontauschGameScreen(
         if (current != st) gameState = current
     }
 
-    // ── Save result to Firestore when game finishes ───────────────────────────
-    var resultSaved by remember { mutableStateOf(false) }
-    LaunchedEffect(gameState?.status) {
-        val st = gameState ?: return@LaunchedEffect
-        if (st.status != "FINISHED") return@LaunchedEffect
-        showWinDialog = true
-        if (resultSaved) return@LaunchedEffect
-        resultSaved = true
-        val winnerId   = st.winnerId
-        val playerIds  = st.playerIds
-        val teamKey    = playerIds.sorted().joinToString("|")
-        try {
-            db.collection("klontauschResults").add(mapOf(
-                "winnerId"    to winnerId,
-                "winnerName"  to (st.players[winnerId]?.displayName ?: ""),
-                "winnerAvatar" to (st.players[winnerId]?.avatarUrl ?: ""),
-                "playerIds"   to playerIds,
-                "players"     to playerIds.mapNotNull { pid ->
-                    val p = st.players[pid] ?: return@mapNotNull null
-                    mapOf("userId" to pid, "displayName" to p.displayName, "avatarUrl" to p.avatarUrl)
-                },
-                "teamName"    to teamName(teamKey),
-                "mode"        to mode,
-                "difficulty"  to difficulty,
-                "createdAt"   to System.currentTimeMillis(),
-            )).await()
-        } catch (_: Exception) {}
-    }
-
     // ── Close picker when turn passes ─────────────────────────────────────────
     val currentTurnUidForPicker = gameState?.playerIds?.getOrNull(
         (gameState?.turnIndex ?: 0) % (gameState?.playerIds?.size?.coerceAtLeast(1) ?: 1)
@@ -327,10 +330,13 @@ fun KlontauschGameScreen(
         val targetTargetIds = aiTargets[targetUid] ?: emptyList()
         val newSt = executeNehmen(st, uid, targetUid, targetTargetIds)
         val me = newSt.players[uid]
-        pushState(
-            if (me != null && me.hasWon(myTargetIds)) newSt.copy(status = "FINISHED", winnerId = uid)
-            else newSt
-        )
+        if (me != null && me.hasWon(myTargetIds)) {
+            val finalState = newSt.copy(status = "FINISHED", winnerId = uid)
+            saveResult(finalState)
+            pushState(finalState)
+        } else {
+            pushState(newSt)
+        }
     }
 
     fun doTauschen() {
@@ -359,10 +365,13 @@ fun KlontauschGameScreen(
         val st = gameState ?: return
         val newSt = selectPartnerAndSwap(st, responderId)
         val me = newSt.players[uid]
-        pushState(
-            if (me != null && me.hasWon(myTargetIds)) newSt.copy(status = "FINISHED", winnerId = uid)
-            else newSt
-        )
+        if (me != null && me.hasWon(myTargetIds)) {
+            val finalState = newSt.copy(status = "FINISHED", winnerId = uid)
+            saveResult(finalState)
+            pushState(finalState)
+        } else {
+            pushState(newSt)
+        }
     }
 
     fun doCancelOffer() {
@@ -378,9 +387,10 @@ fun KlontauschGameScreen(
     if (showWinDialog && gameState != null) {
         val finishedState = gameState!!
         KlontauschWinDialog(
-            gameState   = finishedState,
-            uid         = uid,
-            onToLobby   = onNavigateBack,
+            gameState           = finishedState,
+            uid                 = uid,
+            onToLobby           = onNavigateBack,
+            onNavigateToResults = onNavigateToResults,
         )
     }
 
@@ -510,117 +520,130 @@ fun KlontauschGameScreen(
 
         HorizontalDivider(color = BorderColor, thickness = 0.5.dp)
 
-        // ── Ereignisliste (pinned) ────────────────────────────────────────────
-        if (eventList.isNotEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(SurfaceDark.copy(alpha = 0.6f))
-                    .padding(horizontal = 12.dp, vertical = 5.dp),
-                verticalArrangement = Arrangement.spacedBy(3.dp),
-            ) {
-                eventList.forEach { (text, type) ->
-                    val eventColor = when (type) {
-                        KlonEventType.SWAP     -> Color(0xFF22C55E)
-                        KlonEventType.STOLEN   -> Crimson
-                        KlonEventType.COMPLETE -> SandGold
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        Box(Modifier.size(5.dp).clip(CircleShape).background(eventColor))
-                        Text(
-                            text,
-                            color = eventColor.copy(alpha = 0.9f),
-                            fontSize = MaterialTheme.typography.labelSmall.fontSize,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                }
+        // ── Neueste Meldung (einzeilig, fixe Höhe) ───────────────────────────
+        val latestEvent = eventList.firstOrNull()
+        val latestEventColor = when (latestEvent?.second) {
+            KlonEventType.SWAP     -> Color(0xFF22C55E)
+            KlonEventType.STOLEN   -> Crimson
+            KlonEventType.COMPLETE -> SandGold
+            null                   -> Color.Transparent
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(28.dp)
+                .background(if (latestEvent != null) SurfaceDark.copy(alpha = 0.6f) else Color.Transparent)
+                .padding(horizontal = 12.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            if (latestEvent != null) {
+                Text(
+                    latestEvent.first,
+                    color = latestEventColor.copy(alpha = 0.9f),
+                    fontSize = MaterialTheme.typography.labelSmall.fontSize,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
-            HorizontalDivider(color = BorderColor, thickness = 0.5.dp)
         }
 
-        // ── Scrollbarer Hauptbereich: Ziel- + Vorratsfiguren ─────────────────
+        // ── Hauptbereich: Ziel- + Vorratsfiguren (kein Scroll, beide immer sichtbar) ──
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
-                .verticalScroll(rememberScrollState()),
+                .weight(1f),
         ) {
-            // Ziel-Figuren (Pager)
+            // Ziel-Figuren (Pager) — 53 % der verfügbaren Höhe
             if (myTargetIds.isNotEmpty()) {
                 val pagerState = rememberPagerState { myTargetIds.size }
 
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxWidth(),
-                ) { page ->
-                    val charId = myTargetIds[page]
-                    val char = klonCharacterById(charId)
-                    val hasKopf    = myCards.any { it.characterId == charId && it.part == KlonPart.KOPF.name }
-                    val hasKoerper = myCards.any { it.characterId == charId && it.part == KlonPart.KOERPER.name }
-                    val hasBeine   = myCards.any { it.characterId == charId && it.part == KlonPart.BEINE.name }
-                    val allDone    = hasKopf && hasKoerper && hasBeine
-
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (allDone) KlontauschAccent.copy(0.12f) else SurfaceDark,
-                        ),
-                        shape = RoundedCornerShape(12.dp),
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(0.53f),
+                ) {
+                    HorizontalPager(
+                        state = pagerState,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 6.dp)
-                            .border(1.dp, if (allDone) KlontauschAccent.copy(0.6f) else BorderColor, RoundedCornerShape(12.dp)),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            ) {
-                                Text("${page + 1} / ${myTargetIds.size}", color = TextMuted, fontSize = MaterialTheme.typography.labelSmall.fontSize)
-                                Text(char.name, color = if (allDone) KlontauschAccent else TextPrimary, fontWeight = FontWeight.Bold, fontSize = MaterialTheme.typography.titleSmall.fontSize)
-                                if (allDone) Text("✅", fontSize = MaterialTheme.typography.titleSmall.fontSize)
-                            }
+                            .weight(1f),
+                    ) { page ->
+                        val charId = myTargetIds[page]
+                        val char = klonCharacterById(charId)
+                        val hasKopf    = myCards.any { it.characterId == charId && it.part == KlonPart.KOPF.name }
+                        val hasKoerper = myCards.any { it.characterId == charId && it.part == KlonPart.KOERPER.name }
+                        val hasBeine   = myCards.any { it.characterId == charId && it.part == KlonPart.BEINE.name }
+                        val allDone    = hasKopf && hasKoerper && hasBeine
 
-                            BoxWithConstraints(Modifier.fillMaxWidth().height(216.dp)) {
-                                val partH = maxHeight / 3f
-                                val partW = maxWidth * 0.65f
-                                val fillForChar = targetFillCards[charId]
-                                Column(Modifier.width(partW).align(Alignment.Center)) {
-                                    KlonPartSlot(charId, KlonPart.KOPF,    hasKopf,    partH, fillCard = if (!hasKopf)    fillForChar?.get(KlonPart.KOPF)    else null)
-                                    KlonPartSlot(charId, KlonPart.KOERPER, hasKoerper, partH, fillCard = if (!hasKoerper) fillForChar?.get(KlonPart.KOERPER) else null)
-                                    KlonPartSlot(charId, KlonPart.BEINE,   hasBeine,   partH, fillCard = if (!hasBeine)   fillForChar?.get(KlonPart.BEINE)   else null)
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (allDone) KlontauschAccent.copy(0.12f) else SurfaceDark,
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                .border(1.5.dp, if (allDone) KlontauschAccent else KlontauschAccent.copy(0.45f), RoundedCornerShape(12.dp)),
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    Text("${page + 1} / ${myTargetIds.size}", color = TextMuted, fontSize = MaterialTheme.typography.labelSmall.fontSize)
+                                    Text(char.name, color = if (allDone) KlontauschAccent else TextPrimary, fontWeight = FontWeight.Bold, fontSize = MaterialTheme.typography.titleSmall.fontSize)
+                                    if (allDone) Text("✅", fontSize = MaterialTheme.typography.titleSmall.fontSize)
+                                }
+
+                                // Figuren-Bereich füllt den Rest der Karte
+                                BoxWithConstraints(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f),
+                                ) {
+                                    val partH    = maxHeight / 3f
+                                    val partW    = maxWidth * 0.70f
+                                    val fillForChar = targetFillCards[charId]
+                                    Column(Modifier.width(partW).align(Alignment.Center)) {
+                                        KlonPartSlot(charId, KlonPart.KOPF,    hasKopf,    partH, fillCard = if (!hasKopf)    fillForChar?.get(KlonPart.KOPF)    else null)
+                                        KlonPartSlot(charId, KlonPart.KOERPER, hasKoerper, partH, fillCard = if (!hasKoerper) fillForChar?.get(KlonPart.KOERPER) else null)
+                                        KlonPartSlot(charId, KlonPart.BEINE,   hasBeine,   partH, fillCard = if (!hasBeine)   fillForChar?.get(KlonPart.BEINE)   else null)
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalArrangement = Arrangement.Center) {
-                    repeat(myTargetIds.size) { i ->
-                        Box(Modifier.size(8.dp).padding(2.dp).clip(CircleShape).background(if (i == pagerState.currentPage) KlontauschAccent else BorderColor))
+                    // Pager-Punkte
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(16.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        repeat(myTargetIds.size) { i ->
+                            Box(Modifier.size(8.dp).padding(2.dp).clip(CircleShape).background(if (i == pagerState.currentPage) KlontauschAccent else BorderColor))
+                        }
                     }
                 }
             }
 
             HorizontalDivider(color = BorderColor, thickness = 0.5.dp)
 
-            // Vorrats-Figuren
+            // Vorrats-Figuren — 47 % (oder 100 % wenn keine Zielfiguren)
             KlontauschStockFigure(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(if (myTargetIds.isNotEmpty()) 0.47f else 1f),
                 stockKopf    = stockKopf,
                 stockKoerper = stockKoerper,
                 stockBeine   = stockBeine,
             )
-
-            Spacer(Modifier.height(8.dp))
         }
 
         // ── Aktionsbereich (fixiert unten) ────────────────────────────────────
@@ -955,6 +978,7 @@ private fun MyOfferCard(
 
 @Composable
 private fun KlontauschStockFigure(
+    modifier: Modifier = Modifier,
     stockKopf: List<KlonCard>,
     stockKoerper: List<KlonCard>,
     stockBeine: List<KlonCard>,
@@ -965,10 +989,12 @@ private fun KlontauschStockFigure(
     val beinePager   = rememberPagerState { maxOf(stockBeine.size, 1) }
     val totalStock   = stockKopf.size + stockKoerper.size + stockBeine.size
 
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-        // Header
+    Column(modifier = modifier.fillMaxWidth()) {
+        // Header (Zeile mit Titel + Shuffle-Button)
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -981,15 +1007,24 @@ private fun KlontauschStockFigure(
             if (totalStock > 0) {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(34.dp)
                         .clip(CircleShape)
                         .background(SurfaceDark)
                         .border(1.dp, OceanBlue, CircleShape)
                         .clickable {
                             scope.launch {
-                                if (stockKopf.isNotEmpty())    kopfPager.animateScrollToPage(stockKopf.indices.random())
-                                if (stockKoerper.isNotEmpty()) koerperPager.animateScrollToPage(stockKoerper.indices.random())
-                                if (stockBeine.isNotEmpty())   beinePager.animateScrollToPage(stockBeine.indices.random())
+                                if (stockKopf.size > 1) {
+                                    val next = (0 until stockKopf.size).filter { it != kopfPager.currentPage }.random()
+                                    kopfPager.animateScrollToPage(next)
+                                }
+                                if (stockKoerper.size > 1) {
+                                    val next = (0 until stockKoerper.size).filter { it != koerperPager.currentPage }.random()
+                                    koerperPager.animateScrollToPage(next)
+                                }
+                                if (stockBeine.size > 1) {
+                                    val next = (0 until stockBeine.size).filter { it != beinePager.currentPage }.random()
+                                    beinePager.animateScrollToPage(next)
+                                }
                             }
                         },
                     contentAlignment = Alignment.Center,
@@ -1000,15 +1035,26 @@ private fun KlontauschStockFigure(
         }
 
         if (totalStock == 0) {
-            Text(
-                "Alle Karten gehören zu deinen Zielfiguren.",
-                color = TextMuted,
-                fontSize = MaterialTheme.typography.bodySmall.fontSize,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-            )
+            Box(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    "Alle Karten gehören zu deinen Zielfiguren.",
+                    color = TextMuted,
+                    fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
         } else {
-            BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-                val partH = 88.dp
+            // Figuren-Bereich: füllt den Rest, Höhe wird per BoxWithConstraints berechnet
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 20.dp),
+            ) {
+                val partH = maxHeight / 3f
                 val partW = maxWidth * 0.62f
 
                 Column(Modifier.width(partW).align(Alignment.Center)) {
@@ -1042,13 +1088,16 @@ private fun KlontauschStockFigure(
                 }
             }
 
+            // Karten-Zähler
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 3.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 2.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
-                Text("${stockKopf.size} Kopf", color = TextMuted, fontSize = MaterialTheme.typography.labelSmall.fontSize)
-                Text("${stockKoerper.size} Koerper", color = TextMuted, fontSize = MaterialTheme.typography.labelSmall.fontSize)
-                Text("${stockBeine.size} Beine", color = TextMuted, fontSize = MaterialTheme.typography.labelSmall.fontSize)
+                Text("${stockKopf.size} Kopf",    color = TextMuted, fontSize = MaterialTheme.typography.labelSmall.fontSize)
+                Text("${stockKoerper.size} Körper", color = TextMuted, fontSize = MaterialTheme.typography.labelSmall.fontSize)
+                Text("${stockBeine.size} Beine",  color = TextMuted, fontSize = MaterialTheme.typography.labelSmall.fontSize)
             }
         }
     }
@@ -1072,11 +1121,26 @@ private fun KlontauschWinDialog(
     gameState: KlonGameState,
     uid: String,
     onToLobby: () -> Unit,
+    onNavigateToResults: () -> Unit,
 ) {
-    val winnerId   = gameState.winnerId
-    val winner     = gameState.players[winnerId]
-    val iAmWinner  = winnerId == uid
-    val players    = gameState.playerIds.mapNotNull { gameState.players[it] }
+    val winnerId  = gameState.winnerId
+    val winner    = gameState.players[winnerId]
+    val iAmWinner = winnerId == uid
+    val players   = gameState.playerIds.mapNotNull { gameState.players[it] }
+
+    var trophyVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(120L)
+        trophyVisible = true
+    }
+    val trophyScale by animateFloatAsState(
+        targetValue = if (trophyVisible) 1f else 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium,
+        ),
+        label = "trophy_scale",
+    )
 
     Dialog(
         onDismissRequest = {},
@@ -1085,81 +1149,135 @@ private fun KlontauschWinDialog(
             dismissOnClickOutside = false,
         ),
     ) {
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = SurfaceDark,
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(2.dp, KlontauschAccent.copy(0.6f), RoundedCornerShape(24.dp)),
-        ) {
-            Column(
-                modifier = Modifier.padding(28.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+        Box {
+            KlonWinParticles(Modifier.matchParentSize())
+
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = SurfaceDark,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(2.dp, KlontauschAccent.copy(0.6f), RoundedCornerShape(24.dp)),
             ) {
-                Text("🏆", fontSize = MaterialTheme.typography.displayMedium.fontSize)
-
-                val winnerDisplayName = winner?.displayName ?: "?"
-                Text(
-                    if (iAmWinner) "Du hast gewonnen!" else "$winnerDisplayName hat gewonnen!",
-                    color = SandGold,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = MaterialTheme.typography.titleLarge.fontSize,
-                    textAlign = TextAlign.Center,
-                )
-
-                if (winner != null) {
-                    Text(
-                        "${winner.avatarUrl}  ${winner.displayName}",
-                        color = SandGold,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = MaterialTheme.typography.bodyLarge.fontSize,
-                    )
-                }
-
-                HorizontalDivider(color = BorderColor)
-
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.padding(28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    players.forEachIndexed { idx, p ->
-                        val isWin = p.userId == winnerId
-                        val isLast = idx == players.size - 1
-                        val emoji = when {
-                            idx == 0 -> "🥇"
-                            idx == 1 -> "🥈"
-                            idx == 2 && !isLast -> "🥉"
-                            isLast   -> "🦀"
-                            else     -> "🥉"
-                        }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(emoji, fontSize = MaterialTheme.typography.bodyLarge.fontSize)
-                            Text(p.avatarUrl, fontSize = MaterialTheme.typography.titleSmall.fontSize)
-                            Text(
-                                p.displayName + if (p.userId == uid) " (Du)" else "",
-                                color = if (isWin) SandGold else TextSub,
-                                fontWeight = if (isWin) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = MaterialTheme.typography.bodyMedium.fontSize,
-                            )
+                    Text(
+                        "🏆",
+                        fontSize = MaterialTheme.typography.displayMedium.fontSize,
+                        modifier = Modifier.scale(trophyScale),
+                    )
+
+                    val winnerDisplayName = winner?.displayName ?: "?"
+                    Text(
+                        if (iAmWinner) "Du hast gewonnen!" else "$winnerDisplayName hat gewonnen!",
+                        color = SandGold,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = MaterialTheme.typography.titleLarge.fontSize,
+                        textAlign = TextAlign.Center,
+                    )
+
+                    if (winner != null) {
+                        Text(
+                            "${winner.avatarUrl}  ${winner.displayName}",
+                            color = SandGold,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = MaterialTheme.typography.bodyLarge.fontSize,
+                        )
+                    }
+
+                    HorizontalDivider(color = BorderColor)
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        players.forEachIndexed { idx, p ->
+                            val isWin  = p.userId == winnerId
+                            val isLast = idx == players.size - 1
+                            val emoji  = when {
+                                idx == 0            -> "🥇"
+                                idx == 1            -> "🥈"
+                                idx == 2 && !isLast -> "🥉"
+                                isLast              -> "🦀"
+                                else                -> "🥉"
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(emoji, fontSize = MaterialTheme.typography.bodyLarge.fontSize)
+                                Text(p.avatarUrl, fontSize = MaterialTheme.typography.titleSmall.fontSize)
+                                Text(
+                                    p.displayName + if (p.userId == uid) " (Du)" else "",
+                                    color = if (isWin) SandGold else TextSub,
+                                    fontWeight = if (isWin) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = MaterialTheme.typography.bodyMedium.fontSize,
+                                )
+                            }
                         }
                     }
-                }
 
-                Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(4.dp))
 
-                Button(
-                    onClick = onToLobby,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = KlontauschAccent),
-                ) {
-                    Text("Zur Lobby", fontWeight = FontWeight.Bold, color = Color.White)
+                    Button(
+                        onClick = onNavigateToResults,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = KlontauschAccent),
+                    ) {
+                        Text("Ergebnisse ansehen", fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+
+                    OutlinedButton(
+                        onClick = onToLobby,
+                        modifier = Modifier.fillMaxWidth(),
+                        border = BorderStroke(1.dp, KlontauschAccent.copy(0.5f)),
+                    ) {
+                        Text("Zur Lobby", color = TextSub)
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun KlonWinParticles(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "klon_particles")
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue  = 1f,
+        animationSpec = infiniteRepeatable(
+            animation  = tween(4000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "klon_phase",
+    )
+    val particles = remember {
+        List(16) { i ->
+            Triple(
+                (i / 16f + kotlin.random.Random.nextFloat() * 0.055f).coerceIn(0.02f, 0.98f),
+                kotlin.random.Random.nextFloat(),
+                listOf("🃏", "🎭", "🎲", "✨", "🎴", "🃏", "🎲", "🎭")[i % 8],
+            )
+        }
+    }
+
+    BoxWithConstraints(modifier = modifier) {
+        val w = maxWidth
+        val h = maxHeight
+        particles.forEach { (x, offset, emoji) ->
+            val y = (phase + offset) % 1f
+            Text(
+                text = emoji,
+                fontSize = MaterialTheme.typography.titleSmall.fontSize,
+                modifier = Modifier
+                    .absoluteOffset(x = w * x, y = h * y)
+                    .alpha(0.7f),
+            )
         }
     }
 }
@@ -1194,7 +1312,7 @@ private fun KlonPartSlot(
             )
             fillCard != null -> KlontauschCharacterView(
                 characterId = fillCard.characterId,
-                part = KlonPart.valueOf(fillCard.part),
+                part = part,
                 modifier = Modifier.fillMaxSize().padding(2.dp).alpha(0.35f),
             )
             else -> KlontauschSilhouette(
