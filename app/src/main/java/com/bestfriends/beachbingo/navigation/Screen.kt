@@ -200,4 +200,16 @@ sealed interface Screen {
     // Sonnenrad
     @Serializable object SonnenradLobby : Screen
     @Serializable object Sonnenrad : Screen
+    // Klontausch
+    @Serializable object KlontauschLobby : Screen
+    @Serializable data class KlontauschGame(
+        val mode: String,
+        val gameId: String? = null,
+        val aiCount: Int = 2,
+        val difficulty: String = "SNIPER",
+        val saveId: String? = null,
+    ) : Screen
+    @Serializable object KlontauschSettings : Screen
+    @Serializable object KlontauschGallery : Screen
+    @Serializable object KlontauschResults : Screen
 }

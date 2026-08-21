@@ -19,4 +19,5 @@ enum class GameType {
     WORTWELLE,
     PERLENTAUCHER,
     SONNENRAD,
+    KLONTAUSCH,
 }

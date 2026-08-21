@@ -32,6 +32,7 @@ sealed class JoinDestination {
     data class MeerMau(val gameId: String) : JoinDestination()
     data class Strandraeuber(val gameId: String) : JoinDestination()
     data class Kuestenkrieg(val gameCode: String) : JoinDestination()
+    data class Klontausch(val gameId: String) : JoinDestination()
 }
 
 data class JoinUiState(
@@ -63,6 +64,7 @@ class JoinViewModel @Inject constructor(
                 val meermauDeferred        = async { firestore.collection("meermauGames").document(code).get().await() }
                 val strandraeuberDeferred  = async { firestore.collection("strandraeuberGames").document(code).get().await() }
                 val kuestenkriegDeferred   = async { firestore.collection("kuestenkriegGames").document(code).get().await() }
+                val klontauschDeferred     = async { firestore.collection("klontauschGames").document(code).get().await() }
 
                 val bingoSnap          = bingoDeferred.await()
                 val pongSnap           = pongDeferred.await()
@@ -71,6 +73,7 @@ class JoinViewModel @Inject constructor(
                 val meermauSnap        = meermauDeferred.await()
                 val strandraeuberSnap  = strandraeuberDeferred.await()
                 val kuestenkriegSnap   = kuestenkriegDeferred.await()
+                val klontauschSnap     = klontauschDeferred.await()
 
                 val destination: JoinDestination? = when {
                     bingoSnap.exists()         -> joinBingo(code, bingoSnap.data!!, user.uid, user.displayName, user.avatarUrl)
@@ -80,6 +83,7 @@ class JoinViewModel @Inject constructor(
                     meermauSnap.exists()       -> joinMeerMau(code, meermauSnap.data!!, user.uid, user.displayName, user.avatarUrl)
                     strandraeuberSnap.exists() -> joinStrandraeuber(code, strandraeuberSnap.data!!, user.uid, user.displayName, user.avatarUrl)
                     kuestenkriegSnap.exists()  -> joinKuestenkrieg(code, kuestenkriegSnap.data!!, user.uid, user.displayName, user.avatarUrl)
+                    klontauschSnap.exists()    -> joinKlontausch(code, klontauschSnap.data!!, user.uid, user.displayName, user.avatarUrl)
                     else -> { _uiState.update { it.copy(isLoading = false, error = "Kein Spiel mit diesem Code gefunden.") }; null }
                 }
                 if (destination != null) {
@@ -321,6 +325,37 @@ class JoinViewModel @Inject constructor(
             ).await()
         }
         return JoinDestination.Kuestenkrieg(code)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private suspend fun joinKlontausch(
+        docId: String, data: Map<String, Any>, uid: String, displayName: String, avatarUrl: String
+    ): JoinDestination? {
+        val status = data["status"] as? String ?: ""
+        if (status == "FINISHED") {
+            _uiState.update { it.copy(isLoading = false, error = "Dieses Spiel ist bereits beendet.") }
+            return null
+        }
+        val playerIds = (data["playerIds"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+        if (status == "PLAYING") {
+            if (playerIds.contains(uid)) return JoinDestination.Klontausch(docId)
+            _uiState.update { it.copy(isLoading = false, error = "Das Spiel läuft bereits.") }
+            return null
+        }
+        if (!playerIds.contains(uid)) {
+            if (playerIds.size >= 4) {
+                _uiState.update { it.copy(isLoading = false, error = "Das Spiel ist voll (max. 4 Spieler).") }
+                return null
+            }
+            val newPlayer = mapOf(
+                "userId" to uid, "displayName" to displayName, "avatarUrl" to avatarUrl,
+                "heldCards" to emptyList<Any>(), "isAI" to false,
+            )
+            firestore.collection("klontauschGames").document(docId).update(
+                mapOf("playerIds" to FieldValue.arrayUnion(uid), "players.$uid" to newPlayer)
+            ).await()
+        }
+        return JoinDestination.Klontausch(docId)
     }
 
     fun clearNavigate() = _uiState.update { it.copy(destination = null, error = null) }

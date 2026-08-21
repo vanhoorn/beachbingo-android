@@ -180,6 +180,16 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         playerCounts = listOf(PlayerCount.ONE_TWO),
         genres = listOf(GameGenre.COUCH, GameGenre.LOGICAL),
     ),
+    // ── Klontausch ─────────────────────────────────────────────────────────────
+    GameMetadata(
+        id = "klontausch",
+        emoji = "🃏",
+        title = "Klontausch",
+        description = "Tausch Figuren-Teile blind mit anderen — wer als Erstes seine 3 Zielfiguren komplett hat, gewinnt!",
+        color = 0xFF8B5CF6,
+        playerCounts = listOf(PlayerCount.TWO_FOUR),
+        genres = listOf(GameGenre.PARTY, GameGenre.CARD),
+    ),
     // ── Sonnenrad ──────────────────────────────────────────────────────────────
     GameMetadata(
         id = "sonnenrad",

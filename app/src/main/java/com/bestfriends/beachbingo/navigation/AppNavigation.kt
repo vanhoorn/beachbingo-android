@@ -93,6 +93,11 @@ import com.bestfriends.beachbingo.feature.perlentaucher.ui.PerlentaucherSettings
 import com.bestfriends.beachbingo.feature.perlentaucher.ui.createFreshPerlentaucherSave
 import com.bestfriends.beachbingo.feature.sonnenrad.ui.SonnenradBonusScreen
 import com.bestfriends.beachbingo.feature.sonnenrad.ui.SonnenradLobbyScreen
+import com.bestfriends.beachbingo.feature.klontausch.ui.KlontauschLobbyScreen
+import com.bestfriends.beachbingo.feature.klontausch.ui.KlontauschGameScreen
+import com.bestfriends.beachbingo.feature.klontausch.ui.KlontauschResultsScreen
+import com.bestfriends.beachbingo.feature.klontausch.ui.KlontauschSettingsScreen
+import com.bestfriends.beachbingo.feature.klontausch.ui.KlontauschGalleryScreen
 import com.bestfriends.beachbingo.feature.raetsel.PuzzleSave
 
 @Composable
@@ -226,6 +231,7 @@ fun AppNavigation() {
                 onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
                 onNavigateToMeermauLobby = { navController.navigate(Screen.MeermauLobby) },
                 onNavigateToStrandraeuberLobby = { navController.navigate(Screen.StrandraeuberLobby) },
+                onNavigateToKlontauschLobby = { navController.navigate(Screen.KlontauschLobby) },
             )
         }
 
@@ -499,6 +505,61 @@ fun AppNavigation() {
             )
         }
 
+        // ── Klontausch ─────────────────────────────────────────────────────────
+        composable<Screen.KlontauschLobby> {
+            KlontauschLobbyScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToGame = { mode, gameId, aiCount, difficulty, saveId ->
+                    navController.navigate(Screen.KlontauschGame(mode, gameId, aiCount, difficulty, saveId)) {
+                        popUpTo(Screen.KlontauschLobby)
+                    }
+                },
+                onNavigateToResults = { navController.navigate(Screen.KlontauschResults) },
+                onNavigateToSettings = { navController.navigate(Screen.KlontauschSettings) },
+            )
+        }
+        composable<Screen.KlontauschSettings> {
+            KlontauschSettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToGallery = { navController.navigate(Screen.KlontauschGallery) },
+            )
+        }
+        composable<Screen.KlontauschGallery> {
+            KlontauschGalleryScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable<Screen.KlontauschGame> { backStack ->
+            val route: Screen.KlontauschGame = backStack.toRoute()
+            KlontauschGameScreen(
+                mode = route.mode,
+                gameId = route.gameId,
+                aiCount = route.aiCount,
+                difficulty = route.difficulty,
+                saveId = route.saveId,
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
+                onNavigateBack = {
+                    navController.navigate(Screen.KlontauschLobby) {
+                        popUpTo(Screen.KlontauschLobby) { inclusive = true }
+                    }
+                },
+                onNavigateToResults = {
+                    navController.navigate(Screen.KlontauschResults) {
+                        popUpTo(Screen.KlontauschLobby)
+                    }
+                },
+            )
+        }
+        composable<Screen.KlontauschResults> {
+            KlontauschResultsScreen(
+                onNavigateBack = {
+                    navController.navigate(Screen.KlontauschLobby) {
+                        popUpTo(Screen.KlontauschLobby) { inclusive = true }
+                    }
+                },
+            )
+        }
         // ── Sonnenrad ──────────────────────────────────────────────────────────
         composable<Screen.SonnenradLobby> {
             SonnenradLobbyScreen(
@@ -592,6 +653,9 @@ fun AppNavigation() {
                 },
                 onNavigateToKuestenkrieg = { code ->
                     navController.navigate(Screen.KuestenkriegOnlineLobby(code)) { popUpTo(Screen.Home) }
+                },
+                onNavigateToKlontausch = { gameId ->
+                    navController.navigate(Screen.KlontauschGame("ONLINE", gameId, 0, "SNIPER")) { popUpTo(Screen.Home) }
                 },
                 onNavigateBack = { navController.popBackStack() }
             )
