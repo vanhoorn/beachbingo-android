@@ -180,7 +180,7 @@ fun VierGameScreen(
     val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
     val vierUid = auth.currentUser?.uid
 
-    val audio = remember { VierAudioManager() }
+    val audio = remember { VierAudioManager(context) }
     var musicStarted by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {

@@ -637,7 +637,7 @@ fun StrandraeuberGameScreen(
     val scope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    val audio = remember { StrandraeuberAudioManager() }
+    val audio = remember { StrandraeuberAudioManager(context) }
     DisposableEffect(Unit) { onDispose { audio.release() } }
 
     var localState by remember { mutableStateOf<SpGameState?>(null) }

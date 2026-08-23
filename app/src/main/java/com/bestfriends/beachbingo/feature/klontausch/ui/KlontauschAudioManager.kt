@@ -2,7 +2,7 @@ package com.bestfriends.beachbingo.feature.klontausch.ui
 
 import com.bestfriends.beachbingo.core.audio.BaseChiptuneAudioManager
 
-internal class KlontauschAudioManager : BaseChiptuneAudioManager() {
+internal class KlontauschAudioManager(ctx: android.content.Context) : BaseChiptuneAudioManager(ctx) {
 
     override fun musicAssetName(): String = "klontausch.ogg"
 

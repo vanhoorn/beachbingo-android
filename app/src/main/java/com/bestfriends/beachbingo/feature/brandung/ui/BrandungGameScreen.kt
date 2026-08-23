@@ -832,7 +832,7 @@ fun BrandungGameScreen(
     val scope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    val audio = remember { BrandungAudioManager() }
+    val audio = remember { BrandungAudioManager(context) }
     DisposableEffect(Unit) { onDispose { audio.release() } }
 
     var newCardsOnAllPass by remember { mutableStateOf(false) }

@@ -2,7 +2,7 @@ package com.bestfriends.beachbingo.feature.strandraeuber.ui
 
 import com.bestfriends.beachbingo.core.audio.BaseChiptuneAudioManager
 
-internal class StrandraeuberAudioManager : BaseChiptuneAudioManager() {
+internal class StrandraeuberAudioManager(ctx: android.content.Context) : BaseChiptuneAudioManager(ctx) {
 
     override fun musicAssetName(): String = "strandraeuber.ogg"
 

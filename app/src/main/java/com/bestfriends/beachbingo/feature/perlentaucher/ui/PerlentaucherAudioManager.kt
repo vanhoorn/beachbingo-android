@@ -2,7 +2,7 @@ package com.bestfriends.beachbingo.feature.perlentaucher.ui
 
 import com.bestfriends.beachbingo.core.audio.BaseChiptuneAudioManager
 
-internal class PerlentaucherAudioManager : BaseChiptuneAudioManager() {
+internal class PerlentaucherAudioManager(ctx: android.content.Context) : BaseChiptuneAudioManager(ctx) {
 
     override fun musicAssetName(): String = "perlentaucher.ogg"
 

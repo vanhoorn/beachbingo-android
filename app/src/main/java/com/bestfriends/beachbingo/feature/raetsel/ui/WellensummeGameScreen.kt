@@ -50,7 +50,7 @@ fun WellensummeGameScreen(
     var showQuit by remember { mutableStateOf(false) }
     var showHelp by remember { mutableStateOf(false) }
     val saveIdRef = remember { saveId ?: SoloGameSaveManager.generateId() }
-    val audio = remember { RaetselAudioManager() }
+    val audio = remember { RaetselAudioManager(context) }
     DisposableEffect(Unit) { onDispose { audio.release() } }
     LaunchedEffect(Unit) { audio.startMusic(soundEnabled, musicEnabled) }
 

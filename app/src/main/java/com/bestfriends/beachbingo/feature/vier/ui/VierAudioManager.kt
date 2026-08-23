@@ -2,7 +2,7 @@ package com.bestfriends.beachbingo.feature.vier.ui
 
 import com.bestfriends.beachbingo.core.audio.BaseChiptuneAudioManager
 
-internal class VierAudioManager : BaseChiptuneAudioManager() {
+internal class VierAudioManager(ctx: android.content.Context) : BaseChiptuneAudioManager(ctx) {
 
     override fun musicAssetName(): String = "vier.ogg"
 

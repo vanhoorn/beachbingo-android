@@ -2,7 +2,7 @@ package com.bestfriends.beachbingo.feature.raetsel.ui
 
 import com.bestfriends.beachbingo.core.audio.BaseChiptuneAudioManager
 
-internal class KuestenkriegAudioManager : BaseChiptuneAudioManager() {
+internal class KuestenkriegAudioManager(ctx: android.content.Context) : BaseChiptuneAudioManager(ctx) {
 
     override fun musicAssetName(): String = "kuestenkrieg.ogg"
 

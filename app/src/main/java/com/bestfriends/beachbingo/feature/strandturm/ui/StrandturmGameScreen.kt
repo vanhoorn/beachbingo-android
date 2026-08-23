@@ -1159,7 +1159,7 @@ fun StrandturmGameScreen(
     val context   = androidx.compose.ui.platform.LocalContext.current
 
     val gs    = remember { StrandturmState(startLevel) }
-    val audio = remember { StrandturmAudioManager() }
+    val audio = remember { StrandturmAudioManager(context) }
 
     var renderTick     by remember { mutableLongStateOf(0L) }
     var paused         by remember { mutableStateOf(false) }

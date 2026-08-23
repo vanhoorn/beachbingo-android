@@ -49,7 +49,7 @@ fun KuestenkriegGameScreen(
     var showRules by remember { mutableStateOf(false) }
     var activeTool by remember { mutableStateOf(ShipMark.SHIP) }
     val saveIdRef = remember { saveId ?: SoloGameSaveManager.generateId() }
-    val audio = remember { KuestenkriegAudioManager() }
+    val audio = remember { KuestenkriegAudioManager(context) }
     DisposableEffect(Unit) { onDispose { audio.release() } }
     LaunchedEffect(Unit) { audio.startMusic(soundEnabled, musicEnabled) }
 

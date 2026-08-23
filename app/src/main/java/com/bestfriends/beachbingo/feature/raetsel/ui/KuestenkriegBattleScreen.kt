@@ -69,7 +69,7 @@ fun KuestenkriegBattleScreen(
     var showRules by remember { mutableStateOf(false) }
     var paused by remember { mutableStateOf(false) }
     var aiFireCount by remember { mutableIntStateOf(0) }
-    val audio = remember { KuestenkriegAudioManager() }
+    val audio = remember { KuestenkriegAudioManager(context) }
     DisposableEffect(Unit) { onDispose { audio.release() } }
     LaunchedEffect(Unit) { audio.startMusic(soundEnabled, musicEnabled) }
 

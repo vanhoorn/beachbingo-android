@@ -252,7 +252,7 @@ fun WormGameScreen(
     val context   = androidx.compose.ui.platform.LocalContext.current
 
     val gs    = remember { WormState(difficulty) }
-    val audio = remember { WormAudioManager() }
+    val audio = remember { WormAudioManager(context) }
 
     var renderTick     by remember { mutableLongStateOf(0L) }
     var paused         by remember { mutableStateOf(false) }

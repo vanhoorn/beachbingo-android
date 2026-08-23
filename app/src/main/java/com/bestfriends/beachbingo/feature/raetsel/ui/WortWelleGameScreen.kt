@@ -94,7 +94,7 @@ fun WortWelleGameScreen(
     val shakeX      = remember { Animatable(0f) }
     val resultSaved = remember { mutableStateOf(false) }
     val saveIdRef   = remember { if (!isDaily) saveId ?: SoloGameSaveManager.generateId() else "" }
-    val audio = remember { RaetselAudioManager() }
+    val audio = remember { RaetselAudioManager(context) }
     DisposableEffect(Unit) { onDispose { audio.release() } }
     LaunchedEffect(Unit) { audio.startMusic(soundEnabled, musicEnabled) }
 

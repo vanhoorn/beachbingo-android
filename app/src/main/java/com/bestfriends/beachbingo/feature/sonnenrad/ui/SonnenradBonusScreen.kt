@@ -90,7 +90,8 @@ fun SonnenradBonusScreen(
     var prevPhase by remember { mutableStateOf<SonnenradPhase?>(null) }
     var showQuit by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
-    val audioManager = remember { SonnenradAudioManager() }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val audioManager = remember { SonnenradAudioManager(context) }
     DisposableEffect(Unit) {
         audioManager.setSound(soundEnabled)
         onDispose { audioManager.release() }

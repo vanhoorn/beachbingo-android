@@ -51,7 +51,7 @@ fun MahjongGameScreen(
     val uid     = auth.currentUser?.uid ?: ""
     val scope   = rememberCoroutineScope()
 
-    val audio = remember { MahjongAudioManager() }
+    val audio = remember { MahjongAudioManager(context) }
     DisposableEffect(Unit) { onDispose { audio.release() } }
 
 

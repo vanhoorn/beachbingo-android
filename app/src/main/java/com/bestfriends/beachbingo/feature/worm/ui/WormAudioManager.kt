@@ -2,7 +2,7 @@ package com.bestfriends.beachbingo.feature.worm.ui
 
 import com.bestfriends.beachbingo.core.audio.BaseChiptuneAudioManager
 
-internal class WormAudioManager : BaseChiptuneAudioManager() {
+internal class WormAudioManager(ctx: android.content.Context) : BaseChiptuneAudioManager(ctx) {
 
     override fun musicAssetName(): String = "worm.ogg"
 

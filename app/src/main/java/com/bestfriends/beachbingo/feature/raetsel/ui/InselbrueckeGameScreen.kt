@@ -57,7 +57,7 @@ fun InselbrueckeGameScreen(
     // Incrementing this key forces ZoomableGrid to recreate its state (= zoom reset)
     var zoomResetKey by remember { mutableIntStateOf(0) }
     val saveIdRef = remember { saveId ?: SoloGameSaveManager.generateId() }
-    val audio = remember { RaetselAudioManager() }
+    val audio = remember { RaetselAudioManager(context) }
     DisposableEffect(Unit) { onDispose { audio.release() } }
     LaunchedEffect(Unit) { audio.startMusic(soundEnabled, musicEnabled) }
 

@@ -2,7 +2,7 @@ package com.bestfriends.beachbingo.feature.strandturm.ui
 
 import com.bestfriends.beachbingo.core.audio.BaseChiptuneAudioManager
 
-internal class StrandturmAudioManager : BaseChiptuneAudioManager() {
+internal class StrandturmAudioManager(ctx: android.content.Context) : BaseChiptuneAudioManager(ctx) {
 
     override fun musicAssetName(): String = "strandturm.ogg"
 

@@ -130,7 +130,8 @@ fun PongGameScreen(
     val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid
 
-    val audio = remember { PongAudioManager() }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val audio = remember { PongAudioManager(context) }
     var musicStarted by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {

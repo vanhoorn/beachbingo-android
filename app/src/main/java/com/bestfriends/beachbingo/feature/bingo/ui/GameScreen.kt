@@ -174,7 +174,8 @@ fun GameScreen(
     val player2 = player2User?.uid?.let { game.players[it] }
     val winner = game.players.values.firstOrNull { it.hasBingo }
 
-    val audio = remember { BingoAudioManager() }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val audio = remember { BingoAudioManager(context) }
     var musicStarted by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {

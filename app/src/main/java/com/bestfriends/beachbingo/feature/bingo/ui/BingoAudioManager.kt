@@ -2,7 +2,7 @@ package com.bestfriends.beachbingo.feature.bingo.ui
 
 import com.bestfriends.beachbingo.core.audio.BaseChiptuneAudioManager
 
-internal class BingoAudioManager : BaseChiptuneAudioManager() {
+internal class BingoAudioManager(ctx: android.content.Context) : BaseChiptuneAudioManager(ctx) {
 
     override fun musicAssetName(): String = "bingo.ogg"
 

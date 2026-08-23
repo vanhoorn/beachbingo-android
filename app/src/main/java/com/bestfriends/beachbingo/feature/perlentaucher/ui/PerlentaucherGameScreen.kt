@@ -123,7 +123,7 @@ fun PerlentaucherGameScreen(
 
     val shakeAnim = remember { Animatable(0f) }
 
-    val audio = remember { PerlentaucherAudioManager() }
+    val audio = remember { PerlentaucherAudioManager(context) }
     DisposableEffect(Unit) { onDispose { audio.release() } }
     LaunchedEffect(Unit) { audio.startMusic(soundEnabled, musicEnabled) }
 

@@ -2,7 +2,7 @@ package com.bestfriends.beachbingo.feature.meermau.ui
 
 import com.bestfriends.beachbingo.core.audio.BaseChiptuneAudioManager
 
-internal class MeerMauAudioManager : BaseChiptuneAudioManager() {
+internal class MeerMauAudioManager(ctx: android.content.Context) : BaseChiptuneAudioManager(ctx) {
 
     override fun musicAssetName(): String = "meermau.ogg"
 
