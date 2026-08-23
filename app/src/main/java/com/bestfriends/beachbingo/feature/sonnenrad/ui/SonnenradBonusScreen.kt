@@ -24,13 +24,10 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -49,21 +46,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bestfriends.beachbingo.feature.sonnenrad.SonnenradBoardModel
 import com.bestfriends.beachbingo.feature.sonnenrad.SonnenradLadderState
 import com.bestfriends.beachbingo.feature.sonnenrad.SonnenradPhase
 import com.bestfriends.beachbingo.feature.sonnenrad.SonnenradState
 import com.bestfriends.beachbingo.feature.sonnenrad.SonnenradSymbol
+import com.bestfriends.beachbingo.ui.components.GameHudBar
+import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
 import com.bestfriends.beachbingo.ui.theme.BgDark
 import com.bestfriends.beachbingo.ui.theme.BorderColor
+import com.bestfriends.beachbingo.ui.theme.EmojiLarge
 import com.bestfriends.beachbingo.ui.theme.MahjongGold
 import com.bestfriends.beachbingo.ui.theme.OceanBlue
 import com.bestfriends.beachbingo.ui.theme.Surface2Dark
@@ -88,6 +88,8 @@ fun SonnenradBonusScreen(
 
     var cardsFaceUp by remember { mutableStateOf(false) }
     var prevPhase by remember { mutableStateOf<SonnenradPhase?>(null) }
+    var showQuit by remember { mutableStateOf(false) }
+    var showRules by remember { mutableStateOf(false) }
     val audioManager = remember { SonnenradAudioManager() }
     DisposableEffect(Unit) {
         audioManager.setSound(soundEnabled)
@@ -136,17 +138,56 @@ fun SonnenradBonusScreen(
         if (isClimbing) audioManager.playSound("tick")
     }
 
-    BackHandler { onNavigateBack() }
+    BackHandler { showQuit = true }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(BgDark)
-            .statusBarsPadding()
             .navigationBarsPadding(),
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            SonnenradTopBar(onBack = onNavigateBack, lifetimePoints = state.lifetimePoints)
+            GameHudBar(
+                showPause = false,
+                paused = false,
+                onPauseToggle = {},
+                onQuit = { showQuit = true },
+                onShowRules = { showRules = true },
+            ) {
+                Text("☀️", fontSize = 22.sp)
+                Spacer(Modifier.width(8.dp))
+                Column {
+                    Text(
+                        "TAGESBONUS",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextMuted,
+                        letterSpacing = 1.5.sp,
+                    )
+                    Text(
+                        "Sonnenrad",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = TextPrimary,
+                    )
+                }
+                if (state.lifetimePoints > 0) {
+                    Spacer(Modifier.width(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = MahjongGold.copy(alpha = 0.15f),
+                        modifier = Modifier.border(1.dp, MahjongGold.copy(alpha = 0.4f), RoundedCornerShape(20.dp)),
+                    ) {
+                        Text(
+                            "${state.lifetimePoints} Pkt.",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MahjongGold,
+                        )
+                    }
+                }
+            }
 
             Box(modifier = Modifier.fillMaxSize()) {
                 when (state.phase) {
@@ -177,70 +218,61 @@ fun SonnenradBonusScreen(
             }
         }
     }
+
+    if (showQuit) {
+        QuitConfirmDialog(
+            emoji = "☀️",
+            message = "Das Sonnenrad-Spiel wird beendet.",
+            onConfirm = onNavigateBack,
+            onDismiss = { showQuit = false },
+        )
+    }
+
+    if (showRules) {
+        SonnenradRulesDialog(onDismiss = { showRules = false })
+    }
 }
 
-// ── Top-Bar ───────────────────────────────────────────────────────────────────
-
 @Composable
-private fun SonnenradTopBar(onBack: () -> Unit, lifetimePoints: Int) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Brush.linearGradient(listOf(SurfaceDark, Surface2Dark)))
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = Surface2Dark,
-                modifier = Modifier
-                    .size(40.dp)
-                    .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
-                    .clickable { onBack() },
+private fun SonnenradRulesDialog(onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Zurueck",
-                        tint = TextSub,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
-
-            Spacer(Modifier.width(14.dp))
-            Text(text = "☀️", fontSize = 28.sp)
-            Spacer(Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
+                Text("☀️", fontSize = EmojiLarge)
                 Text(
-                    text = "TAGESBONUS",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextMuted,
-                    letterSpacing = 1.5.sp,
-                )
-                Text(
-                    text = "Sonnenrad",
-                    fontSize = 20.sp,
+                    "Sonnenrad – Regeln",
+                    fontSize = MaterialTheme.typography.titleMedium.fontSize,
                     fontWeight = FontWeight.ExtraBold,
                     color = TextPrimary,
                 )
-            }
-
-            if (lifetimePoints > 0) {
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MahjongGold.copy(alpha = 0.15f),
-                    modifier = Modifier.border(1.dp, MahjongGold.copy(alpha = 0.4f), RoundedCornerShape(20.dp)),
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "$lifetimePoints Pkt.",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MahjongGold,
+                        "Decke 3 Muschelkarten auf. Die Symbole bestimmen, wie hoch du in die Bonusleiter einsteigst:",
+                        color = TextSub,
+                        fontSize = MaterialTheme.typography.bodySmall.fontSize,
                     )
+                    Text(
+                        "• 3× Basissymbol → Stufe 2\n• 2× gleiches Symbol → Stufe 1\n• 3× Sonnenschirm → Stufe 4\n• Kein Treffer → keine Punkte",
+                        color = TextSub,
+                        fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                    )
+                    Text(
+                        "Danach: Punkte sichern oder per Timing-Herausforderung höher steigen. Tippe im Zielfeld, um eine Stufe aufzusteigen – verfehle es und die Runde endet.",
+                        color = TextSub,
+                        fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MahjongGold),
+                ) {
+                    Text("Verstanden", color = BgDark, fontWeight = FontWeight.Bold)
                 }
             }
         }

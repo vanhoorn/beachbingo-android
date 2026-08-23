@@ -14,6 +14,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -335,7 +338,7 @@ fun PerlentaucherGameScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("⏸", fontSize = EmojiXLarge)
+                        Icon(Icons.Filled.Pause, contentDescription = null, tint = Color.White, modifier = Modifier.size(56.dp))
                         Spacer(Modifier.height(12.dp))
                         Text("Pausiert", fontSize = BingoCallSize, fontWeight = FontWeight.ExtraBold, color = Color.White)
                         Spacer(Modifier.height(20.dp))
@@ -343,7 +346,11 @@ fun PerlentaucherGameScreen(
                             onClick = { paused = false },
                             colors = ButtonDefaults.buttonColors(containerColor = OceanBlue),
                             shape = RoundedCornerShape(14.dp),
-                        ) { Text("▶  Weiterspielen", color = BgDark, fontWeight = FontWeight.ExtraBold) }
+                        ) {
+                            Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = BgDark, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Weiterspielen", color = BgDark, fontWeight = FontWeight.ExtraBold)
+                        }
                     }
                 }
             }

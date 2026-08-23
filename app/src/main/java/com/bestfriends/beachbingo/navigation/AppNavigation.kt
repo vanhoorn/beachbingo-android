@@ -283,7 +283,9 @@ fun AppNavigation() {
             val route: Screen.DuenenschattenGame = backStack.toRoute()
             DuenenschattenGameScreen(
                 difficulty = route.difficulty, seed = route.seed, saveId = route.saveId,
-                onNavigateBack = { navController.navigate(Screen.DuenenschattenLobby) { popUpTo(Screen.DuenenschattenLobby) { inclusive = true } } }
+                onNavigateBack = { navController.navigate(Screen.DuenenschattenLobby) { popUpTo(Screen.DuenenschattenLobby) { inclusive = true } } },
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
             )
         }
         composable<Screen.InselbrueckeLobby> {
@@ -298,7 +300,9 @@ fun AppNavigation() {
             val route: Screen.InselbrueckeGame = backStack.toRoute()
             InselbrueckeGameScreen(
                 difficulty = route.difficulty, seed = route.seed, saveId = route.saveId,
-                onNavigateBack = { navController.navigate(Screen.InselbrueckeLobby) { popUpTo(Screen.InselbrueckeLobby) { inclusive = true } } }
+                onNavigateBack = { navController.navigate(Screen.InselbrueckeLobby) { popUpTo(Screen.InselbrueckeLobby) { inclusive = true } } },
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
             )
         }
         composable<Screen.StrandokuLobby> {
@@ -313,7 +317,9 @@ fun AppNavigation() {
             val route: Screen.StrandokuGame = backStack.toRoute()
             StrandokuGameScreen(
                 variant = route.variant, difficulty = route.difficulty, seed = route.seed, saveId = route.saveId,
-                onNavigateBack = { navController.navigate(Screen.StrandokuLobby) { popUpTo(Screen.StrandokuLobby) { inclusive = true } } }
+                onNavigateBack = { navController.navigate(Screen.StrandokuLobby) { popUpTo(Screen.StrandokuLobby) { inclusive = true } } },
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
             )
         }
         composable<Screen.WellensummeLobby> {
@@ -328,7 +334,9 @@ fun AppNavigation() {
             val route: Screen.WellensummeGame = backStack.toRoute()
             WellensummeGameScreen(
                 difficulty = route.difficulty, seed = route.seed, saveId = route.saveId,
-                onNavigateBack = { navController.navigate(Screen.WellensummeLobby) { popUpTo(Screen.WellensummeLobby) { inclusive = true } } }
+                onNavigateBack = { navController.navigate(Screen.WellensummeLobby) { popUpTo(Screen.WellensummeLobby) { inclusive = true } } },
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
             )
         }
         composable<Screen.KuestenkriegLobby> {
@@ -383,7 +391,9 @@ fun AppNavigation() {
             val route: Screen.KuestenkriegGame = backStack.toRoute()
             KuestenkriegGameScreen(
                 difficulty = route.difficulty, seed = route.seed, saveId = route.saveId,
-                onNavigateBack = { navController.navigate(Screen.KuestenkriegLobby) { popUpTo(Screen.KuestenkriegLobby) { inclusive = true } } }
+                onNavigateBack = { navController.navigate(Screen.KuestenkriegLobby) { popUpTo(Screen.KuestenkriegLobby) { inclusive = true } } },
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
             )
         }
         composable<Screen.WortWelleLobby> {
@@ -404,7 +414,9 @@ fun AppNavigation() {
                 dailyWord = route.dailyWord.ifEmpty { null },
                 dateStr = route.dateStr.ifEmpty { null },
                 saveId = route.saveId,
-                onNavigateBack = { navController.navigate(Screen.WortWelleLobby) { popUpTo(Screen.WortWelleLobby) { inclusive = true } } }
+                onNavigateBack = { navController.navigate(Screen.WortWelleLobby) { popUpTo(Screen.WortWelleLobby) { inclusive = true } } },
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
             )
         }
         // ── GezeitenSteine (Mahjong) ───────────────────────────────────────────
@@ -450,7 +462,8 @@ fun AppNavigation() {
         }
         composable<Screen.PerlentaucherSettings> {
             PerlentaucherSettingsScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToProfile = { navController.navigate(Screen.Profile) },
             )
         }
         composable<Screen.PerlentaucherGame> { backStack ->
@@ -522,6 +535,7 @@ fun AppNavigation() {
             KlontauschSettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToGallery = { navController.navigate(Screen.KlontauschGallery) },
+                onNavigateToProfile = { navController.navigate(Screen.Profile) },
             )
         }
         composable<Screen.KlontauschGallery> {
@@ -590,7 +604,9 @@ fun AppNavigation() {
                 onNavigateBack = { navController.navigate(Screen.KuestenkriegLobby) { popUpTo(Screen.KuestenkriegLobby) { inclusive = true } } },
                 onNavigateToPlacement = { aiMode ->
                     navController.navigate(Screen.KuestenkriegPlacement(aiMode)) { popUpTo(Screen.KuestenkriegLobby) }
-                }
+                },
+                soundEnabled = currentUser?.soundEnabled ?: true,
+                musicEnabled = currentUser?.musicEnabled ?: true,
             )
         }
 

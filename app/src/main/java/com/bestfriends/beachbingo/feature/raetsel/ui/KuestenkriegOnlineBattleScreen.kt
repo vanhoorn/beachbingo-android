@@ -1,5 +1,6 @@
 package com.bestfriends.beachbingo.feature.raetsel.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,7 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,9 +21,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.bestfriends.beachbingo.feature.raetsel.BATTLE_GRID
 import com.bestfriends.beachbingo.feature.raetsel.PlacedShip
 import com.bestfriends.beachbingo.feature.raetsel.shipCells
+import com.bestfriends.beachbingo.ui.components.GameHudBar
+import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
 import com.bestfriends.beachbingo.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -121,6 +125,9 @@ fun KuestenkriegOnlineBattleScreen(
     var oppAvatar by remember { mutableStateOf("") }
     var shooting by remember { mutableStateOf(false) }
     var lastMsg by remember { mutableStateOf<String?>(null) }
+    var showQuit by remember { mutableStateOf(false) }
+    var showRules by remember { mutableStateOf(false) }
+    var paused by remember { mutableStateOf(false) }
 
     val oppId = playerIds.find { it != uid } ?: ""
 
@@ -235,32 +242,24 @@ fun KuestenkriegOnlineBattleScreen(
         else -> "$oppName schießt…"
     }
 
-    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(BgDark).statusBarsPadding().navigationBarsPadding()) {
+    BackHandler {
+        if (paused) paused = false else showQuit = true
+    }
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(BgDark).navigationBarsPadding()) {
         val cellDp = ((maxWidth - 46.dp) / BATTLE_GRID).coerceIn(18.dp, 52.dp)
     Column(modifier = Modifier.fillMaxSize()) {
-        // Header
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Brush.linearGradient(listOf(SurfaceDark, Surface2Dark)))
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+        GameHudBar(
+            paused = paused,
+            onPauseToggle = { paused = !paused },
+            onQuit = { showQuit = true },
+            onShowRules = { showRules = true },
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    shape = RoundedCornerShape(10.dp), color = Surface2Dark,
-                    modifier = Modifier.size(36.dp).border(1.dp, BorderColor, RoundedCornerShape(10.dp)).clickable { onNavigateBack() },
-                ) { Box(contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück", tint = TextSub, modifier = Modifier.size(18.dp)) } }
-                Spacer(Modifier.width(10.dp))
-                Text("⚓", style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.width(10.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("KÜSTENKRIEG · ONLINE", fontSize = StatusTiny, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
-                    Text(headerText, fontSize = CellNumber, fontWeight = FontWeight.Bold, color = TextPrimary)
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("Du: $myRemainingCells ❤️", style = MaterialTheme.typography.labelSmall, color = TextMuted)
-                    Text("$oppName: $oppRemainingCells 💀", style = MaterialTheme.typography.labelSmall, color = TextMuted)
-                }
+            Text("⚓", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.width(8.dp))
+            Column {
+                Text("ONLINE", fontSize = StatusTiny, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.5.sp)
+                Text(headerText, fontSize = CellNumber, fontWeight = FontWeight.Bold, color = TextPrimary)
             }
         }
 
@@ -327,8 +326,47 @@ fun KuestenkriegOnlineBattleScreen(
                 }
             }
         }
+
+        if (paused && !isOver) {
+            Box(
+                modifier = Modifier.fillMaxSize().background(BgDark.copy(alpha = 0.88f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Icon(Icons.Filled.Pause, null, tint = TextPrimary, modifier = Modifier.size(48.dp))
+                    Text(
+                        "Spiel pausiert",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                    )
+                    Text(
+                        "Das Online-Spiel läuft weiter.",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextMuted,
+                    )
+                    OutlinedButton(onClick = { paused = false }) { Text("Weiterspielen", color = TextSub) }
+                }
+            }
+        }
     }
     } // BoxWithConstraints
+
+    if (showQuit) {
+        QuitConfirmDialog(
+            emoji = "⚓",
+            message = "Das Online-Spiel wird abgebrochen.",
+            onConfirm = onNavigateBack,
+            onDismiss = { showQuit = false },
+        )
+    }
+
+    if (showRules) {
+        KuestenkriegRulesDialog(onDismiss = { showRules = false })
+    }
 }
 
 @Composable

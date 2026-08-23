@@ -4,6 +4,8 @@ import com.bestfriends.beachbingo.core.audio.BaseChiptuneAudioManager
 
 internal class BrandungAudioManager : BaseChiptuneAudioManager() {
 
+    override fun musicAssetName(): String = "brandung.ogg"
+
     // ── Sound cache ──────────────────────────────────────────────────────────
 
     override fun buildSoundCache() {

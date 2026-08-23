@@ -4,6 +4,8 @@ import com.bestfriends.beachbingo.core.audio.BaseChiptuneAudioManager
 
 internal class PongAudioManager : BaseChiptuneAudioManager() {
 
+    override fun musicAssetName(): String = "pong.ogg"
+
     // ── Sound cache ──────────────────────────────────────────────────────────
 
     override fun buildSoundCache() {

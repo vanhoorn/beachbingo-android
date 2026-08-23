@@ -37,6 +37,8 @@ fun DuenenschattenGameScreen(
     seed: Long,
     saveId: String?,
     onNavigateBack: () -> Unit,
+    soundEnabled: Boolean = true,
+    musicEnabled: Boolean = true,
 ) {
     val context = LocalContext.current
     var puzzle by remember { mutableStateOf<HitoriPuzzle?>(null) }
@@ -47,6 +49,9 @@ fun DuenenschattenGameScreen(
     var showQuit by remember { mutableStateOf(false) }
     var showHelp by remember { mutableStateOf(false) }
     val saveIdRef = remember { saveId ?: SoloGameSaveManager.generateId() }
+    val audio = remember { RaetselAudioManager() }
+    DisposableEffect(Unit) { onDispose { audio.release() } }
+    LaunchedEffect(Unit) { audio.startMusic(soundEnabled, musicEnabled) }
 
     BackHandler { running = false; showQuit = true }
 
@@ -72,6 +77,7 @@ fun DuenenschattenGameScreen(
             showWin = true
         }
     }
+    LaunchedEffect(showWin) { if (showWin) audio.playSound("win") }
 
     LaunchedEffect(gs) {
         val state = gs ?: return@LaunchedEffect
@@ -224,6 +230,7 @@ fun DuenenschattenGameScreen(
                             onClick = {
                                 val hint = getHitoriHint(state)
                                 if (hint != null) {
+                                    audio.playSound("hint")
                                     val correct = if (p.solution[hint.first][hint.second]) CellMark.BLACK else CellMark.WHITE
                                     gs = setMark(state, hint.first, hint.second, correct)
                                 }

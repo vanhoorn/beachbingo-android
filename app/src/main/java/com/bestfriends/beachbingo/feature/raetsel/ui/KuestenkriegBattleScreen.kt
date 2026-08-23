@@ -1,5 +1,6 @@
 package com.bestfriends.beachbingo.feature.raetsel.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,7 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,8 +25,11 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.bestfriends.beachbingo.feature.raetsel.*
+import com.bestfriends.beachbingo.ui.components.GameHudBar
 import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
+import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
 import com.bestfriends.beachbingo.ui.theme.*
 import kotlinx.coroutines.delay
 
@@ -52,6 +56,8 @@ private fun cellLabel(v: CellView): String = when (v) {
 fun KuestenkriegBattleScreen(
     onNavigateBack: () -> Unit,
     onNavigateToPlacement: (aiMode: String) -> Unit,
+    soundEnabled: Boolean = true,
+    musicEnabled: Boolean = true,
 ) {
     val context = LocalContext.current
     val aiModeEnum = KuestenkriegSession.aiMode
@@ -60,11 +66,22 @@ fun KuestenkriegBattleScreen(
     var state by remember { mutableStateOf(KuestenkriegSession.resumedState ?: createBattleState(KuestenkriegSession.playerFleet)) }
     var aiMsg by remember { mutableStateOf<String?>(null) }
     var showQuit by remember { mutableStateOf(false) }
+    var showRules by remember { mutableStateOf(false) }
+    var paused by remember { mutableStateOf(false) }
     var aiFireCount by remember { mutableIntStateOf(0) }
+    val audio = remember { KuestenkriegAudioManager() }
+    DisposableEffect(Unit) { onDispose { audio.release() } }
+    LaunchedEffect(Unit) { audio.startMusic(soundEnabled, musicEnabled) }
 
     LaunchedEffect(Unit) {
         KuestenkriegSession.resumedState = null
         KuestenkriegSession.resumedSaveId = null
+    }
+
+    LaunchedEffect(state.gameOver) {
+        if (state.gameOver) {
+            audio.playSound(if (state.winner == BattleTurn.PLAYER) "win" else "lose")
+        }
     }
 
     LaunchedEffect(state) {
@@ -80,9 +97,13 @@ fun KuestenkriegBattleScreen(
         }
     }
 
+    BackHandler {
+        if (paused) paused = false else showQuit = true
+    }
+
     // AI turn handler — aiFireCount ensures re-trigger when AI hits (turn stays AI)
-    LaunchedEffect(state.turn, state.gameOver, aiFireCount) {
-        if (state.turn == BattleTurn.AI && !state.gameOver) {
+    LaunchedEffect(state.turn, state.gameOver, aiFireCount, paused) {
+        if (state.turn == BattleTurn.AI && !state.gameOver && !paused) {
             val delayMs = when (aiModeEnum) {
                 AiMode.ADMIRAL   -> 900L
                 AiMode.KAPITAEN  -> 700L
@@ -102,6 +123,11 @@ fun KuestenkriegBattleScreen(
                             ShotResult.HIT, ShotResult.SUNK -> "$col$row — Treffer!"
                             else -> "$col$row — Wasser!"
                         }
+                        audio.playSound(when (next.playerGrid[r][c]) {
+                            ShotResult.SUNK -> "sunk"
+                            ShotResult.HIT  -> "own_hit"
+                            else            -> "miss"
+                        })
                         delay(2000L)
                         aiMsg = null
                     }
@@ -150,37 +176,32 @@ fun KuestenkriegBattleScreen(
     val isMyTurn     = state.turn == BattleTurn.PLAYER && !state.gameOver
     val aiThinking   = state.turn == BattleTurn.AI && !state.gameOver
 
-    Column(modifier = Modifier.fillMaxSize().background(BgDark).statusBarsPadding().navigationBarsPadding()) {
-        // Header
-        Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(SurfaceDark, Surface2Dark))).padding(horizontal = 14.dp, vertical = 12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = RoundedCornerShape(10.dp), color = Surface2Dark,
-                    modifier = Modifier.size(36.dp).border(1.dp, BorderColor, RoundedCornerShape(10.dp)).clickable { showQuit = true }
-                ) { Box(contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Zurück", tint = TextSub, modifier = Modifier.size(18.dp)) } }
-                Spacer(Modifier.width(10.dp))
-                Text("⚓", style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.width(8.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("KÜSTENKRIEG · $aiModeLabel", fontSize = ChipLabelTiny, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
-                    Text(
-                        when {
-                            state.gameOver && state.winner == BattleTurn.PLAYER -> "🏆 Sieg!"
-                            state.gameOver                                       -> "💀 Niederlage!"
-                            aiThinking                                          -> "KI denkt nach…"
-                            isMyTurn                                            -> "Dein Schuss 🎯"
-                            else                                                -> "KI ist am Zug…"
-                        },
-                        fontSize = CellNumber, fontWeight = FontWeight.Bold, color = TextPrimary
-                    )
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("Du: $myRemaining ❤️", style = MaterialTheme.typography.labelSmall, color = TextMuted)
-                    Text("KI: $aiRemaining 💀", style = MaterialTheme.typography.labelSmall, color = TextMuted)
-                }
+    Column(modifier = Modifier.fillMaxSize().background(BgDark).navigationBarsPadding()) {
+        GameHudBar(
+            paused = paused,
+            onPauseToggle = { paused = !paused },
+            onQuit = { showQuit = true },
+            onShowRules = { showRules = true },
+        ) {
+            Text("⚓", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.width(8.dp))
+            Column {
+                Text("KI: $aiModeLabel", fontSize = ChipLabelTiny, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
+                Text(
+                    when {
+                        state.gameOver && state.winner == BattleTurn.PLAYER -> "Sieg!"
+                        state.gameOver -> "Niederlage!"
+                        aiThinking -> "KI denkt..."
+                        isMyTurn -> "Dein Schuss"
+                        else -> "KI ist dran"
+                    },
+                    fontSize = CellNumber, fontWeight = FontWeight.Bold, color = TextPrimary,
+                )
             }
         }
 
-        BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             // Reserved: padding(20) + 2 gaps(24) + 2 title rows(48) + fleet row(28) + bottom spacer(24)
             val reservedH = 144.dp
             val availPerGrid = (maxHeight - reservedH) / 2
@@ -210,6 +231,11 @@ fun KuestenkriegBattleScreen(
                 onCellTap = { r, c ->
                     if (isMyTurn && state.aiGrid[r][c] == ShotResult.UNKNOWN) {
                         state = playerShoot(state, r, c)
+                        audio.playSound(when (state.aiGrid[r][c]) {
+                            ShotResult.SUNK -> "sunk"
+                            ShotResult.HIT  -> "hit"
+                            else            -> "miss"
+                        })
                     }
                 }
             )
@@ -271,6 +297,28 @@ fun KuestenkriegBattleScreen(
             Spacer(Modifier.height(24.dp))
         }
         } // BoxWithConstraints
+
+        if (paused && !state.gameOver) {
+            Box(
+                modifier = Modifier.fillMaxSize().background(BgDark.copy(alpha = 0.88f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Icon(Icons.Filled.Pause, null, tint = TextPrimary, modifier = Modifier.size(48.dp))
+                    Text(
+                        "Spiel pausiert",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                    )
+                    OutlinedButton(onClick = { paused = false }) { Text("Weiterspielen", color = TextSub) }
+                }
+            }
+        }
+        } // Box weight(1f)
     }
 
     if (showQuit) {
@@ -280,6 +328,51 @@ fun KuestenkriegBattleScreen(
             onSaveAndQuit = onNavigateBack,
             onQuitWithoutSave = { SoloGameSaveManager.deleteSave(context, saveIdRef); onNavigateBack() },
         )
+    }
+
+    if (showRules) {
+        KuestenkriegRulesDialog(onDismiss = { showRules = false })
+    }
+}
+
+@Composable
+fun KuestenkriegRulesDialog(onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(20.dp), color = SurfaceDark) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text("⚓", fontSize = EmojiLarge)
+                Text(
+                    "Küstenkrieg – Regeln",
+                    fontSize = MaterialTheme.typography.titleMedium.fontSize,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = TextPrimary,
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        "Platziere deine Flotte und versenke alle Schiffe des Gegners. Tippe auf ein Feld im gegnerischen Gewässer, um dort zu schießen.",
+                        color = TextSub,
+                        fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                    )
+                    Text(
+                        "• Wasser (•): daneben\n• Treffer (●): Schiff getroffen\n• Versenkt (✕): alle Felder eines Schiffs getroffen\n\nWer zuerst alle gegnerischen Schiffe versenkt, gewinnt.",
+                        color = TextSub,
+                        fontSize = MaterialTheme.typography.bodySmall.fontSize,
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = RoseRed),
+                ) {
+                    Text("Verstanden", color = BgDark, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
 }
 

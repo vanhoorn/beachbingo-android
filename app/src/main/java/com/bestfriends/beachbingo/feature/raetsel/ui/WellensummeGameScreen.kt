@@ -38,6 +38,8 @@ fun WellensummeGameScreen(
     seed: Long,
     saveId: String?,
     onNavigateBack: () -> Unit,
+    soundEnabled: Boolean = true,
+    musicEnabled: Boolean = true,
 ) {
     val context = LocalContext.current
     var puzzle by remember { mutableStateOf<KakuroPuzzle?>(null) }
@@ -48,6 +50,9 @@ fun WellensummeGameScreen(
     var showQuit by remember { mutableStateOf(false) }
     var showHelp by remember { mutableStateOf(false) }
     val saveIdRef = remember { saveId ?: SoloGameSaveManager.generateId() }
+    val audio = remember { RaetselAudioManager() }
+    DisposableEffect(Unit) { onDispose { audio.release() } }
+    LaunchedEffect(Unit) { audio.startMusic(soundEnabled, musicEnabled) }
 
     BackHandler { running = false; showQuit = true }
 
@@ -70,6 +75,7 @@ fun WellensummeGameScreen(
             showWin = true
         }
     }
+    LaunchedEffect(showWin) { if (showWin) audio.playSound("win") }
 
     LaunchedEffect(gs) {
         val state = gs ?: return@LaunchedEffect
@@ -243,7 +249,10 @@ fun WellensummeGameScreen(
                         OutlinedButton(
                             onClick = {
                                 val hint = getKakuroHint(state)
-                                if (hint != null) gs = enterKakuroNumber(selectKakuroCell(state, hint.first, hint.second), p.cells[hint.first][hint.second].solution ?: 0)
+                                if (hint != null) {
+                                    audio.playSound("hint")
+                                    gs = enterKakuroNumber(selectKakuroCell(state, hint.first, hint.second), p.cells[hint.first][hint.second].solution ?: 0)
+                                }
                             },
                             border = BorderStroke(1.dp, PurpleLight.copy(alpha = 0.5f)),
                         ) { Icon(Icons.Filled.Lightbulb, contentDescription = "Tipp", tint = PurpleLight, modifier = Modifier.size(18.dp)) }

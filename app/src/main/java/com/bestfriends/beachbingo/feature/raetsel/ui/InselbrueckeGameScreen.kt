@@ -41,6 +41,8 @@ fun InselbrueckeGameScreen(
     seed: Long,
     saveId: String?,
     onNavigateBack: () -> Unit,
+    soundEnabled: Boolean = true,
+    musicEnabled: Boolean = true,
 ) {
     val context = LocalContext.current
     var puzzleWithSol by remember { mutableStateOf<HashiPuzzleWithSolution?>(null) }
@@ -55,6 +57,9 @@ fun InselbrueckeGameScreen(
     // Incrementing this key forces ZoomableGrid to recreate its state (= zoom reset)
     var zoomResetKey by remember { mutableIntStateOf(0) }
     val saveIdRef = remember { saveId ?: SoloGameSaveManager.generateId() }
+    val audio = remember { RaetselAudioManager() }
+    DisposableEffect(Unit) { onDispose { audio.release() } }
+    LaunchedEffect(Unit) { audio.startMusic(soundEnabled, musicEnabled) }
 
     BackHandler { running = false; showQuit = true }
 
@@ -79,6 +84,7 @@ fun InselbrueckeGameScreen(
             showWin = true
         }
     }
+    LaunchedEffect(showWin) { if (showWin) audio.playSound("win") }
 
     LaunchedEffect(gs) {
         val state = gs ?: return@LaunchedEffect
@@ -247,7 +253,10 @@ fun InselbrueckeGameScreen(
                                 val currentState = gs ?: return@OutlinedButton
                                 val currentPs = puzzleWithSol ?: return@OutlinedButton
                                 val hint = getHashiHint(currentState, currentPs.solution)
-                                if (hint != null) gs = toggleHashiBridge(currentState, hint.first, hint.second)
+                                if (hint != null) {
+                                    audio.playSound("hint")
+                                    gs = toggleHashiBridge(currentState, hint.first, hint.second)
+                                }
                             },
                             border = BorderStroke(1.dp, LimeGreen.copy(alpha = 0.5f)),
                         ) { Icon(Icons.Filled.Lightbulb, contentDescription = "Tipp", tint = LimeGreen, modifier = Modifier.size(18.dp)) }

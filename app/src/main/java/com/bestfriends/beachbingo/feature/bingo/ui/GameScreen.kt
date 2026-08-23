@@ -68,6 +68,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.VerticalDivider
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -250,44 +251,46 @@ fun GameScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = { Text("BeachBingo 🏖️") },
-                    navigationIcon = {
-                        IconButton(onClick = {
-                            viewModel.leaveGame()
-                            onNavigateBack()
-                        }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Verlassen")
-                        }
-                    },
-                    actions = {
-                        if (isAdmin && game.status == GameStatus.LOBBY) {
-                            IconButton(onClick = { showDeleteDialog = true }) {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = "Spiel löschen",
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                    }
-                )
-            },
-            bottomBar = {
                 if (game.status == GameStatus.RUNNING) {
                     GameHudBar(
+                        showPause = false,
                         paused = false,
                         onPauseToggle = {},
                         onQuit = { showQuitDialog = true },
                         onShowRules = { showRules = true },
                     ) {
-                        val playerCount = game.players.size
-                        val drawnCount = game.drawnNumbers.size
-                        androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("$playerCount Spieler · $drawnCount Zahlen", fontSize = ChipLabel, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = TextPrimary)
+                        Text("🎱", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.width(8.dp))
+                        Column {
+                            val playerCount = game.players.size
+                            val drawnCount = game.drawnNumbers.size
+                            Text("$playerCount Spieler · $drawnCount Zahlen", fontSize = ChipLabel, fontWeight = FontWeight.Bold, color = TextPrimary)
                             Text("BeachBingo", fontSize = StatusTiny, color = TextMuted)
                         }
                     }
+                } else {
+                    TopAppBar(
+                        title = { Text("BeachBingo 🏖️") },
+                        navigationIcon = {
+                            IconButton(onClick = {
+                                viewModel.leaveGame()
+                                onNavigateBack()
+                            }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Verlassen")
+                            }
+                        },
+                        actions = {
+                            if (isAdmin && game.status == GameStatus.LOBBY) {
+                                IconButton(onClick = { showDeleteDialog = true }) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Spiel löschen",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                        }
+                    )
                 }
             },
             snackbarHost = { SnackbarHost(snackbarHostState) }

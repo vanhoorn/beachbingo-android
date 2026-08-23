@@ -55,6 +55,7 @@ fun GameHudBar(
     onPauseToggle: () -> Unit,
     onQuit: () -> Unit,
     modifier: Modifier = Modifier,
+    showPause: Boolean = true,
     onShowRules: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
@@ -92,14 +93,16 @@ fun GameHudBar(
             }
 
             // Pause / Play
-            HudButton(
-                icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                contentDescription = if (paused) "Weiterspielen" else "Pause",
-                color = if (paused) OceanBlue.copy(0.25f) else Surface2Dark,
-                borderColor = if (paused) OceanBlue else BorderColor,
-                tint = TextPrimary,
-                onClick = onPauseToggle,
-            )
+            if (showPause) {
+                HudButton(
+                    icon = if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                    contentDescription = if (paused) "Weiterspielen" else "Pause",
+                    color = if (paused) OceanBlue.copy(0.25f) else Surface2Dark,
+                    borderColor = if (paused) OceanBlue else BorderColor,
+                    tint = TextPrimary,
+                    onClick = onPauseToggle,
+                )
+            }
 
             // Abbruch
             HudButton(

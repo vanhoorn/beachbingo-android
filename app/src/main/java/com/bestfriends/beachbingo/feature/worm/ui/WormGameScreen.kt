@@ -6,6 +6,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -412,9 +414,9 @@ fun WormGameScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Text("⏸", fontSize = EmojiLarge)
+                            Icon(Icons.Filled.Pause, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(48.dp))
                             Text("Pause", fontSize = MaterialTheme.typography.titleMedium.fontSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-                            Text("Drücke ⏸ zum Weiterspielen", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted)
+                            Text("Tippe zum Weiterspielen", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextMuted)
                         }
                     }
                 }

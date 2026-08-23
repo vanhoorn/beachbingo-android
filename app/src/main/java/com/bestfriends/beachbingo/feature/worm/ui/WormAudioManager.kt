@@ -4,6 +4,8 @@ import com.bestfriends.beachbingo.core.audio.BaseChiptuneAudioManager
 
 internal class WormAudioManager : BaseChiptuneAudioManager() {
 
+    override fun musicAssetName(): String = "worm.ogg"
+
     // ── Sound cache ──────────────────────────────────────────────────────────
 
     override fun buildSoundCache() {

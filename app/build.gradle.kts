@@ -89,6 +89,8 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.zxing.android.embedded)
     implementation(libs.konfetti.compose)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.common)
 }
 
 kapt {

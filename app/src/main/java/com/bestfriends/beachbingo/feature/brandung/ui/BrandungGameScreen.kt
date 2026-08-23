@@ -27,6 +27,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -1171,9 +1174,9 @@ fun BrandungGameScreen(
         if (isPaused) {
             Box(Modifier.fillMaxSize().padding(padding).background(BgDark), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("⏸", fontSize = DrawNumberTablet)
+                    Icon(Icons.Filled.Pause, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(52.dp))
                     Text("Pausiert", color = TextPrimary, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("Drücke ▶ um weiterzuspielen", color = TextMuted, style = MaterialTheme.typography.labelMedium)
+                    Text("Tippe zum Weiterspielen", color = TextMuted, style = MaterialTheme.typography.labelMedium)
                 }
             }
             return@Scaffold

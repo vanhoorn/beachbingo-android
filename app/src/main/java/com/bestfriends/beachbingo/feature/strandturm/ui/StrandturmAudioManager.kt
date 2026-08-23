@@ -4,6 +4,8 @@ import com.bestfriends.beachbingo.core.audio.BaseChiptuneAudioManager
 
 internal class StrandturmAudioManager : BaseChiptuneAudioManager() {
 
+    override fun musicAssetName(): String = "strandturm.ogg"
+
     // ── Sound cache ──────────────────────────────────────────────────────────
 
     override fun buildSoundCache() {

@@ -3,10 +3,18 @@ package com.bestfriends.beachbingo.core.audio
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
 import kotlinx.coroutines.*
 import kotlin.math.*
 
-internal abstract class BaseChiptuneAudioManager {
+// Pass context to enable file-based music (ExoPlayer + assets/audio/music/).
+// Without context, or when the asset file is missing, falls back to PCM synthesis.
+internal abstract class BaseChiptuneAudioManager(
+    private val context: android.content.Context? = null
+) {
 
     var soundEnabled = true
     var musicEnabled = true
@@ -16,6 +24,8 @@ internal abstract class BaseChiptuneAudioManager {
     protected val soundCache = mutableMapOf<String, ShortArray>()
     private var cachedMelody: ShortArray? = null
     private var musicTrack: AudioTrack? = null
+    private var musicPlayer: ExoPlayer? = null
+    private var musicSetupJob: Job? = null
 
     init {
         scope.launch {
@@ -28,6 +38,9 @@ internal abstract class BaseChiptuneAudioManager {
 
     protected abstract fun buildSoundCache()
     protected abstract fun buildMelodyPcm(): ShortArray
+
+    // Override to return e.g. "pirates.mp3" — enables ExoPlayer music when context != null.
+    protected open fun musicAssetName(): String? = null
 
     // ── Wave generators ──────────────────────────────────────────────────────
 
@@ -213,6 +226,40 @@ internal abstract class BaseChiptuneAudioManager {
         this.musicEnabled = musicEnabled
         if (!musicEnabled) return
         stopMusic()
+
+        val ctx = context
+        val assetName = musicAssetName()
+        if (ctx != null && assetName != null) {
+            // Try ExoPlayer with asset file; falls back to synthesis on error.
+            musicSetupJob = scope.launch(Dispatchers.Main) {
+                try {
+                    val player = ExoPlayer.Builder(ctx).build()
+                    musicPlayer = player
+                    player.addListener(object : Player.Listener {
+                        override fun onPlayerError(error: PlaybackException) {
+                            if (musicPlayer === player) {
+                                musicPlayer = null
+                                scope.launch(Dispatchers.Main) {
+                                    try { player.release() } catch (_: Exception) {}
+                                }
+                                if (musicEnabled) startMusicSynthesis()
+                            }
+                        }
+                    })
+                    player.setMediaItem(MediaItem.fromUri(android.net.Uri.parse("asset:///audio/music/$assetName")))
+                    player.repeatMode = Player.REPEAT_MODE_ONE
+                    player.prepare()
+                    player.play()
+                } catch (_: Exception) {
+                    if (musicEnabled) startMusicSynthesis()
+                }
+            }
+        } else {
+            startMusicSynthesis()
+        }
+    }
+
+    private fun startMusicSynthesis() {
         scope.launch(Dispatchers.Default) {
             try {
                 val pcm = cachedMelody ?: buildMelodyPcm().also { cachedMelody = it }
@@ -232,6 +279,13 @@ internal abstract class BaseChiptuneAudioManager {
     }
 
     fun stopMusic() {
+        musicSetupJob?.cancel(); musicSetupJob = null
+        val p = musicPlayer; musicPlayer = null
+        if (p != null) {
+            scope.launch(Dispatchers.Main) {
+                try { p.stop(); p.release() } catch (_: Exception) {}
+            }
+        }
         val t = musicTrack; musicTrack = null
         try { t?.pause(); t?.flush(); t?.release() } catch (_: Exception) {}
     }

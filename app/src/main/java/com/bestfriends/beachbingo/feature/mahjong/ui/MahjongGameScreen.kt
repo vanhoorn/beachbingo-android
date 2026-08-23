@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -245,7 +247,7 @@ fun MahjongGameScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("⏸", fontSize = DrawNumberTablet)
+                    Icon(Icons.Filled.Pause, contentDescription = null, tint = Color.White, modifier = Modifier.size(52.dp))
                     Spacer(Modifier.height(12.dp))
                     Text("Pausiert", fontSize = MaterialTheme.typography.titleLarge.fontSize, fontWeight = FontWeight.ExtraBold, color = Color.White)
                     Spacer(Modifier.height(20.dp))
@@ -254,7 +256,9 @@ fun MahjongGameScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = MahjongGold),
                         shape = RoundedCornerShape(14.dp),
                     ) {
-                        Text("▶  Weiterspielen", color = Color.Black, fontWeight = FontWeight.ExtraBold)
+                        Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Weiterspielen", color = Color.Black, fontWeight = FontWeight.ExtraBold)
                     }
                 }
             }

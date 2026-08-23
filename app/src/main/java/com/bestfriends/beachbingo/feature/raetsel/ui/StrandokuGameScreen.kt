@@ -40,6 +40,8 @@ fun StrandokuGameScreen(
     seed: Long,
     saveId: String?,
     onNavigateBack: () -> Unit,
+    soundEnabled: Boolean = true,
+    musicEnabled: Boolean = true,
 ) {
     val context = LocalContext.current
     var puzzle by remember { mutableStateOf<StrandokuPuzzle?>(null) }
@@ -50,6 +52,9 @@ fun StrandokuGameScreen(
     var showQuit by remember { mutableStateOf(false) }
     var showHelp by remember { mutableStateOf(false) }
     val saveIdRef = remember { saveId ?: SoloGameSaveManager.generateId() }
+    val audio = remember { RaetselAudioManager() }
+    DisposableEffect(Unit) { onDispose { audio.release() } }
+    LaunchedEffect(Unit) { audio.startMusic(soundEnabled, musicEnabled) }
 
     BackHandler { running = false; showQuit = true }
 
@@ -74,6 +79,7 @@ fun StrandokuGameScreen(
             showWin = true
         }
     }
+    LaunchedEffect(showWin) { if (showWin) audio.playSound("win") }
 
     LaunchedEffect(gs) {
         val state = gs ?: return@LaunchedEffect
@@ -239,6 +245,7 @@ fun StrandokuGameScreen(
                             onClick = {
                                 val hint = getStrandokuHint(state)
                                 if (hint != null) {
+                                    audio.playSound("hint")
                                     val s1 = selectStrandokuCell(state, hint.first, hint.second)
                                     gs = enterStrandokuNumber(s1.copy(noteMode = false), p.solution[hint.first][hint.second])
                                 }

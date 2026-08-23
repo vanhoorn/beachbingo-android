@@ -47,6 +47,8 @@ fun WortWelleGameScreen(
     dateStr: String?,
     saveId: String?,
     onNavigateBack: () -> Unit,
+    soundEnabled: Boolean = true,
+    musicEnabled: Boolean = true,
 ) {
     val context = LocalContext.current
     val cfg = WW_CONFIG[difficulty] ?: WW_CONFIG["mittel"]!!
@@ -92,6 +94,9 @@ fun WortWelleGameScreen(
     val shakeX      = remember { Animatable(0f) }
     val resultSaved = remember { mutableStateOf(false) }
     val saveIdRef   = remember { if (!isDaily) saveId ?: SoloGameSaveManager.generateId() else "" }
+    val audio = remember { RaetselAudioManager() }
+    DisposableEffect(Unit) { onDispose { audio.release() } }
+    LaunchedEffect(Unit) { audio.startMusic(soundEnabled, musicEnabled) }
 
     BackHandler { running = false; showQuit = true }
 
@@ -120,6 +125,7 @@ fun WortWelleGameScreen(
         if (gameStatus == "won" || gameStatus == "lost") {
             resultSaved.value = true
             running = false
+            audio.playSound(if (gameStatus == "won") "win" else "wrong")
             if (gameStatus == "won") SoloGameSaveManager.recordBestTime(context, "wortwelle", difficulty, difficulty, elapsed)
             recordWwResult(context, difficulty, gameStatus == "won", guesses.size, isDaily, dateStr)
             if (!isDaily && saveIdRef.isNotEmpty()) SoloGameSaveManager.deleteSave(context, saveIdRef)

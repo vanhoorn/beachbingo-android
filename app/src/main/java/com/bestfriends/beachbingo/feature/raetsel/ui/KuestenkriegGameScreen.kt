@@ -36,6 +36,8 @@ fun KuestenkriegGameScreen(
     seed: Long,
     saveId: String?,
     onNavigateBack: () -> Unit,
+    soundEnabled: Boolean = true,
+    musicEnabled: Boolean = true,
 ) {
     val context = LocalContext.current
     var puzzle by remember { mutableStateOf<BattleshipPuzzle?>(null) }
@@ -47,6 +49,9 @@ fun KuestenkriegGameScreen(
     var showRules by remember { mutableStateOf(false) }
     var activeTool by remember { mutableStateOf(ShipMark.SHIP) }
     val saveIdRef = remember { saveId ?: SoloGameSaveManager.generateId() }
+    val audio = remember { KuestenkriegAudioManager() }
+    DisposableEffect(Unit) { onDispose { audio.release() } }
+    LaunchedEffect(Unit) { audio.startMusic(soundEnabled, musicEnabled) }
 
     BackHandler { running = false; showQuit = true }
 
@@ -69,6 +74,7 @@ fun KuestenkriegGameScreen(
             showWin = true
         }
     }
+    LaunchedEffect(showWin) { if (showWin) audio.playSound("win") }
 
     LaunchedEffect(gs) {
         val state = gs ?: return@LaunchedEffect

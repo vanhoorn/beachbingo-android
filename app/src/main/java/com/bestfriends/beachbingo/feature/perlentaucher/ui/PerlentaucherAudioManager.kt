@@ -4,6 +4,8 @@ import com.bestfriends.beachbingo.core.audio.BaseChiptuneAudioManager
 
 internal class PerlentaucherAudioManager : BaseChiptuneAudioManager() {
 
+    override fun musicAssetName(): String = "perlentaucher.ogg"
+
     override fun buildSoundCache() {
         // 3er-Match: kurzes Aufwärts-Ping
         soundCache["match3"] = squareBurst(523.0, 0.08, 0.12, 0.001)

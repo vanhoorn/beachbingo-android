@@ -4,6 +4,8 @@ import com.bestfriends.beachbingo.core.audio.BaseChiptuneAudioManager
 
 internal class MeerMauAudioManager : BaseChiptuneAudioManager() {
 
+    override fun musicAssetName(): String = "meermau.ogg"
+
     // ── Sound cache ──────────────────────────────────────────────────────────
 
     override fun buildSoundCache() {

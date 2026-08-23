@@ -25,21 +25,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.bestfriends.beachbingo.ui.components.GameHudBar
@@ -265,33 +260,18 @@ fun VierGameScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        if (isAiMode) "vs KI" else "Code: $gameId",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = TextMuted,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Zurück", tint = TextPrimary)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = SurfaceDark),
-            )
-        },
-        bottomBar = {
             GameHudBar(
                 paused = manualPaused,
                 onPauseToggle = { manualPaused = !manualPaused },
                 onQuit = { manualPaused = true; showQuitDialog = true },
                 onShowRules = { showRules = true },
             ) {
-                val turnLabel = when { gameOver -> "Fertig"; myTurn -> "Du bist dran"; else -> "Gegner denkt..." }
-                androidx.compose.foundation.layout.Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("🍺", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.width(8.dp))
+                Column {
+                    val turnLabel = when { gameOver -> "Fertig"; myTurn -> "Du bist dran"; else -> "Gegner denkt..." }
+                    Text(if (isAiMode) "vs KI" else "Code: ${gameId ?: ""}", fontSize = StatusTiny, fontWeight = FontWeight.Bold, color = TextMuted)
                     Text(turnLabel, fontSize = ChipLabel, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    Text(if (isAiMode) "vs KI" else "Online", fontSize = StatusTiny, color = TextMuted)
                 }
             }
         },
