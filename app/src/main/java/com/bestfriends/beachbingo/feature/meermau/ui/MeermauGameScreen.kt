@@ -592,7 +592,6 @@ fun MeermauGameScreen(
     var showRules by remember { mutableStateOf(false) }
     var isPaused by remember { mutableStateOf(false) }
 
-    val context = androidx.compose.ui.platform.LocalContext.current
     val audioManager = remember { MeerMauAudioManager(context) }
     DisposableEffect(Unit) { onDispose { audioManager.release() } }
 
