@@ -262,7 +262,7 @@ private fun doMMPlay(state: MMState, playerIdx: Int, cardId: String, chosenWishS
     var nextWishSuit: String? = if (card.rank == "7" || card.rank == "8") st.wishSuit else null
     var nextDir = st.direction
     var extraSkip = 0
-    var action = "${player.displayName} spielt ${card.rank}${card.suit}"
+    var action = "${player.displayName} spielt ${card.rank} ${suitName(card.suit)}"
 
     when (card.rank) {
         "7" -> {
@@ -287,7 +287,7 @@ private fun doMMPlay(state: MMState, playerIdx: Int, cardId: String, chosenWishS
         "J" -> {
             if (player.isAI || chosenWishSuit != null) {
                 nextWishSuit = chosenWishSuit ?: bestWishSuitMM(newHand)
-                action = "${player.displayName} spielt Bube → wünscht ${nextWishSuit}!"
+                action = "${player.displayName} spielt Bube → wünscht ${suitName(nextWishSuit)}!"
             } else {
                 val entry = MoveLogEntry(st.round, player.displayName, action, System.currentTimeMillis())
                 return st.copy(players = newPlayers, discardPile = newDiscard, drawnCard = null,
@@ -299,7 +299,7 @@ private fun doMMPlay(state: MMState, playerIdx: Int, cardId: String, chosenWishS
             if (st.settings.wildOn10) {
                 if (player.isAI || chosenWishSuit != null) {
                     nextWishSuit = chosenWishSuit ?: bestWishSuitMM(newHand)
-                    action = "${player.displayName} spielt 10 → wünscht ${nextWishSuit}!"
+                    action = "${player.displayName} spielt 10 → wünscht ${suitName(nextWishSuit)}!"
                 } else {
                     val entry = MoveLogEntry(st.round, player.displayName, action, System.currentTimeMillis())
                     return st.copy(players = newPlayers, discardPile = newDiscard, drawnCard = null,
@@ -594,6 +594,25 @@ fun MeermauGameScreen(
 
     val audioManager = remember { MeerMauAudioManager(context) }
     DisposableEffect(Unit) { onDispose { audioManager.release() } }
+    DisposableEffect(Unit) {
+        val activity = context as? androidx.activity.ComponentActivity
+        val callback = object : androidx.lifecycle.DefaultLifecycleObserver {
+            override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
+                val st = localState ?: return
+                if (mode != "ai" || st.phase == "GAME_OVER") return
+                SoloGameSaveManager.saveGame(context, GameSave(
+                    id = java.util.UUID.randomUUID().toString(),
+                    gameType = "meermau",
+                    difficulty = st.difficulty,
+                    gameState = Json.encodeToString(st.copy(aiThinking = false)),
+                    displayLabel = "Runde ${st.round} · ${st.players.size} Spieler · ${st.players.firstOrNull()?.totalScore ?: 0}P",
+                    savedAt = System.currentTimeMillis(),
+                ))
+            }
+        }
+        activity?.lifecycle?.addObserver(callback)
+        onDispose { activity?.lifecycle?.removeObserver(callback) }
+    }
 
     BackHandler { showQuitDialog = true }
 
@@ -1118,7 +1137,7 @@ fun MeermauGameScreen(
             // ── Player hand ──
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
                 Text(
-                    "Du · ${myHand.size + if (drawnCard != null && isMyTurn) 1 else 0} Karten · ${myPlayer?.totalScore ?: 0} Punkte",
+                    "Du · ${myHand.size + if (drawnCard != null && isMyTurn) 1 else 0} Karten · ${myPlayer?.totalScore ?: 0} / 100 Punkte",
                     style = MaterialTheme.typography.labelSmall, color = TextMuted, modifier = Modifier.padding(bottom = 6.dp),
                 )
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -1440,7 +1459,7 @@ fun MeermauGameScreen(
                             val isGameWinner = p.userId == st.gameWinnerId
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Text("${p.avatarUrl} ${p.displayName}${if (p.eliminated) " ❌" else ""}", style = MaterialTheme.typography.bodyMedium, color = if (isGameWinner) SandGold else TextPrimary)
-                                Text("${p.totalScore} P", style = MaterialTheme.typography.bodyMedium, color = if (p.totalScore >= 100) Danger else TextSub, fontWeight = if (isGameWinner) FontWeight.Bold else FontWeight.Normal)
+                                Text("${p.totalScore} / 100 P", style = MaterialTheme.typography.bodyMedium, color = if (p.totalScore >= 100) Danger else TextSub, fontWeight = if (isGameWinner) FontWeight.Bold else FontWeight.Normal)
                             }
                         }
                     }

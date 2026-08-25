@@ -41,6 +41,10 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import kotlin.random.Random
 
 private val KlontauschAccent = Color(0xFF8B5CF6)
 private const val OFFER_TIMEOUT_SECONDS = 15
@@ -64,6 +68,9 @@ fun KlontauschGameScreen(
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid ?: return
+    val context = LocalContext.current
+    val audio = remember { KlontauschAudioManager(context) }
+    DisposableEffect(Unit) { onDispose { audio.release() } }
     val scope = rememberCoroutineScope()
 
     var gameState by remember { mutableStateOf<KlonGameState?>(null) }
@@ -258,8 +265,15 @@ fun KlontauschGameScreen(
         ))
     }
 
+    LaunchedEffect(Unit) {
+        audio.startMusic(soundEnabled, musicEnabled)
+    }
+
     LaunchedEffect(gameState?.status) {
-        if (gameState?.status == "FINISHED") showWinDialog = true
+        if (gameState?.status == "FINISHED") {
+            audio.stopMusic()
+            showWinDialog = true
+        }
     }
 
     // ── AI loop: AI's own turn ────────────────────────────────────────────────
@@ -384,6 +398,9 @@ fun KlontauschGameScreen(
         else showQuitDialog = true
     }
 
+    if (showWinDialog) {
+        KlontauschConfettiOverlay()
+    }
     if (showWinDialog && gameState != null) {
         val finishedState = gameState!!
         KlontauschWinDialog(
@@ -425,19 +442,6 @@ fun KlontauschGameScreen(
     val iAmDeclined  = offer.type == "OPEN" && uid in offer.declinedIds
     val myCards = myPlayer?.heldCards ?: emptyList()
     val mySafeIds = remember(myCards, myTargetIds) { myPlayer?.let { safeCharacterIds(it, myTargetIds) } ?: emptySet() }
-
-    // For each target char + part: if not owned, pick a fill card (same part preferred, random)
-    val targetFillCards = remember(myCards, myTargetIds) {
-        val stockCards = myCards.filter { it.characterId !in myTargetIds }
-        myTargetIds.associateWith { charId ->
-            KlonPart.entries.associateWith { part ->
-                val owned = myCards.any { it.characterId == charId && it.part == part.name }
-                if (owned) null
-                else stockCards.filter { it.part == part.name }.randomOrNull()
-                    ?: stockCards.randomOrNull()
-            }
-        }
-    }
 
     val stockKopf    = remember(myCards, myTargetIds) { myCards.filter { it.characterId !in myTargetIds && it.part == KlonPart.KOPF.name } }
     val stockKoerper = remember(myCards, myTargetIds) { myCards.filter { it.characterId !in myTargetIds && it.part == KlonPart.KOERPER.name } }
@@ -609,11 +613,10 @@ fun KlontauschGameScreen(
                                 ) {
                                     val partH    = maxHeight / 3f
                                     val partW    = maxWidth * 0.70f
-                                    val fillForChar = targetFillCards[charId]
                                     Column(Modifier.width(partW).align(Alignment.Center)) {
-                                        KlonPartSlot(charId, KlonPart.KOPF,    hasKopf,    partH, fillCard = if (!hasKopf)    fillForChar?.get(KlonPart.KOPF)    else null)
-                                        KlonPartSlot(charId, KlonPart.KOERPER, hasKoerper, partH, fillCard = if (!hasKoerper) fillForChar?.get(KlonPart.KOERPER) else null)
-                                        KlonPartSlot(charId, KlonPart.BEINE,   hasBeine,   partH, fillCard = if (!hasBeine)   fillForChar?.get(KlonPart.BEINE)   else null)
+                                        KlonPartSlot(charId, KlonPart.KOPF,    hasKopf,    partH)
+                                        KlonPartSlot(charId, KlonPart.KOERPER, hasKoerper, partH)
+                                        KlonPartSlot(charId, KlonPart.BEINE,   hasBeine,   partH)
                                     }
                                 }
                             }
@@ -1114,6 +1117,51 @@ private fun StockPartDots(count: Int, currentPage: Int, modifier: Modifier = Mod
     }
 }
 
+// ── Confetti overlay ──────────────────────────────────────────────────────────
+
+@Composable
+private fun KlontauschConfettiOverlay() {
+    val confettiColors = remember {
+        listOf(
+            KlontauschAccent, Color(0xFFFB7185), Color(0xFF38BDF8),
+            Color(0xFFFBBF24), Color(0xFF4ADE80), Color(0xFFC084FC),
+        )
+    }
+    val particles = remember {
+        List(48) {
+            floatArrayOf(
+                Random.nextFloat(),
+                -0.05f - Random.nextFloat() * 0.5f,
+                0.25f + Random.nextFloat() * 0.45f,
+                (Random.nextFloat() - 0.5f) * 0.06f,
+            )
+        }
+    }
+    val colors = remember { List(48) { confettiColors[it % confettiColors.size] } }
+    var t by remember { mutableStateOf(0f) }
+    LaunchedEffect(Unit) {
+        val start = System.currentTimeMillis()
+        while (t < 3.5f) {
+            t = (System.currentTimeMillis() - start) / 1000f
+            delay(16)
+        }
+    }
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        particles.forEachIndexed { i, p ->
+            val rawY = p[1] + p[2] * t
+            val y = rawY % 1.1f
+            if (y < 0f) return@forEachIndexed
+            val x = (p[0] + p[3] * t).let { if (it < 0f) it + 1f else if (it > 1f) it - 1f else it }
+            val alpha = ((1f - t / 3.5f) * 1.6f).coerceIn(0f, 0.85f)
+            drawCircle(
+                color = colors[i].copy(alpha = alpha),
+                radius = 8f,
+                center = Offset(x * size.width, y * size.height),
+            )
+        }
+    }
+}
+
 // ── Winner dialog (undismissable) ────────────────────────────────────────────
 
 @Composable
@@ -1290,13 +1338,8 @@ private fun KlonPartSlot(
     part: KlonPart,
     owned: Boolean,
     height: androidx.compose.ui.unit.Dp,
-    fillCard: KlonCard? = null,
 ) {
-    val borderColor = when {
-        owned    -> KlontauschAccent.copy(0.6f)
-        fillCard != null -> BorderColor.copy(0.35f)
-        else     -> BorderColor.copy(0.25f)
-    }
+    val borderColor = if (owned) KlontauschAccent.copy(0.6f) else BorderColor.copy(0.25f)
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -1304,18 +1347,14 @@ private fun KlonPartSlot(
             .border(0.5.dp, borderColor),
         contentAlignment = Alignment.Center,
     ) {
-        when {
-            owned -> KlontauschCharacterView(
+        if (owned) {
+            KlontauschCharacterView(
                 characterId = characterId,
                 part = part,
                 modifier = Modifier.fillMaxSize().padding(2.dp),
             )
-            fillCard != null -> KlontauschCharacterView(
-                characterId = fillCard.characterId,
-                part = part,
-                modifier = Modifier.fillMaxSize().padding(2.dp).alpha(0.35f),
-            )
-            else -> KlontauschSilhouette(
+        } else {
+            KlontauschSilhouette(
                 part = part,
                 modifier = Modifier.fillMaxSize().padding(2.dp),
             )

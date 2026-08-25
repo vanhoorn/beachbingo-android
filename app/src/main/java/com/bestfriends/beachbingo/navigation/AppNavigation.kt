@@ -99,6 +99,9 @@ import com.bestfriends.beachbingo.feature.klontausch.ui.KlontauschResultsScreen
 import com.bestfriends.beachbingo.feature.klontausch.ui.KlontauschSettingsScreen
 import com.bestfriends.beachbingo.feature.klontausch.ui.KlontauschGalleryScreen
 import com.bestfriends.beachbingo.feature.raetsel.PuzzleSave
+import com.bestfriends.beachbingo.feature.raetsel.AiMode
+import com.bestfriends.beachbingo.feature.raetsel.KuestenkriegSession
+import com.bestfriends.beachbingo.feature.raetsel.deserializeBattleState
 
 @Composable
 fun AppNavigation() {
@@ -186,8 +189,22 @@ fun AppNavigation() {
                         "strandoku"      -> navController.navigate(Screen.StrandokuLobby)
                         "wellensumme"    -> navController.navigate(Screen.WellensummeLobby)
                         "kuestenkrieg"   -> navController.navigate(Screen.KuestenkriegLobby)
+                        "kuestenkrieg_ki" -> {
+                            val bs = deserializeBattleState(save.puzzleState ?: "")
+                            if (bs != null) {
+                                KuestenkriegSession.resumedState  = bs
+                                KuestenkriegSession.resumedSaveId = save.id
+                                KuestenkriegSession.aiMode = when (save.variant) {
+                                    "matrose" -> AiMode.MATROSE; "admiral" -> AiMode.ADMIRAL; else -> AiMode.KAPITAEN
+                                }
+                                navController.navigate(Screen.KuestenkriegBattle)
+                            } else {
+                                navController.navigate(Screen.KuestenkriegLobby)
+                            }
+                        }
                         "wortwelle"      -> navController.navigate(Screen.WortWelleLobby)
                         "mahjong"        -> navController.navigate(Screen.MahjongLobby)
+                        "perlentaucher"  -> navController.navigate(Screen.PerlentaucherLobby)
                     }
                 },
                 onRejoinGame = { type, gameId ->

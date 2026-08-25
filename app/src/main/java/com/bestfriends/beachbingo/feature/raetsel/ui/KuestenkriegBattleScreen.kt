@@ -45,9 +45,9 @@ private fun cellBg(v: CellView): Color = when (v) {
 }
 
 private fun cellLabel(v: CellView): String = when (v) {
-    CellView.MISS -> "•"
-    CellView.HIT  -> "●"
-    CellView.SUNK -> "✕"
+    CellView.MISS -> "🌊"
+    CellView.HIT  -> "💣"
+    CellView.SUNK -> "☠️"
     else -> ""
 }
 
@@ -212,16 +212,6 @@ fun KuestenkriegBattleScreen(
 
         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
-            // AI notification toast
-            if (aiMsg != null) {
-                Surface(shape = RoundedCornerShape(10.dp), color = RoseRed.copy(alpha = 0.12f),
-                    modifier = Modifier.fillMaxWidth().border(1.dp, RoseRed.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
-                ) {
-                    Text("KI: $aiMsg", fontSize = CellNumber, fontWeight = FontWeight.Bold, color = RoseRed,
-                        textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 10.dp).fillMaxWidth())
-                }
-            }
-
             // Enemy grid
             BattleGridSection(
                 title = "Gegnerisches Gewässer",
@@ -316,6 +306,23 @@ fun KuestenkriegBattleScreen(
                     )
                     OutlinedButton(onClick = { paused = false }) { Text("Weiterspielen", color = TextSub) }
                 }
+            }
+        }
+        // AI notification toast — overlay so banner doesn't push grid content
+        if (aiMsg != null) {
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = RoseRed.copy(alpha = 0.12f),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .fillMaxWidth()
+                    .border(1.dp, RoseRed.copy(alpha = 0.4f), RoundedCornerShape(10.dp)),
+            ) {
+                Text(
+                    "KI: $aiMsg", fontSize = CellNumber, fontWeight = FontWeight.Bold, color = RoseRed,
+                    textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 10.dp).fillMaxWidth(),
+                )
             }
         }
         } // Box weight(1f)

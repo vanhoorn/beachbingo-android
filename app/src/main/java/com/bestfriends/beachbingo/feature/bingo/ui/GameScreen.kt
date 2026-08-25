@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -309,22 +310,32 @@ fun GameScreen(
                     onClearTabletError = { viewModel.clearTabletLoginError() },
                     modifier = Modifier.fillMaxSize().padding(padding)
                 )
-                GameStatus.RUNNING -> RunningStateContent(
-                    game = game,
-                    myPlayer = myPlayer,
-                    isAdmin = isAdmin,
-                    isDrawing = uiState.isDrawing,
-                    isClaimingBingo = uiState.isClaimingBingo,
-                    onDrawNumber = { viewModel.drawNumber() },
-                    onMarkNumber = { viewModel.markNumber(it) },
-                    onClaimBingo = { viewModel.claimBingo() },
-                    isTablet = isTablet,
-                    player2 = player2,
-                    tabletUiState = tabletUiState,
-                    onMarkNumberPlayer2 = { viewModel.markNumberPlayer2(it) },
-                    onClaimBingoPlayer2 = { viewModel.claimBingoPlayer2() },
-                    modifier = Modifier.fillMaxSize().padding(padding)
-                )
+                GameStatus.RUNNING -> Box(Modifier.fillMaxSize().padding(padding)) {
+                    RunningStateContent(
+                        game = game,
+                        myPlayer = myPlayer,
+                        isAdmin = isAdmin,
+                        isDrawing = uiState.isDrawing,
+                        isClaimingBingo = uiState.isClaimingBingo,
+                        onDrawNumber = { viewModel.drawNumber() },
+                        onMarkNumber = { viewModel.markNumber(it) },
+                        onClaimBingo = { viewModel.claimBingo() },
+                        isTablet = isTablet,
+                        player2 = player2,
+                        tabletUiState = tabletUiState,
+                        onMarkNumberPlayer2 = { viewModel.markNumberPlayer2(it) },
+                        onClaimBingoPlayer2 = { viewModel.claimBingoPlayer2() },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    if (game.drawAnimationActive) {
+                        Box(
+                            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            DrumAnimation()
+                        }
+                    }
+                }
                 GameStatus.FINISHED -> FinishedStateContent(
                     game = game,
                     onNavigateBack = onNavigateBack,
@@ -881,7 +892,7 @@ private fun LobbyStateContent(
     }
 }
 
-private const val WEB_APP_BASE_URL = "https://thebeachbingo.netlify.app"
+private const val WEB_APP_BASE_URL = "https://beachbande.de"
 
 @Composable
 private fun LobbyQrCard(gameId: String, game: BingoGame) {
@@ -1034,34 +1045,30 @@ private fun RunningStateContent(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            if (game.drawAnimationActive) "Zahl wird gezogen..." else "Aktuelle Zahl",
+                            "Aktuelle Zahl",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                         )
-                        if (game.drawAnimationActive) {
-                            DrumAnimation(modifier = Modifier.padding(vertical = 4.dp))
-                        } else {
-                            AnimatedContent(
-                                targetState = game.currentNumber,
-                                transitionSpec = {
-                                    (fadeIn(tween(300)) + scaleIn(tween(300))) togetherWith fadeOut(tween(150))
-                                },
-                                label = "number_animation"
-                            ) { number ->
-                                Text(
-                                    text = number?.toString() ?: "–",
-                                    fontSize = DrawNumberPhone,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
+                        AnimatedContent(
+                            targetState = game.currentNumber,
+                            transitionSpec = {
+                                (fadeIn(tween(300)) + scaleIn(tween(300))) togetherWith fadeOut(tween(150))
+                            },
+                            label = "number_animation"
+                        ) { number ->
+                            Text(
+                                text = number?.toString() ?: "–",
+                                fontSize = DrawNumberPhone,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         }
                     }
                     if (isAdmin) {
                         Button(
                             onClick = onDrawNumber,
                             enabled = !isDrawing && !game.drawAnimationActive && !game.eliminationAnimationActive && game.eliminationPendingPlayerId == null && game.drawnNumbers.size < 75,
-                            modifier = Modifier.height(52.dp)
+                            modifier = Modifier.heightIn(min = 52.dp)
                         ) {
                             if (isDrawing || game.drawAnimationActive) {
                                 CircularProgressIndicator(
@@ -1199,26 +1206,22 @@ private fun TabletRunningContent(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        if (game.drawAnimationActive) "Zahl wird gezogen..." else "Aktuelle Zahl",
+                        "Aktuelle Zahl",
                         style = MaterialTheme.typography.labelMedium
                     )
-                    if (game.drawAnimationActive) {
-                        DrumAnimation(modifier = Modifier.padding(vertical = 4.dp))
-                    } else {
-                        AnimatedContent(
-                            targetState = game.currentNumber,
-                            transitionSpec = {
-                                (fadeIn(tween(300)) + scaleIn(tween(300))) togetherWith fadeOut(tween(150))
-                            },
-                            label = "number_animation"
-                        ) { number ->
-                            Text(
-                                text = number?.toString() ?: "–",
-                                fontSize = DrawNumberTablet,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
+                    AnimatedContent(
+                        targetState = game.currentNumber,
+                        transitionSpec = {
+                            (fadeIn(tween(300)) + scaleIn(tween(300))) togetherWith fadeOut(tween(150))
+                        },
+                        label = "number_animation"
+                    ) { number ->
+                        Text(
+                            text = number?.toString() ?: "–",
+                            fontSize = DrawNumberTablet,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     }
                 }
                 if (isAdmin) {
