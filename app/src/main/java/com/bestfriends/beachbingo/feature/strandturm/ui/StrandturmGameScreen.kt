@@ -38,6 +38,7 @@ import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import org.json.JSONArray
 import org.json.JSONObject
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.tasks.await
@@ -1138,8 +1139,31 @@ private fun DrawScope.drawGame(gs: StrandturmState, s: Float) {
     drawPlayer(gs, s)
 }
 
-private fun serializeStrandturm(gs: StrandturmState): String =
-    JSONObject().put("score", gs.score).put("lives", gs.lives).put("level", gs.level).toString()
+private fun serializeStrandturm(gs: StrandturmState): String {
+    val oktosArr = JSONArray()
+    gs.oktos.forEach { o -> oktosArr.put(JSONObject().put("x", o.x.toDouble()).put("vx", o.vx.toDouble())) }
+    val elevsArr = JSONArray()
+    gs.elevators.forEach { e -> elevsArr.put(JSONObject().put("y", e.y.toDouble()).put("vy", e.vy.toDouble())) }
+    val nietenArr = JSONArray()
+    gs.nieten.forEach { n -> nietenArr.put(JSONObject().put("collected", n.collected)) }
+    val hammerArr = JSONArray()
+    gs.hammerPickups.forEach { hammerArr.put(it) }
+    return JSONObject()
+        .put("score", gs.score).put("lives", gs.lives).put("level", gs.level)
+        .put("px", gs.px.toDouble()).put("py", gs.py.toDouble())
+        .put("pvx", gs.pvx.toDouble()).put("pvy", gs.pvy.toDouble())
+        .put("ponGround", gs.ponGround).put("ponLadder", gs.ponLadder)
+        .put("pladderIdx", gs.pladderIdx).put("pfacing", gs.pfacing)
+        .put("pinvTimer", gs.pinvTimer)
+        .put("bonusTimer", gs.bonusTimer)
+        .put("hasHammer", gs.hasHammer).put("hammerTimer", gs.hammerTimer)
+        .put("hammerPickups", hammerArr)
+        .put("oktos", oktosArr)
+        .put("elevators", elevsArr)
+        .put("nieten", nietenArr)
+        .put("nietenCollected", gs.nietenCollected)
+        .toString()
+}
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
@@ -1176,7 +1200,7 @@ fun StrandturmGameScreen(
     // true once prefs are loaded and music has been started for the first time
     var musicStarted by remember { mutableStateOf(false) }
 
-    // Restore checkpoint save (score + lives + level)
+    // Restore saved game state
     LaunchedEffect(saveId) {
         if (saveId != null) {
             val save = SoloGameSaveManager.getGameSave(context, "strandturm")
@@ -1184,7 +1208,48 @@ fun StrandturmGameScreen(
                 val obj = JSONObject(save.gameState)
                 gs.score = obj.getInt("score")
                 gs.lives = obj.getInt("lives")
-                // Level is already set via startLevel param
+                // Level is already set via startLevel param; restore runtime state
+                gs.px          = obj.optDouble("px", gs.px.toDouble()).toFloat()
+                gs.py          = obj.optDouble("py", gs.py.toDouble()).toFloat()
+                gs.pvx         = obj.optDouble("pvx", 0.0).toFloat()
+                gs.pvy         = obj.optDouble("pvy", 0.0).toFloat()
+                gs.ponGround   = obj.optBoolean("ponGround", gs.ponGround)
+                gs.ponLadder   = obj.optBoolean("ponLadder", false)
+                gs.pladderIdx  = obj.optInt("pladderIdx", -1)
+                gs.pfacing     = obj.optInt("pfacing", gs.pfacing)
+                gs.pinvTimer   = obj.optInt("pinvTimer", 0)
+                gs.bonusTimer  = obj.optInt("bonusTimer", gs.bonusTimer)
+                gs.hasHammer   = obj.optBoolean("hasHammer", false)
+                gs.hammerTimer = obj.optInt("hammerTimer", 0)
+                obj.optJSONArray("hammerPickups")?.let { arr ->
+                    for (i in gs.hammerPickups.indices) {
+                        if (i < arr.length()) gs.hammerPickups[i] = arr.getBoolean(i)
+                    }
+                }
+                obj.optJSONArray("oktos")?.let { arr ->
+                    gs.oktos.forEachIndexed { i, okto ->
+                        if (i < arr.length()) {
+                            val o = arr.getJSONObject(i)
+                            okto.x  = o.optDouble("x",  okto.x.toDouble()).toFloat()
+                            okto.vx = o.optDouble("vx", okto.vx.toDouble()).toFloat()
+                        }
+                    }
+                }
+                obj.optJSONArray("elevators")?.let { arr ->
+                    gs.elevators.forEachIndexed { i, elev ->
+                        if (i < arr.length()) {
+                            val o = arr.getJSONObject(i)
+                            elev.y  = o.optDouble("y",  elev.y.toDouble()).toFloat()
+                            elev.vy = o.optDouble("vy", elev.vy.toDouble()).toFloat()
+                        }
+                    }
+                }
+                obj.optJSONArray("nieten")?.let { arr ->
+                    gs.nieten.forEachIndexed { i, niete ->
+                        if (i < arr.length()) niete.collected = arr.getJSONObject(i).optBoolean("collected", false)
+                    }
+                }
+                gs.nietenCollected = obj.optInt("nietenCollected", 0)
             } catch (_: Exception) {}
         }
     }
@@ -1199,6 +1264,24 @@ fun StrandturmGameScreen(
 
     // Release audio on leave
     DisposableEffect(Unit) { onDispose { audio.release() } }
+    DisposableEffect(Unit) {
+        val activity = context as? androidx.activity.ComponentActivity
+        val callback = object : androidx.lifecycle.DefaultLifecycleObserver {
+            override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
+                if (gs.phase == "GAME_OVER") return
+                SoloGameSaveManager.saveGame(context, GameSave(
+                    id = SoloGameSaveManager.generateId(),
+                    gameType = "strandturm",
+                    difficulty = "standard",
+                    gameState = serializeStrandturm(gs),
+                    displayLabel = "Score: ${gs.score} · Level ${gs.level} · Leben: ${gs.lives}",
+                    savedAt = System.currentTimeMillis(),
+                ))
+            }
+        }
+        activity?.lifecycle?.addObserver(callback)
+        onDispose { activity?.lifecycle?.removeObserver(callback) }
+    }
 
     // Pause / resume music with game pause
     LaunchedEffect(paused) {

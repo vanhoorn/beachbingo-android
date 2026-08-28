@@ -192,6 +192,33 @@ fun VierGameScreen(
     DisposableEffect(Unit) {
         onDispose { audio.release() }
     }
+    DisposableEffect(Unit) {
+        val activity = context as? androidx.activity.ComponentActivity
+        val callback = object : androidx.lifecycle.DefaultLifecycleObserver {
+            override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
+                if (!isAiMode || uiState.winner != null || uiState.draw) return
+                val boardJson = org.json.JSONArray(uiState.board.map { it.toLong() })
+                SoloGameSaveManager.saveGame(
+                    context,
+                    GameSave(
+                        id = java.util.UUID.randomUUID().toString(),
+                        gameType = "vier",
+                        difficulty = aiDifficulty,
+                        gameState = org.json.JSONObject()
+                            .put("board", boardJson)
+                            .put("currentPlayer", uiState.currentPlayer)
+                            .put("myDrinkId", myDrinkId)
+                            .put("aiDrinkId", aiDrinkId ?: "whisky")
+                            .toString(),
+                        displayLabel = "KI · ${uiState.board.count { it != 0 }} Steine",
+                        savedAt = System.currentTimeMillis(),
+                    )
+                )
+            }
+        }
+        activity?.lifecycle?.addObserver(callback)
+        onDispose { activity?.lifecycle?.removeObserver(callback) }
+    }
     LaunchedEffect(manualPaused) {
         if (!musicStarted) return@LaunchedEffect
         if (manualPaused) audio.stopMusic() else audio.startMusic()

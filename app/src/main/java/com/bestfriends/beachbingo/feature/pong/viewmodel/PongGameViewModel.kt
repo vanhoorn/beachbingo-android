@@ -192,6 +192,17 @@ class PongGameViewModel @Inject constructor(
         }
     }
 
+    fun restoreScores(scoreLeft: Int, scoreRight: Int, scoreTop: Int, scoreBottom: Int, wallSide: String?) {
+        val current = _gs.value
+        _gs.value = current.copy(
+            scoreLeft = scoreLeft,
+            scoreRight = scoreRight,
+            scoreTop = scoreTop,
+            scoreBottom = scoreBottom,
+            wallSide = wallSide ?: current.wallSide,
+        )
+    }
+
     private fun observeGame(gameId: String) {
         firestoreListenerRemover?.invoke()
         val reg = db.collection("pongGames").document(gameId)

@@ -525,7 +525,7 @@ fun StrandraeuberLobbyScreen(
 
                         Surface(shape = RoundedCornerShape(12.dp), color = Color.White, modifier = Modifier.padding(4.dp)) {
                             QrCodeImage(
-                                content = "https://thebeachbingo.netlify.app/strandraeuber/lobby?join=$gameCode",
+                                content = "https://beachbande.de/strandraeuber/lobby?join=$gameCode",
                                 size = 160.dp,
                             )
                         }

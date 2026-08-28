@@ -369,7 +369,7 @@ fun MeermauLobbyScreen(
                             }
                         }
                         Surface(shape = RoundedCornerShape(12.dp), color = Color.White, modifier = Modifier.padding(4.dp)) {
-                            QrCodeImage(content = "https://thebeachbingo.netlify.app/meermau/lobby?join=$gameCode", size = 160.dp)
+                            QrCodeImage(content = "https://beachbande.de/meermau/lobby?join=$gameCode", size = 160.dp)
                         }
                         Text("Spieler scannen den QR-Code oder geben den Code ein",
                             style = MaterialTheme.typography.bodySmall, color = TextMuted, textAlign = TextAlign.Center)

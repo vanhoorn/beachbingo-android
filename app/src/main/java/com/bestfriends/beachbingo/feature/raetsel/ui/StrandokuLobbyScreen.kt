@@ -103,19 +103,22 @@ fun StrandokuLobbyScreen(
         }
         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             Text("VARIANTE", fontSize = ChipLabel, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
-            variants.forEach { v ->
-                val sel = variant == v
-                Surface(shape = RoundedCornerShape(12.dp), color = if (sel) SkyBlue.copy(alpha = 0.1f) else SurfaceDark,
-                    modifier = Modifier.fillMaxWidth().border(1.5.dp, if (sel) SkyBlue else BorderColor, RoundedCornerShape(12.dp)).clickable { variant = v }
-                ) {
-                    Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(STRANDOKU_VARIANT_LABELS[v] ?: v, fontSize = CellNumber, fontWeight = FontWeight.Bold, color = if (sel) SkyBlue else TextPrimary)
-                            Text(STRANDOKU_VARIANT_DESCRIPTIONS[v] ?: "", fontSize = ChipLabel, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
+            variants.chunked(2).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    row.forEach { v ->
+                        val sel = variant == v
+                        Surface(shape = RoundedCornerShape(12.dp), color = if (sel) SkyBlue.copy(alpha = 0.1f) else SurfaceDark,
+                            modifier = Modifier.weight(1f).border(1.5.dp, if (sel) SkyBlue else BorderColor, RoundedCornerShape(12.dp)).clickable { variant = v }
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(STRANDOKU_VARIANT_LABELS[v] ?: v, fontSize = CellNumber, fontWeight = FontWeight.Bold, color = if (sel) SkyBlue else TextPrimary)
+                                Text(STRANDOKU_VARIANT_DESCRIPTIONS[v] ?: "", fontSize = ChipLabel, color = TextMuted, modifier = Modifier.padding(top = 2.dp))
+                            }
                         }
-                        if (sel) Text("✓", fontSize = MaterialTheme.typography.titleMedium.fontSize, color = SkyBlue)
                     }
+                    if (row.size == 1) Spacer(Modifier.weight(1f))
                 }
+                Spacer(Modifier.height(8.dp))
             }
             Text("SCHWIERIGKEIT", fontSize = ChipLabel, fontWeight = FontWeight.Bold, color = TextMuted, letterSpacing = 1.sp)
             difficulties.chunked(2).forEach { row ->

@@ -26,10 +26,17 @@ internal abstract class BaseChiptuneAudioManager(
     private var musicTrack: AudioTrack? = null
     private var musicPlayer: ExoPlayer? = null
     private var musicSetupJob: Job? = null
+    @Volatile private var pausedByLifecycle = false
+
+    private class PoolEntry(val track: AudioTrack, val durationMs: Long) {
+        @Volatile var freeAfter: Long = 0L
+    }
+    private val sfxPools = mutableMapOf<String, Array<PoolEntry>>()
 
     init {
         scope.launch {
             buildSoundCache()
+            buildSoundPools()
             cachedMelody = buildMelodyPcm()
         }
     }
@@ -41,6 +48,31 @@ internal abstract class BaseChiptuneAudioManager(
 
     // Override to return e.g. "pirates.mp3" — enables ExoPlayer music when context != null.
     protected open fun musicAssetName(): String? = null
+
+    private fun buildSoundPools() {
+        val minBuf = AudioTrack.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
+        soundCache.forEach { (id, samples) ->
+            val byteCount = samples.size * 2
+            val durationMs = samples.size * 1000L / sampleRate + 100L
+            val entries = (0 until 3).mapNotNull {
+                try {
+                    val track = AudioTrack.Builder()
+                        .setAudioAttributes(AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_GAME)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+                        .setAudioFormat(AudioFormat.Builder()
+                            .setSampleRate(sampleRate)
+                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
+                        .setBufferSizeInBytes(maxOf(byteCount, minBuf))
+                        .setTransferMode(AudioTrack.MODE_STATIC).build()
+                    track.write(samples, 0, samples.size)
+                    PoolEntry(track, durationMs)
+                } catch (_: Exception) { null }
+            }.toTypedArray()
+            if (entries.isNotEmpty()) sfxPools[id] = entries
+        }
+    }
 
     // ── Wave generators ──────────────────────────────────────────────────────
 
@@ -217,6 +249,22 @@ internal abstract class BaseChiptuneAudioManager(
 
     fun playSound(id: String) {
         if (!soundEnabled) return
+        val pool = sfxPools[id]
+        if (pool != null) {
+            val now = System.currentTimeMillis()
+            val entry = pool.firstOrNull { it.freeAfter <= now }
+            if (entry != null) {
+                entry.freeAfter = now + entry.durationMs
+                scope.launch(Dispatchers.Default) {
+                    try {
+                        entry.track.stop()
+                        entry.track.setPlaybackHeadPosition(0)
+                        entry.track.play()
+                    } catch (_: Exception) {}
+                }
+                return
+            }
+        }
         val samples = soundCache[id] ?: return
         scope.launch(Dispatchers.Default) { playRaw(samples) }
     }
@@ -226,6 +274,7 @@ internal abstract class BaseChiptuneAudioManager(
         this.musicEnabled = musicEnabled
         if (!musicEnabled) return
         stopMusic()
+        AudioRegistry.current = this
 
         val ctx = context
         val assetName = musicAssetName()
@@ -278,11 +327,32 @@ internal abstract class BaseChiptuneAudioManager(
         }
     }
 
+    fun pauseMusic() {
+        val playerActive = musicPlayer?.isPlaying == true
+        val trackActive = musicTrack?.playState == AudioTrack.PLAYSTATE_PLAYING
+        if (playerActive || trackActive) {
+            pausedByLifecycle = true
+            musicPlayer?.pause()
+            try { musicTrack?.pause() } catch (_: Exception) {}
+        }
+    }
+
+    fun resumeMusic() {
+        if (!pausedByLifecycle || !musicEnabled) return
+        pausedByLifecycle = false
+        musicPlayer?.play()
+        try { musicTrack?.play() } catch (_: Exception) {}
+    }
+
     fun stopMusic() {
+        pausedByLifecycle = false
+        if (AudioRegistry.current === this) AudioRegistry.current = null
         musicSetupJob?.cancel(); musicSetupJob = null
         val p = musicPlayer; musicPlayer = null
         if (p != null) {
-            scope.launch(Dispatchers.Main) {
+            // Use a fresh scope — the main scope may be cancelled immediately after (in release()),
+            // which would prevent p.stop()/p.release() from executing and leave the player running.
+            CoroutineScope(Dispatchers.Main).launch {
                 try { p.stop(); p.release() } catch (_: Exception) {}
             }
         }
@@ -297,5 +367,15 @@ internal abstract class BaseChiptuneAudioManager(
         if (!enabled) stopMusic() else startMusic()
     }
 
-    fun release() { stopMusic(); scope.cancel() }
+    fun release() {
+        if (AudioRegistry.current === this) AudioRegistry.current = null
+        stopMusic()
+        sfxPools.values.forEach { entries ->
+            entries.forEach { e ->
+                try { e.track.stop(); e.track.release() } catch (_: Exception) {}
+            }
+        }
+        sfxPools.clear()
+        scope.cancel()
+    }
 }

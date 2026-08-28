@@ -45,6 +45,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
 import kotlin.random.Random
+import com.bestfriends.beachbingo.feature.raetsel.GameSave
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 
 private val KlontauschAccent = Color(0xFF8B5CF6)
 private const val OFFER_TIMEOUT_SECONDS = 15
@@ -86,6 +91,27 @@ fun KlontauschGameScreen(
     val eventList = remember { mutableStateListOf<Pair<String, KlonEventType>>() }
     val prevCardsHolder = remember { mutableListOf<KlonCard>() }
     val prevCompleteIds = remember { mutableSetOf<String>() }
+
+    // Auto-Save on app background (AI mode only)
+    DisposableEffect(Unit) {
+        val activity = context as? androidx.activity.ComponentActivity
+        val callback = object : androidx.lifecycle.DefaultLifecycleObserver {
+            override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
+                val st = gameState ?: return
+                if (mode != "AI" || st.status == "FINISHED") return
+                SoloGameSaveManager.saveGame(context, GameSave(
+                    id = java.util.UUID.randomUUID().toString(),
+                    gameType = "klontausch",
+                    difficulty = difficulty,
+                    gameState = Json.encodeToString(KlontauschSaveState(st, myTargetIds, aiTargets)),
+                    displayLabel = "KI · $aiCount Gegner · Zug ${st.turnIndex}",
+                    savedAt = System.currentTimeMillis(),
+                ))
+            }
+        }
+        activity?.lifecycle?.addObserver(callback)
+        onDispose { activity?.lifecycle?.removeObserver(callback) }
+    }
 
     fun addKlonEvent(text: String, type: KlonEventType) {
         eventList.add(0, Pair(text, type))
@@ -131,7 +157,7 @@ fun KlontauschGameScreen(
 
     // ── Initialize AI game ────────────────────────────────────────────────────
     LaunchedEffect(Unit) {
-        if (mode != "AI") return@LaunchedEffect
+        if (mode != "AI" || saveId != null) return@LaunchedEffect
         try {
             val user = db.collection("users").document(uid).get().await()
             val displayName = user.getString("displayName") ?: "Du"
@@ -157,6 +183,19 @@ fun KlontauschGameScreen(
                 status    = "PLAYING",
                 adminId   = uid,
             )
+        } catch (_: Exception) {}
+    }
+
+    // ── Restore from save (AI mode) ───────────────────────────────────────────
+    LaunchedEffect(saveId) {
+        if (saveId == null || mode != "AI") return@LaunchedEffect
+        val save = SoloGameSaveManager.getGameSave(context, "klontausch")
+        if (save == null || save.id != saveId) return@LaunchedEffect
+        try {
+            val restored = Json.decodeFromString<KlontauschSaveState>(save.gameState)
+            gameState = restored.gameState
+            myTargetIds = restored.myTargetIds
+            aiTargets = restored.aiTargets
         } catch (_: Exception) {}
     }
 
@@ -272,6 +311,7 @@ fun KlontauschGameScreen(
     LaunchedEffect(gameState?.status) {
         if (gameState?.status == "FINISHED") {
             audio.stopMusic()
+            SoloGameSaveManager.deleteGameSave(context, "klontausch")
             showWinDialog = true
         }
     }
@@ -416,13 +456,39 @@ fun KlontauschGameScreen(
     }
 
     if (showQuitDialog) {
-        GameSaveQuitDialog(
-            emoji = "🃏",
-            message = "Klontausch · ${gameState?.players?.size ?: 0} Spieler",
-            onContinue = { showQuitDialog = false },
-            onSaveAndQuit = { showQuitDialog = false; onNavigateBack() },
-            onQuitWithoutSave = { showQuitDialog = false; onNavigateBack() },
-        )
+        val st = gameState
+        if (mode == "AI" && st != null) {
+            GameSaveQuitDialog(
+                emoji = "🃏",
+                message = "KI · $aiCount Gegner · Zug ${st.turnIndex}",
+                onContinue = { showQuitDialog = false },
+                onSaveAndQuit = {
+                    SoloGameSaveManager.saveGame(context, GameSave(
+                        id = java.util.UUID.randomUUID().toString(),
+                        gameType = "klontausch",
+                        difficulty = difficulty,
+                        gameState = Json.encodeToString(KlontauschSaveState(st, myTargetIds, aiTargets)),
+                        displayLabel = "KI · $aiCount Gegner · Zug ${st.turnIndex}",
+                        savedAt = System.currentTimeMillis(),
+                    ))
+                    showQuitDialog = false
+                    onNavigateBack()
+                },
+                onQuitWithoutSave = {
+                    SoloGameSaveManager.deleteGameSave(context, "klontausch")
+                    showQuitDialog = false
+                    onNavigateBack()
+                },
+            )
+        } else {
+            GameSaveQuitDialog(
+                emoji = "🃏",
+                message = "Klontausch verlassen?",
+                onContinue = { showQuitDialog = false },
+                onSaveAndQuit = { showQuitDialog = false; onNavigateBack() },
+                onQuitWithoutSave = { showQuitDialog = false; onNavigateBack() },
+            )
+        }
     }
 
     val st = gameState

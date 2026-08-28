@@ -43,6 +43,7 @@ data class KlonPlayerState(
     val isEliminated: Boolean = false,
 )
 
+@Serializable
 data class KlonGameState(
     val players: Map<String, KlonPlayerState> = emptyMap(),
     val playerIds: List<String> = emptyList(),
@@ -51,6 +52,13 @@ data class KlonGameState(
     val status: String = "LOBBY",    // "LOBBY" | "PLAYING" | "FINISHED"
     val winnerId: String = "",
     val adminId: String = "",
+)
+
+@Serializable
+data class KlontauschSaveState(
+    val gameState: KlonGameState,
+    val myTargetIds: List<String>,
+    val aiTargets: Map<String, List<String>>,
 )
 
 // ── Setup helpers ────────────────────────────────────────────────────────────

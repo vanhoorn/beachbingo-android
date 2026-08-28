@@ -3,6 +3,7 @@ package com.bestfriends.beachbingo.feature.mahjong.ui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.absoluteOffset
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -97,6 +98,14 @@ fun MahjongBoardView(
             computeMetrics(tiles, containerW, containerH)
         }
 
+        val initialPan = remember(metrics) {
+            if (metrics.initialZoom >= 1f) Offset.Zero
+            else Offset(
+                x = containerW / 2f * (1f - metrics.initialZoom),
+                y = containerH / 2f * (1f - metrics.initialZoom),
+            )
+        }
+
         val minCol = remember(tiles) { if (active.isEmpty()) 0 else active.minOf { it.col } }
         val minRow = remember(tiles) { if (active.isEmpty()) 0 else active.minOf { it.row } }
 
@@ -115,6 +124,7 @@ fun MahjongBoardView(
         ZoomableGrid(
             modifier = Modifier.fillMaxSize(),
             initialZoom = metrics.initialZoom,
+            initialPan = initialPan,
             onTap = { gx, gy ->
                 val hit = sorted.lastOrNull { tile ->
                     if (tile.removed) return@lastOrNull false

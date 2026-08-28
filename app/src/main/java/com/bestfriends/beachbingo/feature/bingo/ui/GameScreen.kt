@@ -633,47 +633,61 @@ private fun EliminationDialog(
 
 // ── Drum animation (Lostrommel) ────────────────────────────────────────────
 
+private fun bingoLetter(n: Int) = when {
+    n <= 15 -> "B"
+    n <= 30 -> "I"
+    n <= 45 -> "N"
+    n <= 60 -> "G"
+    else    -> "O"
+}
+
 @Composable
 private fun DrumAnimation(modifier: Modifier = Modifier) {
     val infiniteTransition = rememberInfiniteTransition(label = "drum")
 
-    // Äußerer Ring dreht sich
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f, targetValue = 360f,
         animationSpec = infiniteRepeatable(tween(2000, easing = LinearEasing)),
         label = "drum_rotation"
     )
-    // Innerer Ring dreht sich entgegengesetzt
     val rotationInner by infiniteTransition.animateFloat(
         initialValue = 0f, targetValue = -360f,
         animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing)),
         label = "drum_inner"
     )
-    // Ball hüpft (CSS keyframes nachgebaut)
+    val orbitAngle by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing)),
+        label = "orbit"
+    )
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.38f, targetValue = 0.72f,
+        animationSpec = infiniteRepeatable(tween(1500), repeatMode = RepeatMode.Reverse),
+        label = "glow"
+    )
     val bounceY by infiniteTransition.animateFloat(
         initialValue = 0f, targetValue = 0f,
         animationSpec = infiniteRepeatable(
             keyframes {
                 durationMillis = 600
-                0f    at 0
-                -14f  at 180
-                4f    at 360
-                -6f   at 480
-                0f    at 600
+                0f   at 0
+                -16f at 180
+                5f   at 360
+                -7f  at 480
+                0f   at 600
             }
         ),
         label = "ball_bounce"
     )
-    // Zahl blendet aus/ein
     val numberAlpha by infiniteTransition.animateFloat(
         initialValue = 1f, targetValue = 1f,
         animationSpec = infiniteRepeatable(
             keyframes {
                 durationMillis = 250
-                1f  at 0
-                0f  at 100
-                0f  at 110
-                1f  at 250
+                1f at 0
+                0f at 100
+                0f at 110
+                1f at 250
             }
         ),
         label = "number_alpha"
@@ -687,41 +701,53 @@ private fun DrumAnimation(modifier: Modifier = Modifier) {
         }
     }
 
-    val primary  = MaterialTheme.colorScheme.primary
-    val secondary = MaterialTheme.colorScheme.secondary   // SandGold
+    val primary   = MaterialTheme.colorScheme.primary
+    val secondary = MaterialTheme.colorScheme.secondary
 
     Box(
-        modifier = modifier.size(160.dp),
-        contentAlignment = Alignment.Center
+        modifier = modifier.size(260.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        // Äußerer drehender Ring mit Segmenten
         Canvas(modifier = Modifier.fillMaxSize()) {
             val cx = size.width / 2f
             val cy = size.height / 2f
-            val outerR = size.minDimension / 2f - 4.dp.toPx()
+            val outerR = 100.dp.toPx()           // fixed; drum diameter = 200dp
+            val orbitR = outerR + 22.dp.toPx()   // 122dp; max ball pos 130+122+7 < 260dp/2
 
-            // Glow-Ringe
+            // Pulsierender Glow
             for (i in 3 downTo 1) {
                 drawCircle(
-                    color = primary.copy(alpha = 0.06f * i),
-                    radius = outerR + i * 4.dp.toPx(),
+                    color = primary.copy(alpha = glowAlpha * 0.08f * i),
+                    radius = outerR + i * 5.dp.toPx(),
                     center = Offset(cx, cy),
-                    style = Stroke(width = 3.dp.toPx())
+                    style = Stroke(width = 3.5f.dp.toPx())
                 )
             }
 
-            // Rotierende Segmente
+            // Äußerer drehender Ring: Segmente + Speichen + Außenring
             rotate(rotation, Offset(cx, cy)) {
                 val segAngle = 20f
                 repeat(18) { i ->
                     drawArc(
-                        color = primary.copy(alpha = if (i % 2 == 0) 0.15f else 0f),
+                        color = primary.copy(alpha = if (i % 2 == 0) 0.13f else 0f),
                         startAngle = i * segAngle,
                         sweepAngle = segAngle,
                         useCenter = false,
                         topLeft = Offset(cx - outerR, cy - outerR),
                         size = Size(outerR * 2, outerR * 2),
-                        style = Stroke(width = outerR * 0.30f)
+                        style = Stroke(width = outerR * 0.28f)
+                    )
+                }
+                // Käfig-Speichen
+                for (i in 0..3) {
+                    val a = (i * 45.0 * PI / 180.0).toFloat()
+                    val dx = cos(a) * outerR
+                    val dy = sin(a) * outerR
+                    drawLine(
+                        color = primary.copy(alpha = 0.22f),
+                        start = Offset(cx - dx, cy - dy),
+                        end   = Offset(cx + dx, cy + dy),
+                        strokeWidth = 2.dp.toPx(),
                     )
                 }
                 drawCircle(
@@ -733,44 +759,75 @@ private fun DrumAnimation(modifier: Modifier = Modifier) {
             }
 
             // Innerer Gegenring
-            val innerR = outerR - 16.dp.toPx()
+            val innerR = outerR - 20.dp.toPx()
             rotate(-rotationInner, Offset(cx, cy)) {
                 drawCircle(
-                    color = primary.copy(alpha = 0.25f),
+                    color = primary.copy(alpha = 0.30f),
                     radius = innerR,
                     center = Offset(cx, cy),
                     style = Stroke(width = 2.dp.toPx())
                 )
             }
+
+            // Orbiting Mini-Bälle (5 Stück)
+            repeat(5) { i ->
+                val a = ((orbitAngle.toDouble() + i * 72.0) * PI / 180.0)
+                val bx = cx + cos(a).toFloat() * orbitR
+                val by_ = cy + sin(a).toFloat() * orbitR
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colorStops = arrayOf(
+                            0.00f to Color.White,
+                            0.45f to secondary,
+                            1.00f to SandGoldDark,
+                        ),
+                        center = Offset(bx - 3.dp.toPx(), by_ - 3.dp.toPx()),
+                        radius = 8.dp.toPx(),
+                    ),
+                    radius = 7.dp.toPx(),
+                    center = Offset(bx, by_),
+                )
+            }
         }
 
-        // Goldener Ball
+        // Goldener Ball mit BINGO-Buchstabe
         Box(
             modifier = Modifier
-                .size(112.dp)
+                .size(140.dp)
                 .offset(y = bounceY.dp)
                 .clip(CircleShape)
                 .background(
                     Brush.radialGradient(
                         colorStops = arrayOf(
                             0.00f to Color.White,
-                            0.20f to secondary.copy(alpha = 0.9f),
-                            0.55f to secondary,
-                            1.00f to SandGoldDark
+                            0.18f to secondary.copy(alpha = 0.9f),
+                            0.52f to secondary,
+                            1.00f to SandGoldDark,
                         ),
-                        center = Offset(40f, 34f),
-                        radius = 120f
+                        center = Offset(50f, 42f),
+                        radius = 150f,
                     )
                 ),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = displayNumber.toString(),
-                fontSize = MaterialTheme.typography.headlineLarge.fontSize,
-                fontWeight = FontWeight.Black,
-                color = BgDark,
-                modifier = Modifier.alpha(numberAlpha)
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.alpha(numberAlpha),
+            ) {
+                Text(
+                    text = bingoLetter(displayNumber),
+                    fontSize = StatusTiny,
+                    fontWeight = FontWeight.Black,
+                    color = BgDark.copy(alpha = 0.6f),
+                    letterSpacing = 1.sp,
+                )
+                Text(
+                    text = displayNumber.toString(),
+                    fontSize = MaterialTheme.typography.headlineLarge.fontSize,
+                    fontWeight = FontWeight.Black,
+                    color = BgDark,
+                )
+            }
         }
     }
 }

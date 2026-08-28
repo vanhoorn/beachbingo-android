@@ -241,7 +241,7 @@ fun WortWelleLobbyScreen(
                                 modifier = Modifier
                                     .border(1.dp, CyanBright.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                                     .clickable { onNavigateToGame(save.difficulty, false, "", "", save.id) }
-                            ) { Text("→", fontSize = MaterialTheme.typography.labelLarge.fontSize, fontWeight = FontWeight.Bold, color = CyanBright, modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)) }
+                            ) { Text("Fortsetzen", fontSize = MaterialTheme.typography.labelLarge.fontSize, fontWeight = FontWeight.Bold, color = CyanBright, modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)) }
                             Spacer(Modifier.width(8.dp))
                             Surface(
                                 shape = RoundedCornerShape(8.dp), color = Danger.copy(alpha = 0.1f),

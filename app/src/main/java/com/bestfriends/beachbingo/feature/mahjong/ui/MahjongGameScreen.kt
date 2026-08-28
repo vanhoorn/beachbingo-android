@@ -130,6 +130,7 @@ fun MahjongGameScreen(
     // ── Win-Handling ─────────────────────────────────────────────────────────
     LaunchedEffect(state.won) {
         if (!state.won) return@LaunchedEffect
+        audio.stopMusic()
         SoloGameSaveManager.deleteSave(context, saveIdRef)
         if (diff == MahjongDifficulty.BOSS) {
             val prevBest = SoloGameSaveManager.getBestTime(context, "mahjong", layoutId.name, diff.name)
@@ -142,6 +143,10 @@ fun MahjongGameScreen(
                 } catch (_: Exception) {}
             }
         }
+    }
+
+    LaunchedEffect(state.gameOver) {
+        if (state.gameOver) audio.stopMusic()
     }
 
     Scaffold(

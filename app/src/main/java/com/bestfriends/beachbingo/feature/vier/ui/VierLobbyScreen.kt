@@ -469,7 +469,7 @@ fun VierLobbyScreen(
                             modifier = Modifier.padding(4.dp),
                         ) {
                             QrCodeImage(
-                                content = "https://thebeachbingo.netlify.app/vier/lobby?join=${uiState.gameCode}",
+                                content = "https://beachbande.de/vier/lobby?join=${uiState.gameCode}",
                                 size = 160.dp,
                             )
                         }

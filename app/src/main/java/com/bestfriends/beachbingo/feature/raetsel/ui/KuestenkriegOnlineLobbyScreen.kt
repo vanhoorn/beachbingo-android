@@ -145,7 +145,7 @@ fun KuestenkriegOnlineLobbyScreen(
                         shape = RoundedCornerShape(8.dp),
                     ) { Text("📋 Kopieren", fontSize = MaterialTheme.typography.labelMedium.fontSize, color = TextPrimary) }
                     Surface(shape = RoundedCornerShape(12.dp), color = Color.White, modifier = Modifier.padding(4.dp)) {
-                        QrCodeImage(content = "https://beachbande.de/join?code=$gameCode", size = 160.dp)
+                        QrCodeImage(content = "https://beachbande.de/raetsel/kuestenkrieg/lobby?join=$gameCode", size = 160.dp)
                     }
                     Text(
                         "QR-Code scannen oder Code eingeben",

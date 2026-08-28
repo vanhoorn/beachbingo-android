@@ -28,6 +28,7 @@ import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import org.json.JSONArray
 import org.json.JSONObject
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.tasks.await
@@ -158,8 +159,33 @@ private fun rectsOverlap(ax: Float, ay: Float, aw: Float, ah: Float,
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
-private fun serializePirates(gs: GameState): String =
-    JSONObject().put("score", gs.score).put("lives", gs.lives).put("wave", gs.wave).toString()
+private fun serializePirates(gs: GameState): String {
+    val invArr = JSONArray()
+    gs.invaders.forEach { inv ->
+        invArr.put(JSONObject()
+            .put("col", inv.col).put("row", inv.row)
+            .put("alive", inv.alive)
+            .put("x", inv.x.toDouble()).put("y", inv.y.toDouble()))
+    }
+    val shieldsArr = JSONArray()
+    gs.shields.forEach { shield ->
+        val shieldRows = JSONArray()
+        for (r in 0 until SHIELD_ROWS) {
+            val rowArr = JSONArray()
+            for (c in 0 until SHIELD_COLS) rowArr.put(shield.blocks[r][c])
+            shieldRows.put(rowArr)
+        }
+        shieldsArr.put(shieldRows)
+    }
+    return JSONObject()
+        .put("score", gs.score).put("lives", gs.lives).put("wave", gs.wave)
+        .put("playerX", gs.playerX.toDouble())
+        .put("groupDir", gs.groupDir)
+        .put("moveAccumMs", gs.moveAccumMs.toDouble())
+        .put("invaders", invArr)
+        .put("shields", shieldsArr)
+        .toString()
+}
 
 @Composable
 fun PiratesGameScreen(
@@ -189,7 +215,7 @@ fun PiratesGameScreen(
 
     BackHandler { paused = true; showQuitDialog = true }
 
-    // Restore checkpoint save (score + lives + wave)
+    // Restore saved game state
     LaunchedEffect(saveId) {
         if (saveId != null) {
             val save = SoloGameSaveManager.getGameSave(context, "pirates")
@@ -199,6 +225,41 @@ fun PiratesGameScreen(
                 gs.lives = obj.getInt("lives")
                 gs.wave  = obj.getInt("wave")
                 gs.initWave()
+                // Restore full runtime state
+                gs.playerX     = obj.optDouble("playerX", gs.playerX.toDouble()).toFloat()
+                gs.groupDir    = obj.optInt("groupDir", gs.groupDir)
+                gs.moveAccumMs = obj.optDouble("moveAccumMs", 0.0).toFloat()
+                val invArr = obj.optJSONArray("invaders")
+                if (invArr != null) {
+                    val invMap = HashMap<Pair<Int,Int>, JSONObject>(invArr.length())
+                    for (i in 0 until invArr.length()) {
+                        val o = invArr.getJSONObject(i)
+                        invMap[o.getInt("col") to o.getInt("row")] = o
+                    }
+                    gs.invaders.forEach { inv ->
+                        invMap[inv.col to inv.row]?.let { o ->
+                            inv.alive = o.getBoolean("alive")
+                            inv.x = o.optDouble("x", inv.x.toDouble()).toFloat()
+                            inv.y = o.optDouble("y", inv.y.toDouble()).toFloat()
+                        }
+                    }
+                }
+                val shieldsArr = obj.optJSONArray("shields")
+                if (shieldsArr != null) {
+                    gs.shields.forEachIndexed { i, shield ->
+                        if (i < shieldsArr.length()) {
+                            val rows = shieldsArr.getJSONArray(i)
+                            for (r in shield.blocks.indices) {
+                                if (r < rows.length()) {
+                                    val rowArr = rows.getJSONArray(r)
+                                    for (c in shield.blocks[r].indices) {
+                                        if (c < rowArr.length()) shield.blocks[r][c] = rowArr.getBoolean(c)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             } catch (_: Exception) {}
         }
     }
@@ -210,6 +271,24 @@ fun PiratesGameScreen(
         musicStarted = true
     }
     DisposableEffect(Unit) { onDispose { audio.release() } }
+    DisposableEffect(Unit) {
+        val activity = context as? androidx.activity.ComponentActivity
+        val callback = object : androidx.lifecycle.DefaultLifecycleObserver {
+            override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
+                if (gs.phase == Phase.GAME_OVER) return
+                SoloGameSaveManager.saveGame(context, GameSave(
+                    id = SoloGameSaveManager.generateId(),
+                    gameType = "pirates",
+                    difficulty = difficulty,
+                    gameState = serializePirates(gs),
+                    displayLabel = "Score: ${gs.score} · Welle: ${gs.wave} · Leben: ${gs.lives}",
+                    savedAt = System.currentTimeMillis(),
+                ))
+            }
+        }
+        activity?.lifecycle?.addObserver(callback)
+        onDispose { activity?.lifecycle?.removeObserver(callback) }
+    }
     LaunchedEffect(paused) {
         if (!musicStarted) return@LaunchedEffect
         if (paused) audio.stopMusic() else if (gs.phase == Phase.PLAYING) audio.startMusic()

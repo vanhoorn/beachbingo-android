@@ -21,12 +21,13 @@ import androidx.compose.ui.input.pointer.pointerInput
 fun ZoomableGrid(
     modifier: Modifier = Modifier,
     initialZoom: Float = 1f,
+    initialPan: Offset = Offset.Zero,
     onTap: ((x: Float, y: Float) -> Unit)? = null,
     onLongPress: ((x: Float, y: Float) -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     var zoom by remember { mutableStateOf(initialZoom) }
-    var pan by remember { mutableStateOf(Offset.Zero) }
+    var pan by remember { mutableStateOf(initialPan) }
     // rememberUpdatedState ensures the coroutines below always call the latest lambda,
     // even though pointerInput(Unit) coroutines are not restarted on recomposition.
     val onTapRef = rememberUpdatedState(onTap)
@@ -53,7 +54,7 @@ fun ZoomableGrid(
             }
             .pointerInput(Unit) {
                 detectTapGestures(
-                    onDoubleTap = { zoom = initialZoom; pan = Offset.Zero },
+                    onDoubleTap = { zoom = initialZoom; pan = initialPan },
                     onTap = { raw ->
                         val gx = (raw.x - pan.x) / zoom
                         val gy = (raw.y - pan.y) / zoom

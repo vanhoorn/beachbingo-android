@@ -282,6 +282,24 @@ fun WormGameScreen(
         musicStarted = true
     }
     DisposableEffect(Unit) { onDispose { audio.release() } }
+    DisposableEffect(Unit) {
+        val activity = context as? androidx.activity.ComponentActivity
+        val callback = object : androidx.lifecycle.DefaultLifecycleObserver {
+            override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
+                if (gs.dead) return
+                SoloGameSaveManager.saveGame(context, GameSave(
+                    id = SoloGameSaveManager.generateId(),
+                    gameType = "worm",
+                    difficulty = difficulty,
+                    gameState = serializeWorm(gs),
+                    displayLabel = "Score: ${gs.score} · Länge: ${gs.length}",
+                    savedAt = System.currentTimeMillis(),
+                ))
+            }
+        }
+        activity?.lifecycle?.addObserver(callback)
+        onDispose { activity?.lifecycle?.removeObserver(callback) }
+    }
     LaunchedEffect(paused) {
         if (!musicStarted) return@LaunchedEffect
         if (paused) audio.stopMusic() else audio.startMusic()

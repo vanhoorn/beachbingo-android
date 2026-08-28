@@ -849,6 +849,26 @@ fun BrandungGameScreen(
     var abandonedByOpponent by remember { mutableStateOf(false) }
     var abandonedPlayerName by remember { mutableStateOf("") }
 
+    DisposableEffect(Unit) {
+        val activity = context as? androidx.activity.ComponentActivity
+        val callback = object : androidx.lifecycle.DefaultLifecycleObserver {
+            override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
+                val st = localState ?: return
+                if (mode != "ai" || st.phase == "GAME_OVER") return
+                SoloGameSaveManager.saveGame(context, GameSave(
+                    id = java.util.UUID.randomUUID().toString(),
+                    gameType = "brandung",
+                    difficulty = difficulty,
+                    gameState = Json.encodeToString(st.copy(aiThinking = false)),
+                    displayLabel = "Runde ${st.round} · ${st.players.size} Spieler · ${st.players.firstOrNull()?.lives ?: 0}♥",
+                    savedAt = System.currentTimeMillis(),
+                ))
+            }
+        }
+        activity?.lifecycle?.addObserver(callback)
+        onDispose { activity?.lifecycle?.removeObserver(callback) }
+    }
+
     BackHandler { showQuitDialog = true }
 
     // ── Restore from save ──────────────────────────────────────────────────────
@@ -1104,6 +1124,7 @@ fun BrandungGameScreen(
     LaunchedEffect(state?.phase, state?.winnerId) {
         val s = localState ?: return@LaunchedEffect
         if (s.phase != "GAME_OVER" || s.winnerId == null) return@LaunchedEffect
+        audio.stopMusic()
         if (mode == "ai" && uid.isNotBlank()) {
             try {
                 val resultData = mapOf(

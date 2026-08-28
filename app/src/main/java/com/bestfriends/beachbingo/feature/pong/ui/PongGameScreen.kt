@@ -27,6 +27,9 @@ import androidx.compose.material3.Text
 import com.bestfriends.beachbingo.ui.components.GameHudBar
 import androidx.activity.compose.BackHandler
 import com.bestfriends.beachbingo.ui.components.QuitConfirmDialog
+import com.bestfriends.beachbingo.ui.components.GameSaveQuitDialog
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
+import com.bestfriends.beachbingo.feature.raetsel.GameSave
 import kotlinx.coroutines.tasks.await
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -103,9 +106,25 @@ fun PongGameScreen(
     viewModel: PongGameViewModel = hiltViewModel()
 ) {
     val diff = runCatching { PongDifficulty.valueOf(difficulty) }.getOrDefault(PongDifficulty.ROOKIE)
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     LaunchedEffect(gameId) {
         viewModel.init(gameId, totalPaddles, humanCount, diff, scoreLimit, isHost, mySide)
+        if (humanCount == 1 && gameId == null) {
+            val save = SoloGameSaveManager.getGameSave(context, "pong")
+            if (save != null) {
+                try {
+                    val obj = org.json.JSONObject(save.gameState)
+                    viewModel.restoreScores(
+                        scoreLeft = obj.optInt("scoreLeft", 0),
+                        scoreRight = obj.optInt("scoreRight", 0),
+                        scoreTop = obj.optInt("scoreTop", 0),
+                        scoreBottom = obj.optInt("scoreBottom", 0),
+                        wallSide = obj.optString("wallSide", "").takeIf { it.isNotEmpty() },
+                    )
+                } catch (_: Exception) { }
+            }
+        }
     }
 
     val gs by viewModel.gs.collectAsStateWithLifecycle()
@@ -130,7 +149,6 @@ fun PongGameScreen(
     val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid
 
-    val context = androidx.compose.ui.platform.LocalContext.current
     val audio = remember { PongAudioManager(context) }
     var musicStarted by remember { mutableStateOf(false) }
 
@@ -142,6 +160,35 @@ fun PongGameScreen(
     }
     DisposableEffect(Unit) {
         onDispose { audio.release() }
+    }
+    DisposableEffect(Unit) {
+        val activity = context as? androidx.activity.ComponentActivity
+        val observer = object : androidx.lifecycle.DefaultLifecycleObserver {
+            override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
+                if (humanCount != 1 || gameId != null) return
+                if (viewModel.loserSide.value != null) return
+                val g = viewModel.gs.value
+                SoloGameSaveManager.saveGame(context, GameSave(
+                    id = SoloGameSaveManager.generateId(),
+                    gameType = "pong",
+                    difficulty = difficulty,
+                    gameState = org.json.JSONObject()
+                        .put("scoreLeft", g.scoreLeft)
+                        .put("scoreRight", g.scoreRight)
+                        .put("scoreTop", g.scoreTop)
+                        .put("scoreBottom", g.scoreBottom)
+                        .put("wallSide", g.wallSide)
+                        .put("totalPaddles", totalPaddles)
+                        .put("humanCount", humanCount)
+                        .put("scoreLimit", scoreLimit)
+                        .toString(),
+                    displayLabel = "${g.scoreLeft}:${g.scoreRight} · Ziel: $scoreLimit",
+                    savedAt = System.currentTimeMillis()
+                ))
+            }
+        }
+        activity?.lifecycle?.addObserver(observer)
+        onDispose { activity?.lifecycle?.removeObserver(observer) }
     }
     LaunchedEffect(manualPaused) {
         if (!musicStarted) return@LaunchedEffect
@@ -356,12 +403,45 @@ fun PongGameScreen(
         }
 
         if (showQuitDialog) {
-            QuitConfirmDialog(
-                emoji = "🏓",
-                message = "Das laufende Spiel wird beendet.",
-                onConfirm = { onNavigateToLobby() },
-                onDismiss = { showQuitDialog = false; manualPaused = false },
-            )
+            if (humanCount == 1 && gameId == null && loserSide == null) {
+                GameSaveQuitDialog(
+                    emoji = "🏓",
+                    message = "${gs.scoreLeft}:${gs.scoreRight} · Ziel: $scoreLimit",
+                    onContinue = { showQuitDialog = false; manualPaused = false },
+                    onSaveAndQuit = {
+                        val g = viewModel.gs.value
+                        SoloGameSaveManager.saveGame(context, GameSave(
+                            id = SoloGameSaveManager.generateId(),
+                            gameType = "pong",
+                            difficulty = difficulty,
+                            gameState = org.json.JSONObject()
+                                .put("scoreLeft", g.scoreLeft)
+                                .put("scoreRight", g.scoreRight)
+                                .put("scoreTop", g.scoreTop)
+                                .put("scoreBottom", g.scoreBottom)
+                                .put("wallSide", g.wallSide)
+                                .put("totalPaddles", totalPaddles)
+                                .put("humanCount", humanCount)
+                                .put("scoreLimit", scoreLimit)
+                                .toString(),
+                            displayLabel = "${g.scoreLeft}:${g.scoreRight} · Ziel: $scoreLimit",
+                            savedAt = System.currentTimeMillis()
+                        ))
+                        onNavigateToLobby()
+                    },
+                    onQuitWithoutSave = {
+                        SoloGameSaveManager.deleteGameSave(context, "pong")
+                        onNavigateToLobby()
+                    },
+                )
+            } else {
+                QuitConfirmDialog(
+                    emoji = "🏓",
+                    message = "Das laufende Spiel wird beendet.",
+                    onConfirm = { onNavigateToLobby() },
+                    onDismiss = { showQuitDialog = false; manualPaused = false },
+                )
+            }
         }
 
         // ── Host-disconnect overlay (guest only) ─────────────────────────────

@@ -1,6 +1,7 @@
 package com.bestfriends.beachbingo.core.model
 
 enum class PlayerCount(val label: String) {
+    SOLO("Solo"),
     ONE_TWO("1-2 Spieler"),
     TWO_FOUR("2-4 Spieler"),
     FOUR_PLUS("4+ Spieler"),
@@ -59,7 +60,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "BeachPirates",
         description = "Verteidige den Strand! Besiege Quallen, Muscheln und Fische.",
         color = 0xFFA855F7,
-        playerCounts = listOf(PlayerCount.ONE_TWO),
+        playerCounts = listOf(PlayerCount.SOLO),
         genres = listOf(GameGenre.ACTION),
     ),
     GameMetadata(
@@ -68,7 +69,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "Wattwurm",
         description = "Frisst Krabben, Muscheln und Fische. Werde nie die Grenzen!",
         color = 0xFF22C55E,
-        playerCounts = listOf(PlayerCount.ONE_TWO),
+        playerCounts = listOf(PlayerCount.SOLO),
         genres = listOf(GameGenre.COUCH),
     ),
     GameMetadata(
@@ -77,7 +78,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "Strandturm",
         description = "Klettere den Pier hoch, weiche Kokosnüssen aus — bis zum Gipfel!",
         color = 0xFFDC2626,
-        playerCounts = listOf(PlayerCount.ONE_TWO),
+        playerCounts = listOf(PlayerCount.SOLO),
         genres = listOf(GameGenre.ACTION),
     ),
     GameMetadata(
@@ -113,7 +114,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "GezeitenSteine",
         description = "Mahjong Solitaire am Strand — entferne alle Steine durch Paare.",
         color = 0xFFD4A820,
-        playerCounts = listOf(PlayerCount.ONE_TWO),
+        playerCounts = listOf(PlayerCount.SOLO),
         genres = listOf(GameGenre.COUCH, GameGenre.LOGICAL),
     ),
     // ── Rätsel-Spiele ──────────────────────────────────────────────────────────
@@ -123,7 +124,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "Strandoku",
         description = "Das meistgespielte Logikrätsel der Welt — 6 Varianten von Classic bis Samurai.",
         color = 0xFF38BDF8,
-        playerCounts = listOf(PlayerCount.ONE_TWO),
+        playerCounts = listOf(PlayerCount.SOLO),
         genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
     ),
     GameMetadata(
@@ -132,7 +133,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "WellenSumme",
         description = "Kreuzworträtsel mit Zahlen — Blöcke addieren sich zur angegebenen Summe.",
         color = 0xFFC084FC,
-        playerCounts = listOf(PlayerCount.ONE_TWO),
+        playerCounts = listOf(PlayerCount.SOLO),
         genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
     ),
     GameMetadata(
@@ -150,7 +151,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "DünenSchatten",
         description = "Schwärze Felder ein — das japanische Zahlen-Ausschluss-Rätsel.",
         color = 0xFFFBBF24,
-        playerCounts = listOf(PlayerCount.ONE_TWO),
+        playerCounts = listOf(PlayerCount.SOLO),
         genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
     ),
     GameMetadata(
@@ -159,7 +160,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "Inselbrücke",
         description = "Verbinde alle Inseln mit Brücken — das japanische Hashi-Rätsel.",
         color = 0xFF4ADE80,
-        playerCounts = listOf(PlayerCount.ONE_TWO),
+        playerCounts = listOf(PlayerCount.SOLO),
         genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
     ),
     GameMetadata(
@@ -168,7 +169,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "WortWelle",
         description = "Errate das deutsche Wort in wenigen Versuchen — Wordle auf Deutsch mit Hard Mode.",
         color = 0xFF06B6D4,
-        playerCounts = listOf(PlayerCount.ONE_TWO),
+        playerCounts = listOf(PlayerCount.SOLO),
         genres = listOf(GameGenre.RIDDLE, GameGenre.LOGICAL),
     ),
     GameMetadata(
@@ -177,7 +178,7 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "Perlentaucher",
         description = "Match-3 Puzzle mit Meeresschätzen — tauche tief und sammle Perlen!",
         color = 0xFF0EA5E9,
-        playerCounts = listOf(PlayerCount.ONE_TWO),
+        playerCounts = listOf(PlayerCount.SOLO),
         genres = listOf(GameGenre.COUCH, GameGenre.LOGICAL),
     ),
     // ── Klontausch ─────────────────────────────────────────────────────────────
@@ -197,11 +198,12 @@ val ALL_GAMES: List<GameMetadata> = listOf(
         title = "Sonnenrad",
         description = "Enthülle Muschelfelder und erklimme die Bonusleiter! Einmal täglich gratis.",
         color = 0xFFD4A820,
-        playerCounts = listOf(PlayerCount.ONE_TWO),
+        playerCounts = listOf(PlayerCount.SOLO),
         genres = listOf(GameGenre.COUCH),
     ),
 )
 
+val SOLO_GAMES: List<GameMetadata>   = ALL_GAMES.filter { PlayerCount.SOLO  in it.playerCounts }
 val CARD_GAMES: List<GameMetadata>   = ALL_GAMES.filter { GameGenre.CARD   in it.genres }
 val RIDDLE_GAMES: List<GameMetadata> = ALL_GAMES.filter { GameGenre.RIDDLE in it.genres }
 val ACTION_GAMES: List<GameMetadata> = ALL_GAMES.filter { GameGenre.ACTION in it.genres }

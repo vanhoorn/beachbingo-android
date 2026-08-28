@@ -646,6 +646,26 @@ fun StrandraeuberGameScreen(
     var selectedCardIndex by remember { mutableIntStateOf(-1) }
     var showLoser by remember { mutableStateOf(false) }
 
+    DisposableEffect(Unit) {
+        val activity = context as? androidx.activity.ComponentActivity
+        val callback = object : androidx.lifecycle.DefaultLifecycleObserver {
+            override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
+                val st = localState ?: return
+                if (mode != "AI" || st.phase == SpPhase.GAME_OVER) return
+                SoloGameSaveManager.saveGame(context, GameSave(
+                    id = java.util.UUID.randomUUID().toString(),
+                    gameType = "strandraeuber",
+                    difficulty = difficulty,
+                    gameState = Json.encodeToString(st.copy(phase = SpPhase.PLAYING, showRoundEnd = false).toSavedState()),
+                    displayLabel = "Runde ${st.roundNumber} · ${st.players.size} Spieler",
+                    savedAt = System.currentTimeMillis(),
+                ))
+            }
+        }
+        activity?.lifecycle?.addObserver(callback)
+        onDispose { activity?.lifecycle?.removeObserver(callback) }
+    }
+
     // ── Restore from save ──────────────────────────────────────────────────────
     LaunchedEffect(saveId) {
         if (saveId == null) return@LaunchedEffect
@@ -945,7 +965,7 @@ fun StrandraeuberGameScreen(
                             modifier = Modifier.padding(4.dp),
                         ) {
                             QrCodeImage(
-                                content = "https://thebeachbingo.netlify.app/strandraeuber/lobby?join=$gameId",
+                                content = "https://beachbande.de/strandraeuber/lobby?join=$gameId",
                                 size = 160.dp,
                             )
                         }

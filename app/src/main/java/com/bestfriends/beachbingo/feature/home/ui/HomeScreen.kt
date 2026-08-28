@@ -114,6 +114,7 @@ private val TOUR_SLIDES = listOf(
 )
 
 private val PLAYER_COUNT_LIST = listOf(
+    PlayerCountEntry(PlayerCount.SOLO,      "Solo",        "🧘"),
     PlayerCountEntry(PlayerCount.ONE_TWO,   "1-2 Spieler", "🤝"),
     PlayerCountEntry(PlayerCount.TWO_FOUR,  "2-4 Spieler", "👥"),
     PlayerCountEntry(PlayerCount.FOUR_PLUS, "4+ Spieler",  "🎉"),
@@ -137,6 +138,7 @@ fun HomeScreen(
     onNavigateToBrandungLobby: () -> Unit,
     onNavigateToMeermauLobby: () -> Unit,
     onNavigateToStrandraeuberLobby: () -> Unit,
+    onNavigateToKlontauschLobby: () -> Unit = {},
     onNavigateToProfile: () -> Unit,
     onNavigateToJoin: () -> Unit,
     onNavigateToCategory: (String) -> Unit,
@@ -360,6 +362,7 @@ fun HomeScreen(
                             "brandung"       -> onNavigateToBrandungLobby()
                             "meermau"        -> onNavigateToMeermauLobby()
                             "strandraeuber"  -> onNavigateToStrandraeuberLobby()
+                            "klontausch"     -> onNavigateToKlontauschLobby()
                             "duenenschatten" -> onNavigateToDuenenschattenLobby()
                             "inselbruecke"   -> onNavigateToInselbrueckeLobby()
                             "strandoku"      -> onNavigateToStrandokuLobby()
@@ -536,15 +539,18 @@ fun HomeScreen(
             modifier = Modifier.padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PLAYER_COUNT_LIST.forEach { entry ->
-                    val gameCount = ALL_GAMES.count { entry.key in it.playerCounts }
-                    CategoryTile(
-                        entry = entry,
-                        gameCount = gameCount,
-                        modifier = Modifier.weight(1f),
-                        onClick = { onNavigateToCategory(entry.key.name) }
-                    )
+            PLAYER_COUNT_LIST.chunked(2).forEach { rowItems ->
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    rowItems.forEach { entry ->
+                        val gameCount = ALL_GAMES.count { entry.key in it.playerCounts }
+                        CategoryTile(
+                            entry = entry,
+                            gameCount = gameCount,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onNavigateToCategory(entry.key.name) }
+                        )
+                    }
+                    if (rowItems.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
         }
@@ -570,6 +576,7 @@ fun HomeScreen(
                         "brandung"      -> onNavigateToBrandungLobby
                         "meermau"       -> onNavigateToMeermauLobby
                         "strandraeuber" -> onNavigateToStrandraeuberLobby
+                        "klontausch"    -> onNavigateToKlontauschLobby
                         else -> ({})
                     }
                     SavedGameHomeCard(

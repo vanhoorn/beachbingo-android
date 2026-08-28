@@ -71,6 +71,9 @@ import com.bestfriends.beachbingo.core.model.PongDifficulty
 import com.bestfriends.beachbingo.core.model.PongGame
 import com.bestfriends.beachbingo.feature.bingo.ui.components.QrCodeImage
 import com.bestfriends.beachbingo.feature.pong.viewmodel.PongLobbyViewModel
+import androidx.compose.ui.platform.LocalContext
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
+import com.bestfriends.beachbingo.feature.home.ui.SavedGameRow
 import androidx.compose.material.icons.outlined.HelpOutline
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
@@ -118,6 +121,9 @@ fun PongLobbyScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val activeGame by viewModel.activeGame.collectAsStateWithLifecycle()
     val currentUid by viewModel.currentUid.collectAsStateWithLifecycle()
+
+    val context = LocalContext.current
+    var saveTick by remember { mutableIntStateOf(0) }
 
     var totalPaddles by rememberSaveable { mutableIntStateOf(2) }
     var humanCount by rememberSaveable { mutableIntStateOf(1) }
@@ -203,7 +209,7 @@ fun PongLobbyScreen(
     val hasAI = humanCount < totalPaddles
     val needsLobby = humanCount > 1
     val canStart = activeGame != null && (activeGame!!.players.size >= activeGame!!.humanCount)
-    val joinUrl = activeGame?.let { "https://thebeachbingo.netlify.app/pong/lobby?join=${it.gameId}" } ?: ""
+    val joinUrl = activeGame?.let { "https://beachbande.de/pong/lobby?join=${it.gameId}" } ?: ""
 
     Scaffold(
         containerColor = BgDark,
@@ -383,9 +389,38 @@ fun PongLobbyScreen(
 
             // ── Solo start ──
             if (!needsLobby) {
+                val pongSave = run { saveTick; SoloGameSaveManager.getGameSave(context, "pong") }
+                if (pongSave != null) {
+                    item {
+                        val saveState = try {
+                            org.json.JSONObject(pongSave.gameState)
+                        } catch (_: Exception) { null }
+                        SavedGameRow(
+                            title = "🏓 Pong",
+                            subtitle = pongSave.displayLabel,
+                            color = androidx.compose.ui.graphics.Color(0xFF0EA5E9),
+                            onResume = {
+                                onNavigateToGame(
+                                    null,
+                                    saveState?.optInt("totalPaddles", totalPaddles) ?: totalPaddles,
+                                    saveState?.optInt("humanCount", humanCount) ?: humanCount,
+                                    pongSave.difficulty,
+                                    saveState?.optInt("scoreLimit", scoreLimit) ?: scoreLimit,
+                                    true,
+                                    "left"
+                                )
+                            },
+                            onDelete = {
+                                SoloGameSaveManager.deleteGameSave(context, "pong")
+                                saveTick++
+                            },
+                        )
+                    }
+                }
                 item {
                     Button(
                         onClick = {
+                            SoloGameSaveManager.deleteGameSave(context, "pong")
                             onNavigateToGame(null, totalPaddles, humanCount, difficulty.name, scoreLimit, true, "left")
                         },
                         modifier = Modifier

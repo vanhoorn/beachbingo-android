@@ -16,10 +16,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.bestfriends.beachbingo.feature.shared.rankEmoji
 import com.bestfriends.beachbingo.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private val KlontauschAccent = Color(0xFF8B5CF6)
 
@@ -34,6 +36,44 @@ private data class KlonResult(
     val createdAt: Long = 0L,
 )
 
+private data class KlonPlayerStat(val wins: Int, val played: Int)
+
+private data class KlonTeam(
+    val key: String,
+    val teamName: String,
+    val playerStats: Map<String, KlonPlayerStat>,
+    val players: List<Triple<String, String, String>>,
+    val games: List<KlonResult>,
+)
+
+private fun buildTeams(games: List<KlonResult>): List<KlonTeam> {
+    val map = mutableMapOf<String, MutableList<KlonResult>>()
+    for (g in games) {
+        val key = g.players.map { it.first }.sorted().joinToString("|")
+        map.getOrPut(key) { mutableListOf() }.add(g)
+    }
+    return map.entries.map { (key, gs) ->
+        val wins   = mutableMapOf<String, Int>()
+        val played = mutableMapOf<String, Int>()
+        for (g in gs) {
+            for ((pId, _, _) in g.players) {
+                played[pId] = (played[pId] ?: 0) + 1
+                if (pId == g.winnerId) wins[pId] = (wins[pId] ?: 0) + 1
+            }
+        }
+        val stats = gs.first().players.associate { (pId, _, _) ->
+            pId to KlonPlayerStat(wins[pId] ?: 0, played[pId] ?: 0)
+        }
+        KlonTeam(
+            key = key,
+            teamName = gs.first().teamName,
+            playerStats = stats,
+            players = gs.first().players,
+            games = gs.sortedByDescending { it.createdAt },
+        )
+    }.sortedByDescending { it.games.first().createdAt }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun KlontauschResultsScreen(
@@ -43,7 +83,7 @@ fun KlontauschResultsScreen(
     val db = FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid
 
-    var results by remember { mutableStateOf<List<KlonResult>>(emptyList()) }
+    var teams by remember { mutableStateOf<List<KlonTeam>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
 
     DisposableEffect(uid) {
@@ -52,7 +92,7 @@ fun KlontauschResultsScreen(
             .whereArrayContains("playerIds", uid)
             .addSnapshotListener { snap, _ ->
                 if (snap != null) {
-                    results = snap.documents.mapNotNull { doc ->
+                    val results = snap.documents.mapNotNull { doc ->
                         val winnerId     = doc.getString("winnerId") ?: return@mapNotNull null
                         val winnerName   = doc.getString("winnerName") ?: ""
                         val winnerAvatar = doc.getString("winnerAvatar") ?: "🃏"
@@ -71,9 +111,9 @@ fun KlontauschResultsScreen(
                                 pm["avatarUrl"] as? String ?: "🃏",
                             )
                         }
-                        val sorted = players.sortedByDescending { it.first == winnerId }
-                        KlonResult(team, winnerId, winnerName, winnerAvatar, sorted, mode, difficulty, createdAt)
+                        KlonResult(team, winnerId, winnerName, winnerAvatar, players, mode, difficulty, createdAt)
                     }.sortedByDescending { it.createdAt }
+                    teams = buildTeams(results)
                 }
                 loading = false
             }
@@ -101,7 +141,7 @@ fun KlontauschResultsScreen(
             return@Scaffold
         }
 
-        if (results.isEmpty()) {
+        if (teams.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("🃏", fontSize = EmojiLarge)
@@ -125,83 +165,102 @@ fun KlontauschResultsScreen(
         ) {
             Spacer(Modifier.height(4.dp))
 
-            results.forEachIndexed { idx, result ->
-                val isFirst = idx == 0
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isFirst) KlontauschAccent.copy(0.08f) else SurfaceDark,
-                    ),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth().border(
-                        1.dp,
-                        if (isFirst) KlontauschAccent.copy(0.5f) else BorderColor,
-                        RoundedCornerShape(16.dp),
-                    ),
-                ) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        // Team name + mode
-                        Row(Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                result.teamName,
-                                color = if (isFirst) KlontauschAccent else TextSub,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.titleSmall,
-                            )
-                            Text(
-                                when (result.mode) {
-                                    "AI" -> "🤖 KI"
-                                    "ONLINE" -> "📱 Online"
-                                    else -> result.mode
-                                } + when (result.difficulty) {
-                                    "ROOKIE" -> " · 🐣"
-                                    "SNIPER" -> " · 🎯"
-                                    "BOSS_LEVEL" -> " · 💀"
-                                    else -> ""
-                                },
-                                color = TextMuted,
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                        }
-
-                        // Winner
-                        Row(verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("🏆", style = MaterialTheme.typography.titleLarge)
-                            Text(result.winnerAvatar, style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                "${result.winnerName} hat gewonnen!",
-                                color = if (isFirst) KlontauschAccent else SandGold,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-
-                        HorizontalDivider(color = BorderColor)
-
-                        // All players
-                        result.players.forEachIndexed { rank, (pId, name, avatar) ->
-                            val isWinner = pId == result.winnerId
-                            val total = result.players.size
-                            Row(verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Text(rankEmoji(rank, rank == total - 1, total),
-                                    color = if (isWinner) SandGold else TextMuted,
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.bodyMedium)
-                                Text(avatar, style = MaterialTheme.typography.titleSmall)
-                                Text(name + if (pId == uid) " (Du)" else "",
-                                    color = if (isWinner) TextPrimary else TextSub,
-                                    fontWeight = if (isWinner) FontWeight.SemiBold else FontWeight.Normal,
-                                    style = MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                    }
-                }
+            teams.forEach { team ->
+                TeamCard(team = team, uid = uid ?: "")
             }
 
             Spacer(Modifier.height(60.dp))
+        }
+    }
+}
+
+@Composable
+private fun TeamCard(team: KlonTeam, uid: String) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, BorderColor, RoundedCornerShape(16.dp)),
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    team.teamName,
+                    color = KlontauschAccent,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    "${team.games.size} Spiel${if (team.games.size != 1) "e" else ""}",
+                    color = TextMuted,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+
+            HorizontalDivider(color = BorderColor)
+
+            team.players.forEach { (pId, name, avatar) ->
+                val stat = team.playerStats[pId] ?: KlonPlayerStat(0, 0)
+                val isMe = pId == uid
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            if (isMe) KlontauschAccent.copy(alpha = 0.08f) else Color.Transparent,
+                            RoundedCornerShape(8.dp),
+                        )
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                ) {
+                    Text(avatar, style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        name + if (isMe) " (Du)" else "",
+                        color = if (isMe) TextPrimary else TextSub,
+                        fontWeight = if (isMe) FontWeight.SemiBold else FontWeight.Normal,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        "${stat.wins} / ${stat.played} Siege",
+                        color = if (stat.wins > 0) SandGold else TextMuted,
+                        fontWeight = if (stat.wins > 0) FontWeight.SemiBold else FontWeight.Normal,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
+            }
+
+            if (team.games.isNotEmpty()) {
+                HorizontalDivider(color = BorderColor.copy(alpha = 0.4f))
+                Text("Letzte Spiele", color = TextMuted, style = MaterialTheme.typography.labelSmall)
+                team.games.take(3).forEach { g ->
+                    val dateStr = SimpleDateFormat("dd.MM.yy", Locale.GERMAN).format(Date(g.createdAt))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Text("🏆", style = MaterialTheme.typography.labelSmall)
+                            Text(
+                                "${g.winnerAvatar} ${g.winnerName}",
+                                color = TextSub,
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
+                        Text(dateStr, color = TextMuted, style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
         }
     }
 }
