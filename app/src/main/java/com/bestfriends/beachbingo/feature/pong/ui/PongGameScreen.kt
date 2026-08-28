@@ -355,7 +355,8 @@ fun PongGameScreen(
                                 val zH = size.height.toFloat()
                                 val frac  = (pos.y / zH).coerceIn(0f, 1f)
                                 val fracX = (pos.x / zW).coerceIn(0f, 1f)
-                                val side = if (humanCount == 1) mySide
+                                val side = if (gameId != null) mySide  // Online: nur eigener Paddle
+                                           else if (humanCount == 1) mySide
                                            else if (pos.x < zW / 2f) "left" else "right"
                                 val isVert = side == "left" || side == "right"
                                 val wallOff = if (is2P && isVert) MARGIN.toDouble() else 0.0
@@ -370,7 +371,8 @@ fun PongGameScreen(
                         }
                     }
             ) {
-                if (humanCount >= 2) {
+                if (humanCount >= 2 && gameId == null) {
+                    // Lokaler Split-Screen: beide Hälften zeigen
                     Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Box(Modifier.width(3.dp).height(28.dp).background(OceanBlue, RoundedCornerShape(2.dp)))
