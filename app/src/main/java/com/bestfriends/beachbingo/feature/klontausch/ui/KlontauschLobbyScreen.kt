@@ -24,8 +24,13 @@ import androidx.compose.ui.unit.sp
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.bingo.ui.components.QrCodeImage
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
+import com.bestfriends.beachbingo.feature.home.ui.SavedGameRow
 import com.bestfriends.beachbingo.feature.klontausch.*
+import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
 import com.bestfriends.beachbingo.ui.theme.*
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -47,13 +52,16 @@ fun KlontauschLobbyScreen(
     onNavigateBack: () -> Unit,
     onNavigateToGame: (mode: String, gameId: String?, aiCount: Int, difficulty: String, saveId: String?) -> Unit,
     onNavigateToResults: () -> Unit,
+    onNavigateToGallery: () -> Unit,
     onNavigateToSettings: () -> Unit,
 ) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val uid = auth.currentUser?.uid
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    var savedKlontausch by remember { mutableStateOf(SoloGameSaveManager.getGameSave(context, "klontausch")) }
     var step by remember { mutableStateOf("mode") }          // "mode" | "ai_config" | "online"
     var onlineStep by remember { mutableStateOf("choose") }  // "choose" | "waiting"
     var aiCount by remember { mutableIntStateOf(1) }
@@ -242,6 +250,18 @@ fun KlontauschLobbyScreen(
                 Spacer(Modifier.width(8.dp))
                 Surface(
                     shape = RoundedCornerShape(10.dp),
+                    color = Color.Transparent,
+                    modifier = Modifier.size(36.dp)
+                        .border(1.dp, BorderColor, RoundedCornerShape(10.dp))
+                        .clickable { onNavigateToGallery() },
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text("🖼️", fontSize = MaterialTheme.typography.bodyMedium.fontSize)
+                    }
+                }
+                Spacer(Modifier.width(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
                     color = if (isFavorite) SandGold.copy(0.12f) else Surface2Dark,
                     modifier = Modifier.size(36.dp)
                         .border(1.dp, if (isFavorite) SandGold.copy(0.5f) else BorderColor, RoundedCornerShape(10.dp))
@@ -289,6 +309,18 @@ fun KlontauschLobbyScreen(
             if (step == "mode") {
                 Text("Spielmodus wählen", style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary, modifier = Modifier.padding(start = 4.dp))
+
+                savedKlontausch?.let { sg ->
+                    val savedState = try { Json.decodeFromString<KlontauschSaveState>(sg.gameState) } catch (_: Exception) { null }
+                    val savedAiCount = savedState?.gameState?.players?.values?.count { it.isAI } ?: 1
+                    SavedGameRow(
+                        title = "Klontausch",
+                        subtitle = sg.displayLabel,
+                        color = KlontauschAccent,
+                        onResume = { onNavigateToGame("AI", null, savedAiCount, sg.difficulty, sg.id) },
+                        onDelete = { SoloGameSaveManager.deleteGameSave(context, "klontausch"); savedKlontausch = null },
+                    )
+                }
 
                 KlonModeCard("🤖", "Gegen KI", "Spiel allein gegen KI-Gegner") { step = "ai_config" }
                 KlonModeCard("📱", "Online – 2–4 Spieler", "Spielt gemeinsam per QR-Code") { step = "online" }
@@ -413,7 +445,7 @@ fun KlontauschLobbyScreen(
                         // QR code
                         Surface(shape = RoundedCornerShape(12.dp), color = Color.White, modifier = Modifier.padding(4.dp)) {
                             QrCodeImage(
-                                content = "https://thebeachbingo.netlify.app/klontausch/lobby?join=$gameCode",
+                                content = "https://beachbande.de/klontausch/lobby?join=$gameCode",
                                 size = 180.dp,
                             )
                         }

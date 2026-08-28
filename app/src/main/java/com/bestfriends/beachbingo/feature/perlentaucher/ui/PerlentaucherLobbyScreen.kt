@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -45,6 +46,7 @@ fun PerlentaucherLobbyScreen(
     val highestUnlocked = remember { SoloGameSaveManager.getHighestPerlentaucherLevel(context) }
     var selectedLevel by remember { mutableIntStateOf(1) }
     var isFavorite by remember { mutableStateOf(false) }
+    var showStats by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
     var savedGame by remember { mutableStateOf(SoloGameSaveManager.getGameSave(context, "perlentaucher")) }
 
@@ -96,6 +98,12 @@ fun PerlentaucherLobbyScreen(
                     Text("Perlentaucher", fontSize = BingoCallSize, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
                 }
                 Spacer(Modifier.width(8.dp))
+                // Statistik
+                Surface(
+                    shape = RoundedCornerShape(10.dp), color = Surface2Dark,
+                    modifier = Modifier.size(36.dp).border(1.dp, BorderColor, RoundedCornerShape(10.dp)).clickable { showStats = true }
+                ) { Box(contentAlignment = Alignment.Center) { Text("🏆", fontSize = MaterialTheme.typography.titleSmall.fontSize) } }
+                Spacer(Modifier.width(8.dp))
                 // Favorit
                 Surface(
                     shape = RoundedCornerShape(10.dp),
@@ -107,7 +115,7 @@ fun PerlentaucherLobbyScreen(
                 Surface(
                     shape = RoundedCornerShape(10.dp), color = Surface2Dark,
                     modifier = Modifier.size(36.dp).border(1.dp, BorderColor, RoundedCornerShape(10.dp)).clickable { showRules = true }
-                ) { Box(contentAlignment = Alignment.Center) { Text("?", fontSize = MaterialTheme.typography.titleSmall.fontSize, color = TextSub, fontWeight = FontWeight.Bold) } }
+                ) { Box(contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Filled.HelpOutline, null, tint = TextSub, modifier = Modifier.size(18.dp)) } }
                 Spacer(Modifier.width(8.dp))
                 // Einstellungen
                 Surface(
@@ -227,6 +235,19 @@ fun PerlentaucherLobbyScreen(
 
     ALL_GAME_RULES["perlentaucher"]?.let { rule ->
         if (showRules) GameRulesBottomSheet(rule = rule, onDismiss = { showRules = false })
+    }
+
+    if (showStats) {
+        AlertDialog(
+            onDismissRequest = { showStats = false },
+            title = { Text("🏆 Statistik", fontWeight = FontWeight.Bold) },
+            text = {
+                Text("Freigeschaltet bis Level: $highestUnlocked / 150", color = OceanBlue, fontWeight = FontWeight.Bold)
+            },
+            confirmButton = {
+                TextButton(onClick = { showStats = false }) { Text("Schließen") }
+            },
+        )
     }
 }
 

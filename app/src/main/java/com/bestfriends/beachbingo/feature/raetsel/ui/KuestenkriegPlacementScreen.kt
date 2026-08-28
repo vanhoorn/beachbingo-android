@@ -65,7 +65,7 @@ fun KuestenkriegPlacementScreen(
         val g = Array(BATTLE_GRID) { BooleanArray(BATTLE_GRID) }
         val newFleet = mutableListOf<PlacedShip>()
         FLEET_DEFS.forEachIndexed { id, def ->
-            repeat(300) {
+            for (attempt in 0 until 300) {
                 val h = Random.nextBoolean()
                 val r = Random.nextInt(BATTLE_GRID)
                 val c = Random.nextInt(BATTLE_GRID)
@@ -73,11 +73,11 @@ fun KuestenkriegPlacementScreen(
                     val ship = PlacedShip(id, def.size, r, c, h)
                     placeOnGrid(g, ship)
                     newFleet.add(ship)
-                    return@repeat
+                    break
                 }
             }
         }
-        fleet = newFleet
+        if (newFleet.size == FLEET_DEFS.size) fleet = newFleet
     }
 
     fun startBattle() {
@@ -91,7 +91,7 @@ fun KuestenkriegPlacementScreen(
     }
 
     val occupied = buildOccupied()
-    val currentDef = if (!allPlaced) FLEET_DEFS[activeIdx] else null
+    val currentDef = if (!allPlaced) FLEET_DEFS.getOrNull(activeIdx) else null
 
     // Drag preview: cells the current ship would occupy if placed now
     val ds = dragState
@@ -212,10 +212,12 @@ fun KuestenkriegPlacementScreen(
                             if (gesture != null && fleet.size < FLEET_DEFS.size) {
                                 val currFleetSize = fleet.size
                                 val (cr, cc) = gesture.current  // place where the finger lifted
-                                val def = FLEET_DEFS[currFleetSize]
-                                val g = buildOccupied()
-                                if (canPlaceShip(g, cr, cc, def.size, horiz)) {
-                                    fleet = fleet + PlacedShip(currFleetSize, def.size, cr, cc, horiz)
+                                val def = FLEET_DEFS.getOrNull(currFleetSize)
+                                if (def != null) {
+                                    val g = buildOccupied()
+                                    if (canPlaceShip(g, cr, cc, def.size, horiz)) {
+                                        fleet = fleet + PlacedShip(currFleetSize, def.size, cr, cc, horiz)
+                                    }
                                 }
                             }
                             dragState = null

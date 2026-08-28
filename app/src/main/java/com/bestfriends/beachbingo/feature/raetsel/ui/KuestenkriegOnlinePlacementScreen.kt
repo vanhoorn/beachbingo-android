@@ -79,7 +79,7 @@ fun KuestenkriegOnlinePlacementScreen(
         val g = Array(BATTLE_GRID) { BooleanArray(BATTLE_GRID) }
         val newFleet = mutableListOf<PlacedShip>()
         FLEET_DEFS.forEachIndexed { id, def ->
-            repeat(300) attempt@{
+            for (attempt in 0 until 300) {
                 val h = Random.nextBoolean()
                 val r = Random.nextInt(BATTLE_GRID)
                 val c = Random.nextInt(BATTLE_GRID)
@@ -87,11 +87,11 @@ fun KuestenkriegOnlinePlacementScreen(
                     val ship = PlacedShip(id, def.size, r, c, h)
                     placeOnGrid(g, ship)
                     newFleet.add(ship)
-                    return@attempt
+                    break
                 }
             }
         }
-        fleet = newFleet
+        if (newFleet.size == FLEET_DEFS.size) fleet = newFleet
     }
 
     fun submitFleet() {

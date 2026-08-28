@@ -22,7 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -164,20 +164,6 @@ fun SonnenradLobbyScreen(
                     }
                 }
                 Spacer(Modifier.width(8.dp))
-                // Regeln
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = MahjongGold.copy(alpha = 0.12f),
-                    modifier = Modifier
-                        .size(36.dp)
-                        .border(1.dp, MahjongGold.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
-                        .clickable { showRules = true },
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Info, null, tint = MahjongGold, modifier = Modifier.size(18.dp))
-                    }
-                }
-                Spacer(Modifier.width(8.dp))
                 // Favorit
                 Surface(
                     shape = RoundedCornerShape(10.dp),
@@ -193,6 +179,20 @@ fun SonnenradLobbyScreen(
                             fontSize = MaterialTheme.typography.titleMedium.fontSize,
                             color = if (isFavorite) MahjongGold else TextMuted,
                         )
+                    }
+                }
+                Spacer(Modifier.width(8.dp))
+                // Regeln
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MahjongGold.copy(alpha = 0.12f),
+                    modifier = Modifier
+                        .size(36.dp)
+                        .border(1.dp, MahjongGold.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                        .clickable { showRules = true },
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.AutoMirrored.Filled.HelpOutline, null, tint = MahjongGold, modifier = Modifier.size(18.dp))
                     }
                 }
             }

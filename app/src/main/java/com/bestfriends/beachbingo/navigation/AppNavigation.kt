@@ -167,6 +167,7 @@ fun AppNavigation() {
                 onNavigateToBrandungLobby = { navController.navigate(Screen.BrandungLobby) },
                 onNavigateToMeermauLobby = { navController.navigate(Screen.MeermauLobby) },
                 onNavigateToStrandraeuberLobby = { navController.navigate(Screen.StrandraeuberLobby) },
+                onNavigateToKlontauschLobby = { navController.navigate(Screen.KlontauschLobby) },
                 onNavigateToProfile = { navController.navigate(Screen.Profile) },
                 onNavigateToJoin = { navController.navigate(Screen.JoinGame) },
                 onNavigateToCategory = { playerCount -> navController.navigate(Screen.Category(playerCount)) },
@@ -545,6 +546,7 @@ fun AppNavigation() {
                     }
                 },
                 onNavigateToResults = { navController.navigate(Screen.KlontauschResults) },
+                onNavigateToGallery = { navController.navigate(Screen.KlontauschGallery) },
                 onNavigateToSettings = { navController.navigate(Screen.KlontauschSettings) },
             )
         }
