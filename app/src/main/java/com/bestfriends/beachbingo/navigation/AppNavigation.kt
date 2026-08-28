@@ -620,7 +620,14 @@ fun AppNavigation() {
         }
         composable<Screen.KuestenkriegBattle> {
             KuestenkriegBattleScreen(
-                onNavigateBack = { navController.navigate(Screen.KuestenkriegLobby) { popUpTo(Screen.KuestenkriegLobby) { inclusive = true } } },
+                onNavigateBack = {
+                    val didPop = navController.popBackStack<Screen.KuestenkriegLobby>(inclusive = false)
+                    if (!didPop) {
+                        navController.navigate(Screen.KuestenkriegLobby) {
+                            popUpTo(Screen.Home) { inclusive = false }
+                        }
+                    }
+                },
                 onNavigateToPlacement = { aiMode ->
                     navController.navigate(Screen.KuestenkriegPlacement(aiMode)) { popUpTo(Screen.KuestenkriegLobby) }
                 },
@@ -703,8 +710,11 @@ fun AppNavigation() {
                 soundEnabled = currentUser?.soundEnabled ?: true,
                 musicEnabled = currentUser?.musicEnabled ?: true,
                 onNavigateBack = {
-                    navController.navigate(Screen.Lobby) {
-                        popUpTo(Screen.Lobby) { inclusive = true }
+                    val didPop = navController.popBackStack<Screen.Lobby>(inclusive = false)
+                    if (!didPop) {
+                        navController.navigate(Screen.Lobby) {
+                            popUpTo(Screen.Home) { inclusive = false }
+                        }
                     }
                 }
             )
@@ -1074,8 +1084,11 @@ fun AppNavigation() {
                 soundEnabled = currentUser?.soundEnabled ?: true,
                 musicEnabled = currentUser?.musicEnabled ?: true,
                 onNavigateBack = {
-                    navController.navigate(Screen.BrandungLobby) {
-                        popUpTo(Screen.BrandungLobby) { inclusive = true }
+                    val didPop = navController.popBackStack<Screen.BrandungLobby>(inclusive = false)
+                    if (!didPop) {
+                        navController.navigate(Screen.BrandungLobby) {
+                            popUpTo(Screen.Home) { inclusive = false }
+                        }
                     }
                 },
             )
@@ -1121,8 +1134,11 @@ fun AppNavigation() {
                 soundEnabled = currentUser?.soundEnabled ?: true,
                 musicEnabled = currentUser?.musicEnabled ?: true,
                 onNavigateBack = {
-                    navController.navigate(Screen.MeermauLobby) {
-                        popUpTo(Screen.MeermauLobby) { inclusive = true }
+                    val didPop = navController.popBackStack<Screen.MeermauLobby>(inclusive = false)
+                    if (!didPop) {
+                        navController.navigate(Screen.MeermauLobby) {
+                            popUpTo(Screen.Home) { inclusive = false }
+                        }
                     }
                 },
             )
@@ -1169,8 +1185,11 @@ fun AppNavigation() {
                 soundEnabled = currentUser?.soundEnabled ?: true,
                 musicEnabled = currentUser?.musicEnabled ?: true,
                 onNavigateBack = {
-                    navController.navigate(Screen.StrandraeuberLobby) {
-                        popUpTo(Screen.StrandraeuberLobby) { inclusive = true }
+                    val didPop = navController.popBackStack<Screen.StrandraeuberLobby>(inclusive = false)
+                    if (!didPop) {
+                        navController.navigate(Screen.StrandraeuberLobby) {
+                            popUpTo(Screen.Home) { inclusive = false }
+                        }
                     }
                 },
             )
