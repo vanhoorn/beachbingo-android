@@ -153,7 +153,7 @@ fun JoinGameScreen(
 
             Spacer(Modifier.height(8.dp))
             Text(
-                "BeachBingo · BeachPong · Vier4Bier · Brandung · MeerMau · Strandräuber",
+                "BeachBingo · BeachPong · Vier4Bier · Brandung · MeerMau · Strandräuber · Küstenkrieg · Klontausch",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
