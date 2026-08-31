@@ -1,10 +1,10 @@
 # BeachBande – Architektur-Richtlinien
 
-Stand: 30.08.2026 · Gilt für Web (`beachbingo-web`, React/Vite/TS) und Android (`Beachbingo`, Kotlin/Compose)
+Stand: 31.08.2026 · Gilt für Web (`beachbingo-web`, React/Vite/TS) und Android (`Beachbingo`, Kotlin/Compose)
 
 **Zweck:** Dieses Dokument hält die plattformübergreifenden Regeln fest, die sich über die Analyse-Berichte 9–13 hinweg wiederholt als Fehlerquelle herausgestellt haben (Navigation, Zentralisierung, Layout, QR-Beitritt). Es ersetzt nicht die einzelnen, datierten Analyse- und Aufgabenlisten (`improvement_plan*.md`, `web_android_diff.md` usw.); jene bleiben als historisches Protokoll bestehen. Dieses Dokument ist dafür gedacht, **vor** dem Bau eines neuen Spiels oder einer neuen Funktion konsultiert zu werden, damit bereits behobene Fehlerklassen nicht erneut eingeführt werden.
 
-**Pflege:** Wird eine neue, verallgemeinerbare Regel in einer künftigen Analyse gefunden, gehört sie hierher (nicht nur in den jeweiligen Analysebericht). Dieselbe Datei liegt identisch in beiden Projektordnern (`010_BeachBande/ARCHITEKTUR_RICHTLINIEN.md` und `Beachbingo/ARCHITEKTUR_RICHTLINIEN.md`); bei Änderungen bitte in beiden aktualisieren.
+**Pflege:** Wird eine neue, verallgemeinerbare Regel in einer künftigen Analyse gefunden, gehört sie hierher (nicht nur in den jeweiligen Analysebericht). Dieselbe Datei liegt identisch in beiden Projektordnern (`beachbingo-web/ARCHITEKTUR_RICHTLINIEN.md` und `Beachbingo/ARCHITEKTUR_RICHTLINIEN.md`); bei Änderungen bitte in beiden aktualisieren.
 
 ---
 
@@ -151,3 +151,35 @@ Vor dem Abschluss eines neuen Spiels (oder einer größeren Spiel-Überarbeitung
 | QR-Code-URL-Schema und Beitritts-Dispatch | Analyse 6, vertieft in Analyse 12 |
 | Audio-Zentralisierung und Abdeckungslücke bei 5 Rätselspielen | Analyse 6, weiterhin offen (Analyse 12/13) |
 | Web/Android-Datenstruktur-Unterschiede explizit behandeln (Bingo-Beispiel) | Analyse 12 |
+| Build-Tooling-Upgrade-Prozess als zusammenhängende Versionsmatrix | Analyse 14 |
+| Feature-Flag-Hygiene: kein teilweises Entfernen von Implementierungen hinter Flags | Analyse 14 |
+
+---
+
+## 8. Build-Tooling-Upgrade-Prozess (Android)
+
+Android-Build-Werkzeuge bilden eine zusammenhängende **Versionsmatrix**: Android Gradle Plugin (AGP), Kotlin, KSP/KSP2, Hilt und Gradle sind gegenseitig abhängig und müssen als Einheit behandelt werden, nicht als unabhängige Einzelkomponenten.
+
+### Vorgehen bei Upgrades
+
+- **Schrittweise upgraden:** Nie mehrere Hauptkomponenten gleichzeitig auf neue Major-Versionen heben. Erst ein Werkzeug anheben, Build prüfen, dann weiter.
+- **Rücknahme-Bereitschaft:** Zeigt sich eine Inkompatibilität (z. B. AGP-Version noch nicht kompatibel mit einer neueren Gradle-Version), den zuletzt geänderten Schritt bewusst zurücknehmen und einen kompatiblen Zwischenstand herstellen. Kein Durchdrücken von inkompatiblen Kombinationen.
+- **Kompatibilitäts-Flags aufräumen:** Temporäre Flags in `gradle.properties`, die nur während des Upgrade-Prozesses nötig sind, nach Abschluss wieder entfernen, damit die Datei minimal bleibt.
+- **Kommentare aktuell halten:** Kommentare in Build-Dateien, die auf abgelöste Werkzeuge verweisen (z. B. ein Kapt-Kommentar nach KSP-Migration), sofort entfernen oder korrigieren.
+
+**Positiv-Referenz:** Report 14 (AGP 8.5.2→9.2.1, Kotlin 2.0.21→2.2.20, Kapt→KSP2, Hilt 2.52→2.59.2, Gradle 9.4.1→9.7.1): Ein Gradle-9.7.1-Schritt wurde bewusst zurückgenommen und erst nach dem AGP-Upgrade wieder eingeführt.
+
+---
+
+## 9. Feature-Flag-Hygiene
+
+Wird Code hinter einem deaktivierten Feature-Flag (`val FEATURE = false`, `const FEATURE_ENABLED = false` o. Ä.) bei einer **Warnungs-Bereinigung** oder einem Refactoring als unerreichbar erkannt und gelöscht, gilt ohne Ausnahme:
+
+**Entweder vollständig entfernen oder vollständig behalten.**
+
+- **Vollständig entfernen:** Flag-Konstante, alle UI-Zweige, die das Flag abfragen, und die gesamte zugehörige Hintergrundlogik werden gelöscht. Kein loser Kommentar, der ein späteres Wiedereinschalten verspricht, darf zurückbleiben.
+- **Vollständig behalten:** Die Implementierung hinter dem Flag bleibt vollständig erhalten. Das Flag bleibt auf `false` stehen. Ein Kommentar darf nur dann versprechen, dass ein Umschalten das Feature wieder aktiviert, wenn die dafür notwendige Logik noch vorhanden ist.
+
+**Verboten:** Eine Mischform, bei der das Flag und ein versprechender Kommentar stehen bleiben, die dahinterliegende Implementierung aber gelöscht wurde. Das erzeugt eine Dokumentationsfalle: Ein späteres Umschalten führt zu einer kaputten Oberfläche ohne Fehlermeldung.
+
+**Referenz:** Klontausch `TAUSCHEN_ENABLED` in Report 14 (Android): Die Implementierung wurde bei der Warnungs-Bereinigung entfernt, Flag und Kommentar blieben stehen.

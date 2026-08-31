@@ -52,9 +52,6 @@ import kotlinx.serialization.json.Json
 
 private val KlontauschAccent = Color(0xFF8B5CF6)
 private const val OFFER_TIMEOUT_SECONDS = 15
-@Suppress("MayBeConstant")
-private val TAUSCHEN_ENABLED = false  // flip to true to re-enable Tauschen
-
 private enum class KlonEventType { SWAP, STOLEN, COMPLETE }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -670,32 +667,6 @@ fun KlontauschGameScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
             when {
-                TAUSCHEN_ENABLED && offer.type == "OPEN" && !iAmOfferer -> {
-                    OfferCardCompact(
-                        offererName    = st.players[offer.fromUserId]?.displayName ?: "?",
-                        part           = offer.part,
-                        responderCount = offer.responderIds.size,
-                        declinedCount  = offer.declinedIds.size,
-                        secondsLeft    = offerSecondsLeft,
-                        canMeld        = myCards.any { it.part == offer.part && it.characterId !in mySafeIds },
-                        iAmResponder   = iAmResponder,
-                        iAmDeclined    = iAmDeclined,
-                        onAccept       = { doMelden() },
-                        onDecline      = { doDecline() },
-                        onWithdraw     = { doWithdraw() },
-                    )
-                }
-                TAUSCHEN_ENABLED && iAmOfferer -> {
-                    MyOfferCard(
-                        part          = offer.part,
-                        secondsLeft   = offerSecondsLeft,
-                        responderIds  = offer.responderIds,
-                        declinedCount = offer.declinedIds.size,
-                        playerNames   = st.players.mapValues { it.value.displayName },
-                        onSelectPartner = { doSelectPartner(it) },
-                        onCancel      = { doCancelOffer() },
-                    )
-                }
                 isMyTurn -> {
                     Text(
                         "Dein Zug – tippe auf einen Mitspieler zum Mopsen",
