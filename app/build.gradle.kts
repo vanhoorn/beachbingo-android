@@ -10,10 +10,10 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.google.services)
     alias(libs.plugins.kotlin.serialization)
-    kotlin("kapt")
 }
 
 android {
@@ -78,7 +78,7 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
+    ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
@@ -91,10 +91,6 @@ dependencies {
     implementation(libs.konfetti.compose)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.common)
-}
-
-kapt {
-    correctErrorTypes = true
 }
 
 // ── Theme lint ──────────────────────────────────────────────────────────────

@@ -311,13 +311,13 @@ fun KuestenkriegOnlinePlacementScreen(
                             onClick = ::removeLastShip, enabled = fleet.isNotEmpty(),
                             modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                            border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
+                            border = ButtonDefaults.outlinedButtonBorder(enabled = fleet.isNotEmpty()).copy(width = 1.dp),
                         ) { Text("⌫ Rückgängig", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold) }
                         OutlinedButton(
                             onClick = ::randomizeAll,
                             modifier = Modifier.weight(1f).height(46.dp), shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                            border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
+                            border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(width = 1.dp),
                         ) { Text("🎲 Zufall", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold) }
                     }
                     Button(

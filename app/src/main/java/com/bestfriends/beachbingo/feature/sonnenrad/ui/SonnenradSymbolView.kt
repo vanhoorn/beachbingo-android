@@ -138,7 +138,7 @@ internal fun DrawScope.drawParasol(cx: Float, cy: Float, r: Float) {
 
     val gPath = Path()
     gPath.moveTo(poleBotX - r * 0.22f, poleBotY + r * 0.04f)
-    gPath.quadraticBezierTo(
+    gPath.quadraticTo(
         poleBotX, poleBotY + r * 0.18f,
         poleBotX + r * 0.22f, poleBotY + r * 0.04f,
     )

@@ -62,7 +62,7 @@ import com.bestfriends.beachbingo.core.model.GameMode
 import com.bestfriends.beachbingo.core.model.GameStatus
 import com.bestfriends.beachbingo.core.model.DrawStyle
 import com.bestfriends.beachbingo.feature.bingo.viewmodel.LobbyViewModel
-import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 
@@ -221,7 +221,7 @@ fun LobbyScreen(
                         )
                     }
                     IconButton(onClick = { showRules = true }) {
-                        Icon(Icons.Outlined.HelpOutline, contentDescription = "Spielanleitung", tint = com.bestfriends.beachbingo.ui.theme.TextSub, modifier = Modifier.size(28.dp))
+                        Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = "Spielanleitung", tint = com.bestfriends.beachbingo.ui.theme.TextSub, modifier = Modifier.size(28.dp))
                     }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Einstellungen", modifier = Modifier.size(28.dp))

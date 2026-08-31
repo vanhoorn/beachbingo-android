@@ -12,10 +12,8 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.ui.draw.scale
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -40,6 +38,8 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.tasks.await
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.Canvas
@@ -48,12 +48,12 @@ import kotlin.random.Random
 import com.bestfriends.beachbingo.feature.raetsel.GameSave
 import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 
 private val KlontauschAccent = Color(0xFF8B5CF6)
 private const val OFFER_TIMEOUT_SECONDS = 15
-private const val TAUSCHEN_ENABLED = false  // flip to true to re-enable Tauschen
+@Suppress("MayBeConstant")
+private val TAUSCHEN_ENABLED = false  // flip to true to re-enable Tauschen
 
 private enum class KlonEventType { SWAP, STOLEN, COMPLETE }
 
@@ -76,17 +76,13 @@ fun KlontauschGameScreen(
     val context = LocalContext.current
     val audio = remember { KlontauschAudioManager(context) }
     DisposableEffect(Unit) { onDispose { audio.release() } }
-    val scope = rememberCoroutineScope()
-
     var gameState by remember { mutableStateOf<KlonGameState?>(null) }
     var myTargetIds by remember { mutableStateOf<List<String>>(emptyList()) }
     var paused by remember { mutableStateOf(false) }
     var showQuitDialog by remember { mutableStateOf(false) }
     var showRules by remember { mutableStateOf(false) }
-    var selectedCardId by remember { mutableStateOf<String?>(null) }
     var aiTargets by remember { mutableStateOf<Map<String, List<String>>>(emptyMap()) }
     var offerSecondsLeft by remember { mutableIntStateOf(OFFER_TIMEOUT_SECONDS) }
-    var showMopsePicker by remember { mutableStateOf(false) }
     var showWinDialog by remember { mutableStateOf(false) }
     val eventList = remember { mutableStateListOf<Pair<String, KlonEventType>>() }
     val prevCardsHolder = remember { mutableListOf<KlonCard>() }
@@ -146,7 +142,7 @@ fun KlontauschGameScreen(
         }
         offerSecondsLeft = OFFER_TIMEOUT_SECONDS
         while (offerSecondsLeft > 0) {
-            delay(1000L)
+            delay(1.seconds)
             offerSecondsLeft--
         }
         val st2 = gameState ?: return@LaunchedEffect
@@ -324,17 +320,11 @@ fun KlontauschGameScreen(
         val turnUid = st.playerIds.getOrNull(st.turnIndex % st.playerIds.size) ?: return@LaunchedEffect
         if (st.players[turnUid]?.isAI != true) return@LaunchedEffect
 
-        delay(1200L)
-        val newState = if (!TAUSCHEN_ENABLED) {
-            // Tauschen disabled: AI always Mopsen from a random other player
-            val others = st.playerIds.filter { it != turnUid }
-            val targetUid = others.randomOrNull() ?: return@LaunchedEffect
-            val targetTargetIds = if (targetUid == uid) myTargetIds else aiTargets[targetUid] ?: emptyList()
-            executeNehmen(st, turnUid, targetUid, targetTargetIds)
-        } else {
-            val targets = aiTargets[turnUid] ?: emptyList()
-            aiDecideMove(st, turnUid, targets)
-        }
+        delay(1200.milliseconds)
+        val others = st.playerIds.filter { it != turnUid }
+        val targetUid = others.randomOrNull() ?: return@LaunchedEffect
+        val targetTargetIds = if (targetUid == uid) myTargetIds else aiTargets[targetUid] ?: emptyList()
+        val newState = executeNehmen(st, turnUid, targetUid, targetTargetIds)
 
         val targets = aiTargets[turnUid] ?: emptyList()
         val winner = newState.players[turnUid]
@@ -345,37 +335,6 @@ fun KlontauschGameScreen(
         } else {
             gameState = newState
         }
-    }
-
-    // ── AI loop: respond to human's open offer (only when Tauschen enabled) ──
-    LaunchedEffect(gameState) {
-        if (!TAUSCHEN_ENABLED) return@LaunchedEffect
-        val st = gameState ?: return@LaunchedEffect
-        if (mode != "AI" || paused || st.status != "PLAYING") return@LaunchedEffect
-        if (st.offer.type != "OPEN" || st.offer.fromUserId != uid) return@LaunchedEffect
-
-        val pendingAIs = st.playerIds.filter { pid ->
-            st.players[pid]?.isAI == true &&
-            pid !in st.offer.responderIds &&
-            pid !in st.offer.declinedIds
-        }
-        if (pendingAIs.isEmpty()) return@LaunchedEffect
-
-        delay(900L)
-        var current = st
-        for (aiId in pendingAIs) {
-            val aiTargetList = aiTargets[aiId] ?: emptyList()
-            current = aiDecideMove(current, aiId, aiTargetList)
-        }
-        if (current != st) gameState = current
-    }
-
-    // ── Close picker when turn passes ─────────────────────────────────────────
-    val currentTurnUidForPicker = gameState?.playerIds?.getOrNull(
-        (gameState?.turnIndex ?: 0) % (gameState?.playerIds?.size?.coerceAtLeast(1) ?: 1)
-    )
-    LaunchedEffect(currentTurnUidForPicker) {
-        if (currentTurnUidForPicker != uid) showMopsePicker = false
     }
 
     // ── Actions ───────────────────────────────────────────────────────────────
@@ -391,13 +350,6 @@ fun KlontauschGameScreen(
         } else {
             pushState(newSt)
         }
-    }
-
-    fun doTauschen() {
-        val st = gameState ?: return
-        val cardId = selectedCardId ?: return
-        pushState(openOffer(st, uid, cardId))
-        selectedCardId = null
     }
 
     fun doMelden() {
@@ -672,19 +624,13 @@ fun KlontauschGameScreen(
                                 }
 
                                 // Figuren-Bereich füllt den Rest der Karte
-                                BoxWithConstraints(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .weight(1f),
-                                ) {
-                                    val partH    = maxHeight / 3f
-                                    val partW    = maxWidth * 0.70f
-                                    Column(Modifier.width(partW).align(Alignment.Center)) {
-                                        KlonPartSlot(charId, KlonPart.KOPF,    hasKopf,    partH)
-                                        KlonPartSlot(charId, KlonPart.KOERPER, hasKoerper, partH)
-                                        KlonPartSlot(charId, KlonPart.BEINE,   hasBeine,   partH)
-                                    }
-                                }
+                                KlontauschFigurePartsBox(
+                                    charId     = charId,
+                                    hasKopf    = hasKopf,
+                                    hasKoerper = hasKoerper,
+                                    hasBeine   = hasBeine,
+                                    modifier   = Modifier.fillMaxWidth().weight(1f),
+                                )
                             }
                         }
                     }
@@ -774,77 +720,6 @@ fun KlontauschGameScreen(
     }
 }
 
-// ── Action buttons composable ─────────────────────────────────────────────────
-
-@Composable
-private fun ActionButtons(
-    onMopsen: () -> Unit,
-    // TAUSCHEN_DISABLED: onTauschen, canTauschen, selectedCardLabel
-) {
-    Button(
-        onClick = onMopsen,
-        modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.buttonColors(containerColor = OceanBlue),
-    ) {
-        Text("Mopsen", fontWeight = FontWeight.Bold)
-    }
-}
-
-// ── Mopsen: player picker ─────────────────────────────────────────────────────
-
-@Composable
-private fun MopsePicker(
-    players: Map<String, KlonPlayerState>,
-    playerIds: List<String>,
-    onPickPlayer: (String) -> Unit,
-    onCancel: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(SurfaceDark, RoundedCornerShape(12.dp))
-            .border(1.dp, OceanBlue.copy(0.5f), RoundedCornerShape(12.dp))
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(
-            "Von wem mopsen?",
-            color = OceanBlue,
-            fontWeight = FontWeight.Bold,
-            fontSize = MaterialTheme.typography.bodyMedium.fontSize,
-        )
-        playerIds.forEach { pid ->
-            val p = players[pid] ?: return@forEach
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = OceanBlue.copy(0.08f),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, OceanBlue.copy(0.35f), RoundedCornerShape(10.dp))
-                    .clickable { onPickPlayer(pid) },
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Text(p.avatarUrl, fontSize = MaterialTheme.typography.titleMedium.fontSize)
-                    Column(Modifier.weight(1f)) {
-                        Text(p.displayName, color = TextPrimary, fontWeight = FontWeight.SemiBold,
-                            fontSize = MaterialTheme.typography.bodySmall.fontSize)
-                        Text("${p.cardCount} Karten", color = TextMuted,
-                            fontSize = MaterialTheme.typography.labelSmall.fontSize)
-                    }
-                    Text("→", color = OceanBlue, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-        TextButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) {
-            Text("Abbrechen", color = TextSub, fontSize = MaterialTheme.typography.labelMedium.fontSize)
-        }
-    }
-}
-
 // ── Offer card (from someone else) ───────────────────────────────────────────
 
 @Composable
@@ -900,16 +775,7 @@ private fun OfferCardCompact(
             )
         }
         when {
-            iAmResponder -> {
-                OutlinedButton(
-                    onClick = onWithdraw,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSub),
-                ) {
-                    Text("Entscheidung ändern")
-                }
-            }
-            iAmDeclined -> {
+            iAmResponder || iAmDeclined -> {
                 OutlinedButton(
                     onClick = onWithdraw,
                     modifier = Modifier.fillMaxWidth(),
@@ -1043,8 +909,31 @@ private fun MyOfferCard(
     }
 }
 
+// ── Figuren-Parts Box (BoxWithConstraints für Proportionen) ─────────────────
+
+@Suppress("UnusedBoxWithConstraintsScope")
+@Composable
+private fun KlontauschFigurePartsBox(
+    charId: String,
+    hasKopf: Boolean,
+    hasKoerper: Boolean,
+    hasBeine: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    BoxWithConstraints(modifier = modifier) {
+        val partH = maxHeight / 3f
+        val partW = maxWidth * 0.70f
+        Column(Modifier.width(partW).align(Alignment.Center)) {
+            KlonPartSlot(charId, KlonPart.KOPF,    hasKopf,    partH)
+            KlonPartSlot(charId, KlonPart.KOERPER, hasKoerper, partH)
+            KlonPartSlot(charId, KlonPart.BEINE,   hasBeine,   partH)
+        }
+    }
+}
+
 // ── Vorrats-Figur (3 unabhängige Pager per Körperteil) ───────────────────────
 
+@Suppress("UnusedBoxWithConstraintsScope")
 @Composable
 private fun KlontauschStockFigure(
     modifier: Modifier = Modifier,
@@ -1083,15 +972,15 @@ private fun KlontauschStockFigure(
                         .clickable {
                             scope.launch {
                                 if (stockKopf.size > 1) {
-                                    val next = (0 until stockKopf.size).filter { it != kopfPager.currentPage }.random()
+                                    val next = stockKopf.indices.filter { it != kopfPager.currentPage }.random()
                                     kopfPager.animateScrollToPage(next)
                                 }
                                 if (stockKoerper.size > 1) {
-                                    val next = (0 until stockKoerper.size).filter { it != koerperPager.currentPage }.random()
+                                    val next = stockKoerper.indices.filter { it != koerperPager.currentPage }.random()
                                     koerperPager.animateScrollToPage(next)
                                 }
                                 if (stockBeine.size > 1) {
-                                    val next = (0 until stockBeine.size).filter { it != beinePager.currentPage }.random()
+                                    val next = stockBeine.indices.filter { it != beinePager.currentPage }.random()
                                     beinePager.animateScrollToPage(next)
                                 }
                             }
@@ -1204,12 +1093,12 @@ private fun KlontauschConfettiOverlay() {
         }
     }
     val colors = remember { List(48) { confettiColors[it % confettiColors.size] } }
-    var t by remember { mutableStateOf(0f) }
+    var t by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(Unit) {
         val start = System.currentTimeMillis()
         while (t < 3.5f) {
             t = (System.currentTimeMillis() - start) / 1000f
-            delay(16)
+            delay(16.milliseconds)
         }
     }
     Canvas(modifier = Modifier.fillMaxSize()) {
@@ -1244,7 +1133,7 @@ private fun KlontauschWinDialog(
 
     var trophyVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        delay(120L)
+        delay(120.milliseconds)
         trophyVisible = true
     }
     val trophyScale by animateFloatAsState(
@@ -1358,6 +1247,7 @@ private fun KlontauschWinDialog(
     }
 }
 
+@Suppress("UnusedBoxWithConstraintsScope")
 @Composable
 private fun KlonWinParticles(modifier: Modifier = Modifier) {
     val transition = rememberInfiniteTransition(label = "klon_particles")
@@ -1373,8 +1263,8 @@ private fun KlonWinParticles(modifier: Modifier = Modifier) {
     val particles = remember {
         List(16) { i ->
             Triple(
-                (i / 16f + kotlin.random.Random.nextFloat() * 0.055f).coerceIn(0.02f, 0.98f),
-                kotlin.random.Random.nextFloat(),
+                (i / 16f + Random.nextFloat() * 0.055f).coerceIn(0.02f, 0.98f),
+                Random.nextFloat(),
                 listOf("🃏", "🎭", "🎲", "✨", "🎴", "🃏", "🎲", "🎭")[i % 8],
             )
         }

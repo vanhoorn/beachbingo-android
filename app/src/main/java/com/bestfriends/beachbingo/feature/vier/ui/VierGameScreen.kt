@@ -560,13 +560,13 @@ private fun DroppingPiece(
                 animationSpec = keyframes {
                     durationMillis = duration
                     // Land at 80%
-                    0f at (duration * 0.80f).toInt() with LinearEasing
+                    0f at (duration * 0.80f).toInt() using LinearEasing
                     // Bounce up slightly at 90%
-                    -7f at (duration * 0.90f).toInt() with LinearEasing
+                    -7f at (duration * 0.90f).toInt() using LinearEasing
                     // Settle down at 96%
-                    3f at (duration * 0.96f).toInt() with LinearEasing
+                    3f at (duration * 0.96f).toInt() using LinearEasing
                     // Final rest
-                    0f at duration with LinearEasing
+                    0f at duration using LinearEasing
                 },
             )
         }

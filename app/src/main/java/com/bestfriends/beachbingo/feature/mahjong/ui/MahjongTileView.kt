@@ -265,9 +265,9 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
         svgIcon.startsWith("wellen") -> {
             fun wave(y: Float) = Path().apply {
                 moveTo(4f, y)
-                quadraticBezierTo(8f, y - 4f, 12f, y)
-                quadraticBezierTo(16f, y + 4f, 20f, y)
-                quadraticBezierTo(24f, y - 4f, 28f, y)
+                quadraticTo(8f, y - 4f, 12f, y)
+                quadraticTo(16f, y + 4f, 20f, y)
+                quadraticTo(24f, y - 4f, 28f, y)
             }
             drawPath(wave(10f), color, style = stroke)
             drawPath(wave(17f), color, style = stroke)
@@ -335,7 +335,7 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
         // ── Sonnenuntergang ───────────────────────────────────────────────────
         svgIcon == "wind_west" -> {
             val arch = Path().apply {
-                moveTo(4f, 20f); quadraticBezierTo(16f, 8f, 28f, 20f)
+                moveTo(4f, 20f); quadraticTo(16f, 8f, 28f, 20f)
             }
             drawPath(arch, color, style = stroke)
             drawLine(color, Offset(4f,  24f), Offset(28f, 24f), sw)
@@ -369,10 +369,10 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
         svgIcon == "drache_rot" -> {
             val body = Path().apply {
                 moveTo(4f, 22f)
-                quadraticBezierTo(10f, 10f, 20f, 14f)
-                quadraticBezierTo(28f, 18f, 28f, 22f)
-                quadraticBezierTo(20f, 28f, 12f, 26f)
-                quadraticBezierTo(6f, 24f, 4f, 22f)
+                quadraticTo(10f, 10f, 20f, 14f)
+                quadraticTo(28f, 18f, 28f, 22f)
+                quadraticTo(20f, 28f, 12f, 26f)
+                quadraticTo(6f, 24f, 4f, 22f)
                 close()
             }
             filled(body)
@@ -389,10 +389,10 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
         svgIcon == "drache_gruen" -> {
             val body = Path().apply {
                 moveTo(4f, 18f)
-                quadraticBezierTo(10f, 8f, 20f, 12f)
-                quadraticBezierTo(28f, 16f, 26f, 22f)
-                quadraticBezierTo(20f, 28f, 10f, 24f)
-                quadraticBezierTo(4f, 20f, 4f, 18f)
+                quadraticTo(10f, 8f, 20f, 12f)
+                quadraticTo(28f, 16f, 26f, 22f)
+                quadraticTo(20f, 28f, 10f, 24f)
+                quadraticTo(4f, 20f, 4f, 18f)
                 close()
             }
             filled(body)
@@ -401,7 +401,7 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
             }
             filled(tail)
             val dorsal = Path().apply {
-                moveTo(16f, 8f); quadraticBezierTo(19f, 4f, 22f, 8f); close()
+                moveTo(16f, 8f); quadraticTo(19f, 4f, 22f, 8f); close()
             }
             filled(dorsal)
             drawCircle(eye, 1.5f, Offset(12f, 16f))
@@ -417,7 +417,7 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
                 val tx = toXs[i]; val ty = toYs[i]
                 val p = Path().apply {
                     moveTo(fx, 18f)
-                    quadraticBezierTo((fx + tx) / 2f - 1f, (18f + ty) / 2f, tx, ty)
+                    quadraticTo((fx + tx) / 2f - 1f, (18f + ty) / 2f, tx, ty)
                 }
                 drawPath(p, color, style = stroke1)
             }
@@ -457,12 +457,12 @@ private fun DrawScope.drawTileIcon(svgIcon: String, color: Color) {
         svgIcon == "jahreszeit_herbst" -> {
             val leaf = Path().apply {
                 moveTo(16f, 8f)
-                quadraticBezierTo(20f, 12f, 18f, 18f)
-                quadraticBezierTo(22f, 14f, 26f, 16f)
-                quadraticBezierTo(22f, 22f, 16f, 24f)
-                quadraticBezierTo(10f, 22f, 6f, 16f)
-                quadraticBezierTo(10f, 14f, 14f, 18f)
-                quadraticBezierTo(12f, 12f, 16f, 8f)
+                quadraticTo(20f, 12f, 18f, 18f)
+                quadraticTo(22f, 14f, 26f, 16f)
+                quadraticTo(22f, 22f, 16f, 24f)
+                quadraticTo(10f, 22f, 6f, 16f)
+                quadraticTo(10f, 14f, 14f, 18f)
+                quadraticTo(12f, 12f, 16f, 8f)
                 close()
             }
             filled(leaf)

@@ -74,7 +74,7 @@ import com.bestfriends.beachbingo.feature.pong.viewmodel.PongLobbyViewModel
 import androidx.compose.ui.platform.LocalContext
 import com.bestfriends.beachbingo.feature.raetsel.SoloGameSaveManager
 import com.bestfriends.beachbingo.feature.home.ui.SavedGameRow
-import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import com.bestfriends.beachbingo.core.model.ALL_GAME_RULES
 import com.bestfriends.beachbingo.feature.home.ui.GameRulesBottomSheet
 import com.bestfriends.beachbingo.ui.theme.BgDark
@@ -238,7 +238,7 @@ fun PongLobbyScreen(
                         )
                     }
                     IconButton(onClick = { showRules = true }) {
-                        Icon(Icons.Outlined.HelpOutline, contentDescription = "Spielanleitung", tint = TextSub)
+                        Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = "Spielanleitung", tint = TextSub)
                     }
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Einstellungen", tint = TextSub)

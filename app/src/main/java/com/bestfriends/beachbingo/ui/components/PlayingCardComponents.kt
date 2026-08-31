@@ -90,13 +90,13 @@ internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawSun(cx: Float,
 internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawWave(cx: Float, cy: Float, r: Float, color: Color) {
     val p1 = Path()
     p1.moveTo(cx - r * 0.85f, cy - r * 0.18f)
-    p1.quadraticBezierTo(cx - r * 0.42f, cy - r * 0.56f, cx, cy - r * 0.18f)
-    p1.quadraticBezierTo(cx + r * 0.42f, cy + r * 0.20f, cx + r * 0.85f, cy - r * 0.18f)
+    p1.quadraticTo(cx - r * 0.42f, cy - r * 0.56f, cx, cy - r * 0.18f)
+    p1.quadraticTo(cx + r * 0.42f, cy + r * 0.20f, cx + r * 0.85f, cy - r * 0.18f)
     drawPath(p1, color = color, style = Stroke(width = r * 0.18f, cap = StrokeCap.Round))
     val p2 = Path()
     p2.moveTo(cx - r * 0.85f, cy + r * 0.30f)
-    p2.quadraticBezierTo(cx - r * 0.42f, cy - r * 0.08f, cx, cy + r * 0.30f)
-    p2.quadraticBezierTo(cx + r * 0.42f, cy + r * 0.68f, cx + r * 0.85f, cy + r * 0.30f)
+    p2.quadraticTo(cx - r * 0.42f, cy - r * 0.08f, cx, cy + r * 0.30f)
+    p2.quadraticTo(cx + r * 0.42f, cy + r * 0.68f, cx + r * 0.85f, cy + r * 0.30f)
     drawPath(p2, color = color.copy(alpha = 0.60f), style = Stroke(width = r * 0.14f, cap = StrokeCap.Round))
 }
 
@@ -110,7 +110,7 @@ internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPalm(cx: Float
         Offset(cx + r * 0.05f, cy - r * 0.95f),
     ).forEach { end ->
         val mx = (tx + end.x) / 2f; val my = (ty + end.y) / 2f - r * 0.10f
-        val p = Path(); p.moveTo(tx, ty); p.quadraticBezierTo(mx, my, end.x, end.y)
+        val p = Path(); p.moveTo(tx, ty); p.quadraticTo(mx, my, end.x, end.y)
         drawPath(p, color = color, style = Stroke(width = r * 0.16f, cap = StrokeCap.Round))
     }
 }
@@ -197,8 +197,8 @@ fun CardBackScene(modifier: Modifier = Modifier) {
                 val p = Path(); p.moveTo(0f, y); var x = 0f
                 while (x < w) {
                     val dx = w * 0.26f
-                    p.quadraticBezierTo(x + dx * 0.25f, y - h * 0.022f, x + dx * 0.5f, y)
-                    p.quadraticBezierTo(x + dx * 0.75f, y + h * 0.022f, x + dx, y)
+                    p.quadraticTo(x + dx * 0.25f, y - h * 0.022f, x + dx * 0.5f, y)
+                    p.quadraticTo(x + dx * 0.75f, y + h * 0.022f, x + dx, y)
                     x += dx
                 }
                 drawPath(p, color = Color.White.copy(alpha = alpha), style = Stroke(width = lw))
@@ -211,8 +211,8 @@ fun CardBackScene(modifier: Modifier = Modifier) {
         // Palm trunk
         val trunk = Path()
         trunk.moveTo(w * 0.50f, h * 0.835f)
-        trunk.quadraticBezierTo(w * 0.464f, h * 0.67f, w * 0.478f, h * 0.545f)
-        trunk.quadraticBezierTo(w * 0.495f, h * 0.465f, w * 0.548f, h * 0.385f)
+        trunk.quadraticTo(w * 0.464f, h * 0.67f, w * 0.478f, h * 0.545f)
+        trunk.quadraticTo(w * 0.495f, h * 0.465f, w * 0.548f, h * 0.385f)
         drawPath(trunk, color = TrunkBrown, style = Stroke(width = 4f, cap = StrokeCap.Round))
 
         val ptx = w * 0.548f; val pty = h * 0.385f
@@ -232,8 +232,8 @@ fun CardBackScene(modifier: Modifier = Modifier) {
 
             val frond = Path()
             frond.moveTo(ptx + px * 1.5f, pty + py * 1.5f)
-            frond.quadraticBezierTo(wx + px * hw, wy + py * hw, end.x, end.y)
-            frond.quadraticBezierTo(wx - px * hw, wy - py * hw, ptx - px * 1.5f, pty - py * 1.5f)
+            frond.quadraticTo(wx + px * hw, wy + py * hw, end.x, end.y)
+            frond.quadraticTo(wx - px * hw, wy - py * hw, ptx - px * 1.5f, pty - py * 1.5f)
             frond.close()
             drawPath(frond, color = color)
             drawLine(PalmDeep.copy(alpha = 0.35f), Offset(ptx, pty), end, strokeWidth = 1.2f)

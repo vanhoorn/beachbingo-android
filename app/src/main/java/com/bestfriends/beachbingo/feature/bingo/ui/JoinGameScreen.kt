@@ -1,7 +1,8 @@
 package com.bestfriends.beachbingo.feature.bingo.ui
 
 import android.Manifest
-import android.app.Activity
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -40,15 +41,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bestfriends.beachbingo.feature.join.viewmodel.JoinDestination
 import com.bestfriends.beachbingo.feature.join.viewmodel.JoinViewModel
-import com.google.zxing.integration.android.IntentIntegrator
-import com.google.zxing.integration.android.IntentResult
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,23 +65,15 @@ fun JoinGameScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var gameCode by remember { mutableStateOf("") }
-    val context = LocalContext.current
 
-    val scannerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val intentResult: IntentResult = IntentIntegrator.parseActivityResult(
-                result.resultCode, result.data
-            )
-            intentResult.contents?.let { scanned ->
-                // QR may encode a URL or bare gameId
-                val match = scanned.trim().let { raw ->
-                    Regex("[A-Za-z0-9]{6,}").findAll(raw).lastOrNull()?.value ?: raw
-                }
-                gameCode = match
-                viewModel.joinGame(match)
+    val scannerLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        result.contents?.let { scanned ->
+            // QR may encode a URL or bare gameId
+            val match = scanned.trim().let { raw ->
+                Regex("[A-Za-z0-9]{6,}").findAll(raw).lastOrNull()?.value ?: raw
             }
+            gameCode = match
+            viewModel.joinGame(match)
         }
     }
 
@@ -91,13 +81,12 @@ fun JoinGameScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            val integrator = IntentIntegrator(context as Activity).apply {
-                setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
+            scannerLauncher.launch(ScanOptions().apply {
+                setDesiredBarcodeFormats(ScanOptions.QR_CODE)
                 setPrompt("QR-Code des Spiels scannen")
                 setBeepEnabled(false)
                 setOrientationLocked(false)
-            }
-            scannerLauncher.launch(integrator.createScanIntent())
+            })
         }
     }
 
